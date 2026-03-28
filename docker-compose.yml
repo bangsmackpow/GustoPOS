@@ -1,44 +1,28 @@
 version: "3.9"
 services:
-  api-server:
-    build:
-      context: .
-      dockerfile: artifacts/api-server/Dockerfile
+  api:
+    image: ghcr.io/bangsmackpow/gusto-pos-api:latest
     container_name: gustopos-api
-    depends_on:
-      - db
     environment:
       - DATABASE_URL=postgres://gusto:gusto@db:5432/gusto
+    depends_on:
+      - db
     ports:
       - "3000:3000"
     restart: unless-stopped
 
-  gusto-pos:
-    build:
-      context: .
-      dockerfile: artifacts/gusto-pos/Dockerfile
+  frontend:
+    image: ghcr.io/bangsmackpow/gusto-pos-frontend:latest
     container_name: gustopos-frontend
+    depends_on:
+      - api
     ports:
       - "8080:80"
-    depends_on:
-      - api-server
     restart: unless-stopped
 
-  migrate:
-    build:
-      context: .
-      dockerfile: artifacts/db-migrate/Dockerfile
-    container_name: gustopos-migrate
-    depends_on:
-      - db
-    environment:
-      - DATABASE_URL=postgres://gusto:gusto@db:5432/gusto
-    restart: "no"
-
   db:
-    image: postgres:15
+    image: postgres:17
     container_name: gustopos-db
-    restart: always
     environment:
       - POSTGRES_USER=gusto
       - POSTGRES_PASSWORD=gusto
@@ -47,3 +31,8 @@ services:
       - ./data/postgres:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "gusto"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
