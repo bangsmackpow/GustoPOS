@@ -7,6 +7,9 @@ import drinksRouter from "./drinks";
 import tabsRouter from "./tabs";
 import shiftsRouter from "./shifts";
 import settingsRouter from "./settings";
+import devLoginRouter from "./dev-login";
+import adminSeedRouter from "./admin-seed";
+import adminLoginRouter from "./admin-login";
 
 const router: IRouter = Router();
 
@@ -18,5 +21,8 @@ router.use(drinksRouter);
 router.use(tabsRouter);
 router.use(shiftsRouter);
 router.use(settingsRouter);
+router.use(devLoginRouter());
+router.use(adminLoginRouter());
+router.use(adminSeedRouter());
 
 export default router;

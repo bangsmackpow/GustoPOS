@@ -156,6 +156,8 @@ On initial setup, sample data was seeded:
 
 ## Deployment: GHCR + Portainer (Stack-based)
 
+- Dev login bypass (optional): To test login flow quickly without OpenID, set DEV_LOGIN=true in your environment and call POST /dev/login with the dev credentials. This only works in non-production environments.
+
 - This project now ships pre-built images on GHCR and uses a simple docker-compose stack for quick testing and deployment in Portainer.
 - Secrets management:
   - Place sensitive values in a stack.env file at the repo root and reference it from docker-compose.yml via env_file per service. The provided stack.env includes sample values that should be overridden in your environment.
