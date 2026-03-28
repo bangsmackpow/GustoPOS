@@ -17,6 +17,7 @@
     "cors": "^2",
     "drizzle-orm": "catalog:",
     "express": "^5",
+    "pg": "^8.20.0",
     "express-session": "^1.19.0",
     "openid-client": "^6.8.2",
     "pino": "^9",
