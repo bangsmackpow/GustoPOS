@@ -30,6 +30,8 @@ jobs:
         run: |
           docker build -t ghcr.io/${{ github.repository_owner }}/gusto-pos-api:latest -f artifacts/api-server/Dockerfile .
 
+      - name: Install PNPM
+        run: npm i -g pnpm
       - name: Build Frontend dist on CI
         run: |
           cd artifacts/gusto-pos
