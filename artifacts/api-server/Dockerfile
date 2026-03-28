@@ -18,8 +18,8 @@ COPY artifacts/api-server/package.json artifacts/api-server/package.json
 COPY . .
 
 # Install all workspace dependencies and resolve links
-RUN pnpm install
-
+RUN pnpm install --no-frozen-lockfile
+    
 # Build the API server (produces dist/index.mjs as per package.json)
 WORKDIR /app/artifacts/api-server
 RUN pnpm run build

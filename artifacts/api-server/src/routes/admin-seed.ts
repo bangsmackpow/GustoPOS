@@ -1,6 +1,6 @@
 import express from "express";
 import type { Request, Response } from "express";
-import { Pool } from "pg";
+// pg is loaded lazily at runtime to avoid bundling it in CI builds
 import fs from "fs";
 import path from "path";
 
@@ -20,6 +20,7 @@ export default function adminSeedRouter(): express.Router {
         .status(500)
         .json({ ok: false, error: "DATABASE_URL not configured" });
     }
+    const { Pool } = await import("pg");
     const pool = new Pool({ connectionString });
     try {
       const seedSqlPath = path.resolve(
