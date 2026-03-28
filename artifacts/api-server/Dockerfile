@@ -3,6 +3,7 @@
 # Stage 1: builder - install dependencies and build the API server
 FROM node:20-slim AS builder
 WORKDIR /app
+ENV CI=true
 
 # Install pnpm
 RUN npm install -g pnpm

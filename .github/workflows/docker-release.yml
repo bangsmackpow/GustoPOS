@@ -33,6 +33,10 @@ jobs:
       - name: Install PNPM
         run: npm i -g pnpm
       - name: Build Frontend dist on CI
+        env:
+          PORT: 5173
+          BASE_PATH: /
+          CI: true
         run: |
           cd artifacts/gusto-pos
           pnpm install

@@ -3,6 +3,7 @@
 # Stage 1: build frontend assets
 FROM node:20-slim AS builder
 WORKDIR /app
+ENV CI=true
 
 # Provide default port for Vite build-time config that expects PORT to be set
 ENV PORT=5173
