@@ -21,6 +21,7 @@ COPY . .
 
 RUN pnpm install
 RUN PORT=5173 BASE_PATH=/ pnpm --filter @workspace/gusto-pos build
+RUN if [ ! -d ./artifacts/gusto-pos/dist ]; then echo "ERROR: frontend dist not found after build"; exit 1; fi
 
 # Stage 2: serve with nginx
 FROM nginx:alpine
