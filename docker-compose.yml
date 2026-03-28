@@ -24,6 +24,17 @@ services:
       - api-server
     restart: unless-stopped
 
+  migrate:
+    build:
+      context: .
+      dockerfile: artifacts/db-migrate/Dockerfile
+    container_name: gustopos-migrate
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://gusto:gusto@db:5432/gusto
+    restart: "no"
+
   db:
     image: postgres:15
     container_name: gustopos-db

@@ -47,3 +47,17 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Local database data (dev/CI)
+/data/
+
+# Build outputs in nested workspaces
+**/dist
+**/build
+
+# Dependencies hoisted in monorepos
+**/node_modules
+
+# Secrets
+*.env
+*.env.*
