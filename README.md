@@ -93,20 +93,25 @@ All routes at `/api` prefix.
 ## Packages
 
 ### `artifacts/api-server` (`@workspace/api-server`)
+
 Express 5 API server. Routes live in `src/routes/`. Uses cookie-based session auth via `openid-client` and PostgreSQL session store.
 
 ### `artifacts/gusto-pos` (`@workspace/gusto-pos`)
+
 React + Vite POS frontend. State managed by Zustand (active staff, language). Uses `@workspace/api-client-react` generated hooks.
 
 ### `lib/db` (`@workspace/db`)
+
 Database layer using Drizzle ORM with PostgreSQL. Schema in `src/schema/` (auth.ts + gusto.ts).
 
 ### `lib/api-spec` (`@workspace/api-spec`)
+
 OpenAPI 3.1 spec (`openapi.yaml`) + Orval codegen config.
 
 ## Future: Mobile App
 
 Architecture is ready for Expo mobile app:
+
 - Backend routes support all mobile use cases (tabs, orders, inventory)
 - Multi-currency already implemented
 - Auth supports mobile token exchange (`/mobile-auth/token-exchange`)
@@ -115,6 +120,28 @@ Architecture is ready for Expo mobile app:
 ## Seed Data
 
 On initial setup, sample data was seeded:
+
 - 15 ingredients (spirits, beers, wines, mixers, garnishes)
 - 8 drinks (margaritas, mezcal, beers, wine, shots) with recipes and cost calculations
 - 4 staff users: Carlos Mendez (Manager), Ana Lopez (Head Bartender), Miguel Torres (Bartender), Sofia Garcia (Server)
+
+## Deployment: GHCR + Portainer (Stack-based)
+
+- This project now ships pre-built images on GHCR and uses a simple docker-compose stack for quick testing and deployment in Portainer.
+- Secrets management:
+  - Place sensitive values in a stack.env file at the repo root and reference it from docker-compose.yml via env_file per service. The provided stack.env includes sample values that should be overridden in your environment.
+- How to run locally (Portainer-friendly):
+  1. Create a folder for Postgres data: mkdir -p data/postgres
+  2. Ensure you have stack.env with your secrets (PORT, DATABASE*URL, POSTGRES*\* vars)
+  3. Bring up stack with docker-compose:
+     - docker-compose pull
+     - docker-compose up -d
+  4. Access:
+     - Frontend: http://localhost:8080
+     - API: http://localhost:3000
+  5. If you need to seed/migrate, run the appropriate one-shot steps (we can add a migration runner later if needed).
+
+Notes for Portainer:
+
+- In Portainer, create a Stack from docker-compose.yml and use the Stack Env feature to inject values from stack.env, or place them directly in Portainer's environment UI for the stack.
+- The stack.env file in the repo is provided as a template and should be kept out of version control if it contains real secrets.

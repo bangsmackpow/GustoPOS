@@ -3,9 +3,8 @@ services:
   api:
     image: ghcr.io/bangsmackpow/gusto-pos-api:latest
     container_name: gustopos-api
-    environment:
-      - DATABASE_URL=postgres://gusto:gusto@db:5432/gusto
-      - PORT=3000
+    env_file:
+      - stack.env
     depends_on:
       - db
     ports:
@@ -24,10 +23,8 @@ services:
   db:
     image: postgres:17
     container_name: gustopos-db
-    environment:
-      - POSTGRES_USER=gusto
-      - POSTGRES_PASSWORD=gusto
-      - POSTGRES_DB=gusto
+    env_file:
+      - stack.env
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     ports:
