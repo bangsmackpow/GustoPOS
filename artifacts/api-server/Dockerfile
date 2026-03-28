@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Stage 1: builder - install dependencies and build the API server
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Install pnpm
@@ -24,7 +24,7 @@ WORKDIR /app/artifacts/api-server
 RUN pnpm run build
 
 # Stage 2: runtime image
-FROM node:18-alpine
+FROM node:20-alpine
 WORKDIR /app
 
 COPY --from=builder /app/artifacts/api-server/dist ./dist
