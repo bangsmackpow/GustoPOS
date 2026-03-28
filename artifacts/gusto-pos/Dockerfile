@@ -20,7 +20,7 @@ COPY artifacts/gusto-pos/package.json artifacts/gusto-pos/package.json
 COPY . .
 
 RUN pnpm install
-RUN pnpm --filter @workspace/gusto-pos build
+RUN PORT=5173 BASE_PATH=/ pnpm --filter @workspace/gusto-pos build
 
 # Stage 2: serve with nginx
 FROM nginx:alpine
