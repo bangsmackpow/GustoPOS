@@ -1,0 +1,27 @@
+packages:
+  "zustand": "Global state management for POS active user and language settings"
+  "date-fns": "Human-readable date formatting for tabs and shifts"
+  "recharts": "Data visualization for end-of-night reports"
+  "framer-motion": "Premium micro-interactions and page transitions"
+  "@radix-ui/react-dialog": "Accessible dialogs for POS actions"
+  "@radix-ui/react-dropdown-menu": "Dropdowns for settings and user switching"
+  "@radix-ui/react-tabs": "Tabbed interfaces for menu categories"
+  "@radix-ui/react-slot": "Component composition"
+  "lucide-react": "Icons"
+  "clsx": "Utility for conditionally joining classNames"
+  "tailwind-merge": "Utility for merging tailwind classes"
+
+images:
+  - path: "artifacts/gusto-pos/public/images/hero-bg.png"
+    description: "Dark, moody, atmospheric photography of an upscale mexican mezcal and tequila bar, amber lighting, deep shadows, soft focus background"
+    aspect_ratio: "16:9"
+  - path: "artifacts/gusto-pos/public/images/logo.png"
+    description: "Minimalist modern geometric agave plant logo mark in vibrant amber and gold on transparent background"
+    aspect_ratio: "1:1"
+  - path: "artifacts/gusto-pos/public/images/pattern.png"
+    description: "Subtle dark seamless geometric pattern inspired by mexican tiles, very low contrast, almost black"
+    aspect_ratio: "16:9"
+
+notes:
+  - App relies on `@workspace/api-client-react` for TanStack Query hooks.
+  - Authentication redirects to `/api/login` and `/api/logout`.

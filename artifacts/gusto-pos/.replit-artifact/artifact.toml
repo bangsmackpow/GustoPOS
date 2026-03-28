@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "GustoPOS"
+version = "1.0.0"
+id = "artifacts/gusto-pos"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24732
+
+[services.development]
+run = "pnpm --filter @workspace/gusto-pos run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/gusto-pos", "run", "build" ]
+publicDir = "artifacts/gusto-pos/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24732"
+BASE_PATH = "/"

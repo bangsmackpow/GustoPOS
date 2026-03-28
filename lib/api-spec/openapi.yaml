@@ -1,22 +1,36 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: GustoPOS API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User management
+  - name: ingredients
+    description: Ingredient/inventory management
+  - name: drinks
+    description: Drink/menu management
+  - name: tabs
+    description: Tab/ticket management
+  - name: orders
+    description: Order line items
+  - name: reports
+    description: End-of-night reporting
+  - name: settings
+    description: App settings (currency, exchange rates)
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +38,582 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/user:
+    get:
+      operationId: getCurrentAuthUser
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current auth user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetCurrentAuthUserResponse"
+
+  /users:
+    get:
+      operationId: getUsers
+      tags: [users]
+      summary: List all staff users
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffUser"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create a staff user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserBody"
+      responses:
+        "201":
+          description: Created user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffUser"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get a staff user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffUser"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update a staff user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffUser"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete a staff user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /ingredients:
+    get:
+      operationId: getIngredients
+      tags: [ingredients]
+      summary: List all ingredients/inventory
+      responses:
+        "200":
+          description: List of ingredients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ingredient"
+    post:
+      operationId: createIngredient
+      tags: [ingredients]
+      summary: Create an ingredient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIngredientBody"
+      responses:
+        "201":
+          description: Created ingredient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ingredient"
+
+  /ingredients/{id}:
+    get:
+      operationId: getIngredient
+      tags: [ingredients]
+      summary: Get an ingredient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Ingredient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ingredient"
+    patch:
+      operationId: updateIngredient
+      tags: [ingredients]
+      summary: Update an ingredient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateIngredientBody"
+      responses:
+        "200":
+          description: Updated ingredient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ingredient"
+    delete:
+      operationId: deleteIngredient
+      tags: [ingredients]
+      summary: Delete an ingredient
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /drinks:
+    get:
+      operationId: getDrinks
+      tags: [drinks]
+      summary: List all drinks on the menu
+      responses:
+        "200":
+          description: List of drinks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Drink"
+    post:
+      operationId: createDrink
+      tags: [drinks]
+      summary: Create a drink with recipe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDrinkBody"
+      responses:
+        "201":
+          description: Created drink
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Drink"
+
+  /drinks/{id}:
+    get:
+      operationId: getDrink
+      tags: [drinks]
+      summary: Get a drink
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Drink
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Drink"
+    patch:
+      operationId: updateDrink
+      tags: [drinks]
+      summary: Update a drink
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDrinkBody"
+      responses:
+        "200":
+          description: Updated drink
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Drink"
+    delete:
+      operationId: deleteDrink
+      tags: [drinks]
+      summary: Delete a drink
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /tabs:
+    get:
+      operationId: getTabs
+      tags: [tabs]
+      summary: List all open/recent tabs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, closed, all]
+        - name: shiftId
+          in: query
+          schema:
+            type: ["string", "null"]
+      responses:
+        "200":
+          description: List of tabs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tab"
+    post:
+      operationId: createTab
+      tags: [tabs]
+      summary: Open a new tab
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTabBody"
+      responses:
+        "201":
+          description: Created tab
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tab"
+
+  /tabs/{id}:
+    get:
+      operationId: getTab
+      tags: [tabs]
+      summary: Get a tab with its orders
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tab with orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TabWithOrders"
+    patch:
+      operationId: updateTab
+      tags: [tabs]
+      summary: Update a tab (close, rename, change payment)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTabBody"
+      responses:
+        "200":
+          description: Updated tab
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tab"
+
+  /tabs/{id}/close:
+    post:
+      operationId: closeTab
+      tags: [tabs]
+      summary: Close a tab and record payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CloseTabBody"
+      responses:
+        "200":
+          description: Closed tab
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Tab"
+
+  /tabs/{id}/orders:
+    post:
+      operationId: addOrderToTab
+      tags: [orders]
+      summary: Add an order item to a tab
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderBody"
+      responses:
+        "201":
+          description: Created order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+
+  /orders/{id}:
+    patch:
+      operationId: updateOrder
+      tags: [orders]
+      summary: Update an order item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrderBody"
+      responses:
+        "200":
+          description: Updated order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+    delete:
+      operationId: deleteOrder
+      tags: [orders]
+      summary: Remove an order item from a tab
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /shifts:
+    get:
+      operationId: getShifts
+      tags: [reports]
+      summary: List all shifts
+      responses:
+        "200":
+          description: List of shifts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shift"
+    post:
+      operationId: startShift
+      tags: [reports]
+      summary: Start a new shift
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartShiftBody"
+      responses:
+        "201":
+          description: Created shift
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shift"
+
+  /shifts/active:
+    get:
+      operationId: getActiveShift
+      tags: [reports]
+      summary: Get the currently active shift
+      responses:
+        "200":
+          description: Active shift or null
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShiftOrNull"
+
+  /shifts/{id}/close:
+    post:
+      operationId: closeShift
+      tags: [reports]
+      summary: Close a shift (end of night)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Closed shift
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shift"
+
+  /reports/end-of-night/{shiftId}:
+    get:
+      operationId: getEndOfNightReport
+      tags: [reports]
+      summary: Get full end-of-night report for a shift
+      parameters:
+        - name: shiftId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: End of night report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EndOfNightReport"
+
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get app settings (exchange rates, display currency)
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+    patch:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update app settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingsBody"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppSettings"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +624,787 @@ components:
       required:
         - status
 
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
+    GetCurrentAuthUserResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/AuthUser"
+        isAuthenticated:
+          type: boolean
+      required:
+        - isAuthenticated
+
+    AuthUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [manager, head_bartender, bartender, server]
+        language:
+          type: string
+          enum: [en, es]
+      required:
+        - id
+        - role
+        - language
+
+    StaffUser:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: ["string", "null"]
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        profileImageUrl:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [manager, head_bartender, bartender, server]
+        language:
+          type: string
+          enum: [en, es]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - role
+        - language
+        - isActive
+        - createdAt
+
+    CreateUserBody:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [manager, head_bartender, bartender, server]
+        language:
+          type: string
+          enum: [en, es]
+        pin:
+          type: string
+      required:
+        - firstName
+        - role
+        - language
+        - pin
+
+    UpdateUserBody:
+      type: object
+      properties:
+        firstName:
+          type: ["string", "null"]
+        lastName:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        role:
+          type: ["string", "null"]
+        language:
+          type: ["string", "null"]
+        pin:
+          type: ["string", "null"]
+        isActive:
+          type: ["boolean", "null"]
+
+    Ingredient:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        nameEs:
+          type: ["string", "null"]
+        unit:
+          type: string
+        unitSize:
+          type: number
+          description: Size of the unit (e.g. 750 for a 750ml bottle)
+        costPerUnit:
+          type: number
+          description: Cost per purchase unit in base currency (MXN)
+        currentStock:
+          type: number
+          description: Current stock count in purchase units
+        minimumStock:
+          type: number
+          description: Minimum stock threshold for ordering prompts
+        category:
+          type: string
+          enum: [spirits, wine, beer, mixer, garnish, other]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - unit
+        - unitSize
+        - costPerUnit
+        - currentStock
+        - minimumStock
+        - category
+        - createdAt
+        - updatedAt
+
+    CreateIngredientBody:
+      type: object
+      properties:
+        name:
+          type: string
+        nameEs:
+          type: ["string", "null"]
+        unit:
+          type: string
+        unitSize:
+          type: number
+        costPerUnit:
+          type: number
+        currentStock:
+          type: number
+        minimumStock:
+          type: number
+        category:
+          type: string
+          enum: [spirits, wine, beer, mixer, garnish, other]
+      required:
+        - name
+        - unit
+        - unitSize
+        - costPerUnit
+        - currentStock
+        - minimumStock
+        - category
+
+    UpdateIngredientBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        nameEs:
+          type: ["string", "null"]
+        unit:
+          type: ["string", "null"]
+        unitSize:
+          type: ["number", "null"]
+        costPerUnit:
+          type: ["number", "null"]
+        currentStock:
+          type: ["number", "null"]
+        minimumStock:
+          type: ["number", "null"]
+        category:
+          type: ["string", "null"]
+
+    RecipeIngredient:
+      type: object
+      properties:
+        ingredientId:
+          type: string
+        ingredientName:
+          type: string
+        ingredientNameEs:
+          type: ["string", "null"]
+        amountInMl:
+          type: number
+          description: Amount used in ml (or units for garnishes)
+        costContribution:
+          type: number
+          description: Calculated cost contribution of this ingredient
+      required:
+        - ingredientId
+        - ingredientName
+        - amountInMl
+        - costContribution
+
+    Drink:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        nameEs:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        descriptionEs:
+          type: ["string", "null"]
+        category:
+          type: string
+          enum: [cocktail, beer, wine, shot, non_alcoholic, other]
+        costPerDrink:
+          type: number
+          description: Total calculated cost in MXN
+        suggestedPrice:
+          type: number
+          description: Suggested sell price in MXN (cost * markup factor)
+        actualPrice:
+          type: number
+          description: Actual sell price in MXN (manager override)
+        markupFactor:
+          type: number
+          description: Markup multiplier (e.g. 3.0 = 3x cost)
+        upcharge:
+          type: number
+          description: Additional upcharge amount in MXN added on top of cost calculation
+        recipe:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecipeIngredient"
+        isAvailable:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - category
+        - costPerDrink
+        - suggestedPrice
+        - actualPrice
+        - markupFactor
+        - upcharge
+        - recipe
+        - isAvailable
+        - createdAt
+        - updatedAt
+
+    CreateDrinkBody:
+      type: object
+      properties:
+        name:
+          type: string
+        nameEs:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        descriptionEs:
+          type: ["string", "null"]
+        category:
+          type: string
+          enum: [cocktail, beer, wine, shot, non_alcoholic, other]
+        markupFactor:
+          type: number
+        upcharge:
+          type: number
+        actualPrice:
+          type: ["number", "null"]
+        isAvailable:
+          type: boolean
+        recipe:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateRecipeIngredientBody"
+      required:
+        - name
+        - category
+        - markupFactor
+        - upcharge
+        - isAvailable
+        - recipe
+
+    CreateRecipeIngredientBody:
+      type: object
+      properties:
+        ingredientId:
+          type: string
+        amountInMl:
+          type: number
+      required:
+        - ingredientId
+        - amountInMl
+
+    UpdateDrinkBody:
+      type: object
+      properties:
+        name:
+          type: ["string", "null"]
+        nameEs:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        descriptionEs:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        markupFactor:
+          type: ["number", "null"]
+        upcharge:
+          type: ["number", "null"]
+        actualPrice:
+          type: ["number", "null"]
+        isAvailable:
+          type: ["boolean", "null"]
+        recipe:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreateRecipeIngredientBody"
+
+    Tab:
+      type: object
+      properties:
+        id:
+          type: string
+        nickname:
+          type: string
+          description: Table or customer nickname (e.g. "Table 5", "Maria")
+        status:
+          type: string
+          enum: [open, closed]
+        staffUserId:
+          type: string
+          description: The bartender/server who opened the tab
+        staffUserName:
+          type: ["string", "null"]
+        shiftId:
+          type: ["string", "null"]
+        totalMxn:
+          type: number
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [cash, card, null]
+        currency:
+          type: string
+          enum: [MXN, USD, CAD]
+        convertedTotal:
+          type: ["number", "null"]
+          description: Total in selected currency using current exchange rates
+        openedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: ["string", "null"]
+          format: date-time
+        notes:
+          type: ["string", "null"]
+      required:
+        - id
+        - nickname
+        - status
+        - staffUserId
+        - totalMxn
+        - currency
+        - openedAt
+
+    TabWithOrders:
+      type: object
+      properties:
+        id:
+          type: string
+        nickname:
+          type: string
+        status:
+          type: string
+          enum: [open, closed]
+        staffUserId:
+          type: string
+        staffUserName:
+          type: ["string", "null"]
+        shiftId:
+          type: ["string", "null"]
+        totalMxn:
+          type: number
+        paymentMethod:
+          type: ["string", "null"]
+          enum: [cash, card, null]
+        currency:
+          type: string
+          enum: [MXN, USD, CAD]
+        convertedTotal:
+          type: ["number", "null"]
+        openedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: ["string", "null"]
+          format: date-time
+        notes:
+          type: ["string", "null"]
+        orders:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+      required:
+        - id
+        - nickname
+        - status
+        - staffUserId
+        - totalMxn
+        - currency
+        - openedAt
+        - orders
+
+    CreateTabBody:
+      type: object
+      properties:
+        nickname:
+          type: string
+        staffUserId:
+          type: string
+        shiftId:
+          type: ["string", "null"]
+        currency:
+          type: string
+          enum: [MXN, USD, CAD]
+        notes:
+          type: ["string", "null"]
+      required:
+        - nickname
+        - staffUserId
+        - currency
+
+    UpdateTabBody:
+      type: object
+      properties:
+        nickname:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        currency:
+          type: ["string", "null"]
+
+    CloseTabBody:
+      type: object
+      properties:
+        paymentMethod:
+          type: string
+          enum: [cash, card]
+        notes:
+          type: ["string", "null"]
+      required:
+        - paymentMethod
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        tabId:
+          type: string
+        drinkId:
+          type: string
+        drinkName:
+          type: string
+        drinkNameEs:
+          type: ["string", "null"]
+        quantity:
+          type: integer
+        unitPriceMxn:
+          type: number
+        totalPriceMxn:
+          type: number
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - tabId
+        - drinkId
+        - drinkName
+        - quantity
+        - unitPriceMxn
+        - totalPriceMxn
+        - createdAt
+
+    CreateOrderBody:
+      type: object
+      properties:
+        drinkId:
+          type: string
+        quantity:
+          type: integer
+        notes:
+          type: ["string", "null"]
+      required:
+        - drinkId
+        - quantity
+
+    UpdateOrderBody:
+      type: object
+      properties:
+        quantity:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+
+    Shift:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        closedAt:
+          type: ["string", "null"]
+          format: date-time
+        status:
+          type: string
+          enum: [active, closed]
+        openedByUserId:
+          type: string
+        openedByUserName:
+          type: ["string", "null"]
+      required:
+        - id
+        - name
+        - startedAt
+        - status
+        - openedByUserId
+
+    ShiftOrNull:
+      type: object
+      properties:
+        shift:
+          $ref: "#/components/schemas/Shift"
+
+    StartShiftBody:
+      type: object
+      properties:
+        name:
+          type: string
+        openedByUserId:
+          type: string
+      required:
+        - name
+        - openedByUserId
+
+    EndOfNightReport:
+      type: object
+      properties:
+        shift:
+          $ref: "#/components/schemas/Shift"
+        totalSalesMxn:
+          type: number
+        totalSalesUsd:
+          type: number
+        totalSalesCad:
+          type: number
+        totalTabsClosed:
+          type: integer
+        cashSalesMxn:
+          type: number
+        cardSalesMxn:
+          type: number
+        salesByStaff:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesByStaff"
+        salesByDrink:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesByDrink"
+        salesByCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesByCategory"
+        topSellers:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesByDrink"
+        inventoryUsed:
+          type: array
+          items:
+            $ref: "#/components/schemas/InventoryUsed"
+        lowStockAlerts:
+          type: array
+          items:
+            $ref: "#/components/schemas/LowStockAlert"
+        tabs:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tab"
+      required:
+        - shift
+        - totalSalesMxn
+        - totalSalesUsd
+        - totalSalesCad
+        - totalTabsClosed
+        - cashSalesMxn
+        - cardSalesMxn
+        - salesByStaff
+        - salesByDrink
+        - salesByCategory
+        - topSellers
+        - inventoryUsed
+        - lowStockAlerts
+        - tabs
+
+    SalesByStaff:
+      type: object
+      properties:
+        staffUserId:
+          type: string
+        staffUserName:
+          type: string
+        totalSalesMxn:
+          type: number
+        tabsClosed:
+          type: integer
+        drinksServed:
+          type: integer
+      required:
+        - staffUserId
+        - staffUserName
+        - totalSalesMxn
+        - tabsClosed
+        - drinksServed
+
+    SalesByDrink:
+      type: object
+      properties:
+        drinkId:
+          type: string
+        drinkName:
+          type: string
+        drinkNameEs:
+          type: ["string", "null"]
+        quantitySold:
+          type: integer
+        totalSalesMxn:
+          type: number
+        totalCostMxn:
+          type: number
+        profitMxn:
+          type: number
+      required:
+        - drinkId
+        - drinkName
+        - quantitySold
+        - totalSalesMxn
+        - totalCostMxn
+        - profitMxn
+
+    SalesByCategory:
+      type: object
+      properties:
+        category:
+          type: string
+        quantitySold:
+          type: integer
+        totalSalesMxn:
+          type: number
+      required:
+        - category
+        - quantitySold
+        - totalSalesMxn
+
+    InventoryUsed:
+      type: object
+      properties:
+        ingredientId:
+          type: string
+        ingredientName:
+          type: string
+        amountUsed:
+          type: number
+        unit:
+          type: string
+        currentStock:
+          type: number
+      required:
+        - ingredientId
+        - ingredientName
+        - amountUsed
+        - unit
+        - currentStock
+
+    LowStockAlert:
+      type: object
+      properties:
+        ingredientId:
+          type: string
+        ingredientName:
+          type: string
+        currentStock:
+          type: number
+        minimumStock:
+          type: number
+        unit:
+          type: string
+      required:
+        - ingredientId
+        - ingredientName
+        - currentStock
+        - minimumStock
+        - unit
+
+    AppSettings:
+      type: object
+      properties:
+        baseCurrency:
+          type: string
+          enum: [MXN]
+        usdToMxnRate:
+          type: number
+          description: How many MXN per 1 USD
+        cadToMxnRate:
+          type: number
+          description: How many MXN per 1 CAD
+        defaultMarkupFactor:
+          type: number
+          description: Default markup multiplier for new drinks
+        barName:
+          type: string
+      required:
+        - baseCurrency
+        - usdToMxnRate
+        - cadToMxnRate
+        - defaultMarkupFactor
+        - barName
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        usdToMxnRate:
+          type: ["number", "null"]
+        cadToMxnRate:
+          type: ["number", "null"]
+        defaultMarkupFactor:
+          type: ["number", "null"]
+        barName:
+          type: ["string", "null"]
