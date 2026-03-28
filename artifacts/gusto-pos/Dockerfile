@@ -4,6 +4,9 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 
+# Provide default port for Vite build-time config that expects PORT to be set
+ENV PORT=5173
+
 # Install pnpm
 RUN npm install -g pnpm
 
