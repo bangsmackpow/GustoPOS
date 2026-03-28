@@ -1,0 +1,30 @@
+# syntax=docker/dockerfile:1
+
+# Stage 1: build frontend assets
+FROM node:18-alpine AS builder
+WORKDIR /app
+
+# Install pnpm
+RUN npm install -g pnpm
+
+# Copy workspace metadata and frontend package for proper workspace resolution
+COPY pnpm-workspace.yaml pnpm-workspace.yaml
+COPY package.json package.json
+COPY pnpm-lock.yaml pnpm-lock.yaml
+COPY artifacts/gusto-pos/package.json artifacts/gusto-pos/package.json
+
+# Copy all repo (needed for building the frontend in its package scope)
+COPY . .
+
+RUN pnpm install
+RUN pnpm --filter @workspace/gusto-pos build
+
+# Stage 2: serve with nginx
+FROM nginx:alpine
+COPY --from=builder /app/artifacts/gusto-pos/dist /usr/share/nginx/html
+
+# Simple SPA routing for history API fallback
+COPY artifacts/gusto-pos/nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
