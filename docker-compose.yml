@@ -5,6 +5,7 @@ services:
     container_name: gustopos-api
     environment:
       - DATABASE_URL=postgres://gusto:gusto@db:5432/gusto
+      - PORT=3000
     depends_on:
       - db
     ports:
