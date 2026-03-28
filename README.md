@@ -125,6 +125,35 @@ On initial setup, sample data was seeded:
 - 8 drinks (margaritas, mezcal, beers, wine, shots) with recipes and cost calculations
 - 4 staff users: Carlos Mendez (Manager), Ana Lopez (Head Bartender), Miguel Torres (Bartender), Sofia Garcia (Server)
 
+## Deployment Troubleshooting and Secrets
+
+- Frontend shows the default Nginx welcome page (instead of the app):
+  - This usually means the frontend image does not contain the built static assets (dist) or the assets were not copied into the nginx image during the build.
+  - Quick checks:
+    1. Inspect the frontend image contents (host machine):
+       docker run --rm ghcr.io/bangsmackpow/gusto-pos-frontend:latest sh -c 'ls -la /usr/share/nginx/html'
+       You should see index.html and static assets. If you only see an empty directory or the nginx default, the dist wasn’t copied.
+    2. If dist is missing, rebuild/push the frontend image so dist is included:
+       - Build locally (or in CI):
+         cd artifacts/gusto-pos
+         pnpm install
+         pnpm run build
+       - Ensure the frontend Dockerfile copies dist to the nginx html directory when building the image, then push to GHCR and redeploy.
+       - Then refresh the stack (docker-compose pull && docker-compose up -d) or redeploy via Portainer.
+
+- Secrets management (Portainer):
+  - We now provide a stack.env example (.env.example) for local dev. For Portainer, you can:
+    - Use a stack.env file and reference it via env_file in docker-compose, or
+    - Use Portainer Secrets to inject values (recommended for production). Then reference those secrets in your docker-compose (or Portainer stack) as environment values.
+
+- Security note:
+  - Do not commit real credentials. Use .env.example for structure and Portainer Secrets for production values.
+
+## Quick run-down: Local vs. Portainer
+
+- Local: docker-compose pull; docker-compose up -d (with stack.env at repo root or env variables loaded by your shell).
+- Portainer: Create a Stack, inject values via Stack Environment (or Secrets) and run.
+
 ## Deployment: GHCR + Portainer (Stack-based)
 
 - This project now ships pre-built images on GHCR and uses a simple docker-compose stack for quick testing and deployment in Portainer.
