@@ -17,6 +17,7 @@ export const usersTable = sqliteTable("users", {
   firstName: text("first_name"),
   lastName: text("last_name"),
   profileImageUrl: text("profile_image_url"),
+  password: text("password"),
   role: text("role").notNull().default("bartender"),
   language: text("language").notNull().default("en"),
   pin: text("pin").notNull().default("0000"),

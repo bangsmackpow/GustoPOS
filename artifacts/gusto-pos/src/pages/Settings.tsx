@@ -13,7 +13,7 @@ import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza, Zap, Trash2, Calendar, HardDrive, Shield, Globe } from 'lucide-react';
+import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza, Zap, Trash2, Calendar, HardDrive, Shield, Globe, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 
 const BRAND_ICONS = [
@@ -216,7 +216,7 @@ export default function Settings() {
               <h3 className="text-xl font-medium text-primary flex items-center gap-2">
                 <Users size={20} /> {getTranslation('staff_mgmt', language)}
               </h3>
-              <Button size="sm" variant="outline" onClick={() => setEditingStaff({ firstName: '', lastName: '', role: 'bartender', language: 'es', pin: '', isActive: true })}>
+              <Button size="sm" variant="outline" onClick={() => setEditingStaff({ firstName: '', lastName: '', role: 'bartender', language: 'es', pin: '', isActive: true, password: '' })}>
                 <Plus size={16} className="mr-1" /> {getTranslation('add_staff', language)}
               </Button>
             </div>
@@ -229,6 +229,7 @@ export default function Settings() {
                     <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-1 uppercase font-bold tracking-wider">
                       <span className="bg-secondary px-2 py-0.5 rounded">{getTranslation(user.role as any, language)}</span>
                       <span>PIN: {user.pin}</span>
+                      {user.email && <span className="text-primary/60 ml-2">● Dashboard Access</span>}
                     </div>
                   </div>
                   <Button variant="ghost" size="icon" onClick={() => setEditingStaff(user)}>
@@ -440,14 +441,31 @@ export default function Settings() {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Email</label>
+                <label className="text-sm font-medium text-muted-foreground">Email (Required for Login)</label>
                 <input type="email" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingStaff.email || ''} onChange={e => setEditingStaff({...editingStaff, email: e.target.value})} />
               </div>
+              
+              {(editingStaff.role === 'manager' || editingStaff.role === 'head_bartender') && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                  <label className="text-sm font-medium text-primary flex items-center gap-2">
+                    <Lock size={14} /> Account Password
+                  </label>
+                  <input 
+                    type="password" 
+                    className="w-full bg-secondary border border-primary/30 rounded-xl px-4 py-3 text-foreground" 
+                    placeholder={editingStaff.id ? "Leave blank to keep current" : "Set login password"}
+                    value={editingStaff.password || ''} 
+                    onChange={e => setEditingStaff({...editingStaff, password: e.target.value})} 
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">{getTranslation('role', language)}</label>
                   <select className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingStaff.role} onChange={e => setEditingStaff({...editingStaff, role: e.target.value})}>
                     <option value="manager">{getTranslation('manager', language)}</option>
+                    <option value="head_bartender">{getTranslation('head_bartender', language)}</option>
                     <option value="bartender">{getTranslation('bartender', language)}</option>
                     <option value="server">{getTranslation('server', language)}</option>
                   </select>

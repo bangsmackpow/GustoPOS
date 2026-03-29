@@ -735,6 +735,8 @@ components:
           enum: [en, es]
         pin:
           type: string
+        password:
+          type: ["string", "null"]
         isActive:
           type: boolean
         createdAt:
@@ -784,6 +786,8 @@ components:
         language:
           type: ["string", "null"]
         pin:
+          type: ["string", "null"]
+        password:
           type: ["string", "null"]
         isActive:
           type: ["boolean", "null"]

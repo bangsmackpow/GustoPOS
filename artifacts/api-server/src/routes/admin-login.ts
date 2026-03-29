@@ -1,6 +1,8 @@
 import express from "express";
 import type { Request, Response } from "express";
 import crypto from "crypto";
+import { db, usersTable } from "@workspace/db";
+import { eq, and, or } from "drizzle-orm";
 import { createSession, SESSION_COOKIE, SESSION_TTL, type SessionData } from "../lib/auth";
 
 // Minimal TOTPs helper (no external dep)
@@ -60,13 +62,54 @@ export default function adminLoginRouter(): express.Router {
     }
     const email = req.body?.email;
     const password = req.body?.password;
+    
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
+
+    let userToSession = null;
+
+    // 1. Check Super Admin (Env)
     if (email === adminEmail && password === adminPassword && adminEmail && adminPassword) {
+      userToSession = {
+        id: "admin",
+        email: adminEmail,
+        firstName: "Admin",
+        lastName: "User",
+        role: "manager",
+        language: "en",
+        isActive: true,
+      };
+    } else {
+      // 2. Check Database for Managers
+      const [dbUser] = await db.select().from(usersTable).where(
+        and(
+          eq(usersTable.email, email),
+          eq(usersTable.password, password),
+          eq(usersTable.isActive, true),
+          or(eq(usersTable.role, "manager"), eq(usersTable.role, "head_bartender"))
+        )
+      );
+
+      if (dbUser) {
+        userToSession = {
+          id: dbUser.id,
+          email: dbUser.email,
+          firstName: dbUser.firstName,
+          lastName: dbUser.lastName,
+          role: dbUser.role,
+          language: dbUser.language,
+          isActive: true,
+        };
+      }
+    }
+
+    if (userToSession) {
       const twofaEnabled =
         (process.env.ADMIN_2FA_ENABLED || "false").toLowerCase() === "true";
       const otp = req.body?.otp;
-      if (twofaEnabled) {
+      
+      // 2FA only for Super Admin for now
+      if (twofaEnabled && userToSession.id === "admin") {
         const secret = process.env.ADMIN_TOTP_SECRET || "";
         if (!secret) {
           return res
@@ -79,15 +122,7 @@ export default function adminLoginRouter(): express.Router {
       }
       
       const sessionData: SessionData = {
-        user: {
-          id: "admin",
-          email: adminEmail,
-          firstName: "Admin",
-          lastName: "User",
-          role: "admin",
-          language: "en",
-          isActive: true,
-        },
+        user: userToSession,
         createdAt: Date.now(),
       };
 
@@ -106,6 +141,7 @@ export default function adminLoginRouter(): express.Router {
         .status(200)
         .json({ ok: true, user: sessionData.user });
     }
+    
     return res.status(401).json({ ok: false, error: "Not authorized" });
   });
   return router;

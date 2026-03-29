@@ -79,6 +79,8 @@ export interface StaffUser {
   role: StaffUserRole;
   language: StaffUserLanguage;
   pin?: string;
+  /** @nullable */
+  password?: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -124,6 +126,8 @@ export interface UpdateUserBody {
   language?: string | null;
   /** @nullable */
   pin?: string | null;
+  /** @nullable */
+  password?: string | null;
   /** @nullable */
   isActive?: boolean | null;
 }
