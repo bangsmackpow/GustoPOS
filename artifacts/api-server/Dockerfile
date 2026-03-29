@@ -31,6 +31,13 @@ RUN pnpm run build
 FROM node:20-slim
 WORKDIR /app
 
+# Install Litestream and ca-certificates (needed for S3/R2 HTTPS connections)
+RUN apt-get update && apt-get install -y ca-certificates wget && \
+    wget https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.deb && \
+    dpkg -i litestream-v0.3.13-linux-amd64.deb && \
+    rm litestream-v0.3.13-linux-amd64.deb && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # Ensure data directory exists for SQLite and is writable
 RUN mkdir -p /app/data && chmod 777 /app/data
 
@@ -44,11 +51,14 @@ COPY --from=builder /app/artifacts/api-server/package.json ./artifacts/api-serve
 COPY --from=builder /app/lib/db/migrations /app/lib/db/migrations
 COPY --from=builder /app/db/seeds /app/db/seeds
 
+# Copy Litestream config
+COPY artifacts/api-server/litestream.yml /etc/litestream.yml
+
 # Expose the API port
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# Run from the root using the absolute path to the entrypoint
-# This matches the structure preserved above and satisfies module lookups
-CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
+# The CMD runs litestream replicate, which then spawns the node process
+# It also attempts to restore from the replica on startup if the DB file is missing
+CMD ["sh", "-c", "litestream restore -if-db-not-exists -if-replica-exists /app/data/gusto.db && litestream replicate -exec 'node --enable-source-maps artifacts/api-server/dist/index.mjs'"]

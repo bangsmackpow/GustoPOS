@@ -1,0 +1,9 @@
+# Litestream configuration for GustoPOS
+# Replicates the local SQLite database to an S3-compatible bucket (like Cloudflare R2)
+
+dbs:
+  - path: /app/data/gusto.db
+    replicas:
+      - url: ${LITESTREAM_REPLICA_URL}
+        access-key-id: ${LITESTREAM_ACCESS_KEY_ID}
+        secret-access-key: ${LITESTREAM_SECRET_ACCESS_KEY}
