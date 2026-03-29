@@ -31,7 +31,7 @@ export default function Drinks() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: (results: Papa.ParseResult<any>) => {
         // Expected headers: Name, Category, Price, Ingredients (comma separated: "Tequila:60, Lime:30")
         const rows = results.data.map((row: any) => {
           const recipeStr = row.Ingredients || row.ingredients || '';

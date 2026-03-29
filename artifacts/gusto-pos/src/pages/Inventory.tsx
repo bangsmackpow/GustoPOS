@@ -49,7 +49,7 @@ export default function Inventory() {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: (results) => {
+      complete: (results: Papa.ParseResult<any>) => {
         const rows = results.data.map((row: any) => ({
           name: row.Name || row.name || row.Producto,
           category: row.Category || row.category || row.Categoría || 'spirits',
