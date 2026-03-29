@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useRoute } from 'wouter';
-import { useGetTab, useGetDrinks } from '@workspace/api-client-react';
+import { useGetTab, useGetDrinks, useGetIngredients } from '@workspace/api-client-react';
 import { useAddOrderMutation, useDeleteOrderMutation, useCloseTabMutation } from '@/hooks/use-pos-mutations';
 import { usePosStore } from '@/store';
 import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, CreditCard, Banknote, Coffee, Wine, Beer, Info, X } from 'lucide-react';
+import { ArrowLeft, Trash2, CreditCard, Banknote, Coffee, Wine, Beer, Info, X, AlertCircle } from 'lucide-react';
 import { Link } from 'wouter';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -24,6 +24,7 @@ export default function TabDetail() {
   const { language, activeStaff } = usePosStore();
   const { data: tabData } = useGetTab(tabId);
   const { data: drinks } = useGetDrinks();
+  const { data: ingredients } = useGetIngredients();
   
   const addOrder = useAddOrderMutation();
   const deleteOrder = useDeleteOrderMutation();
@@ -49,6 +50,30 @@ export default function TabDetail() {
         window.location.href = '/tabs';
       }
     });
+  };
+
+  // Helper to calculate stock availability for a drink
+  const getStockStatus = (drink: any) => {
+    if (!ingredients || !drink.recipe || drink.recipe.length === 0) return { status: 'available', message: '' };
+    
+    let minServings = Infinity;
+    let missingIngredient = null;
+
+    for (const r of drink.recipe) {
+      const ing = ingredients.find(i => i.id === r.ingredientId);
+      if (!ing) continue;
+      
+      const available = Number(ing.currentStock) / Number(r.amountInMl);
+      if (available < minServings) minServings = available;
+      if (Number(ing.currentStock) <= 0) missingIngredient = ing;
+    }
+
+    if (minServings <= 0 || isFinite(minServings) === false) {
+      return { status: 'out', message: 'Out of Stock' };
+    } else if (minServings < 5) {
+      return { status: 'low', message: `${Math.floor(minServings)} left` };
+    }
+    return { status: 'available', message: '' };
   };
 
   return (
@@ -141,10 +166,16 @@ export default function TabDetail() {
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pr-2 pb-20">
           {filteredDrinks.map(drink => {
             const Icon = CATEGORY_ICONS[drink.category] || Wine;
+            const stock = getStockStatus(drink);
+            const isOut = stock.status === 'out';
+            const isLow = stock.status === 'low';
+
             return (
               <div 
                 key={drink.id}
-                className="glass p-4 rounded-3xl text-left hover:-translate-y-1 transition-all duration-200 active:scale-95 group border border-transparent hover:border-primary/30 flex flex-col h-40 relative overflow-hidden"
+                className={`glass p-4 rounded-3xl text-left transition-all duration-200 group border border-transparent flex flex-col h-44 relative overflow-hidden ${
+                  isOut ? 'opacity-40 grayscale pointer-events-none' : 'hover:-translate-y-1 active:scale-95 hover:border-primary/30'
+                }`}
               >
                 <button 
                   className="absolute top-3 right-3 text-muted-foreground hover:text-primary z-10 p-1"
@@ -158,16 +189,24 @@ export default function TabDetail() {
 
                 <button
                   onClick={() => handleAddDrink(drink.id)}
-                  disabled={!drink.isAvailable || addOrder.isPending}
+                  disabled={!drink.isAvailable || addOrder.isPending || isOut}
                   className="flex-1 flex flex-col w-full text-left"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center mb-3 text-primary group-hover:scale-110 transition-transform">
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center mb-3 text-primary group-hover:scale-110 transition-transform relative">
                     <Icon size={20} />
+                    {isLow && <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-500 rounded-full border-2 border-background animate-pulse" />}
                   </div>
-                  <h4 className="font-bold text-foreground leading-tight line-clamp-2 mb-auto group-hover:text-primary transition-colors">
+                  <h4 className="font-bold text-foreground leading-tight line-clamp-2 mb-1 group-hover:text-primary transition-colors">
                     {language === 'es' && drink.nameEs ? drink.nameEs : drink.name}
                   </h4>
-                  <div className="font-display font-bold text-lg mt-2">
+                  
+                  {stock.message && (
+                    <p className={`text-[10px] font-bold uppercase tracking-wider mb-auto ${isOut ? 'text-destructive' : 'text-amber-500'}`}>
+                      {stock.message}
+                    </p>
+                  )}
+
+                  <div className="font-display font-bold text-lg mt-auto pt-2">
                     {formatMoney(drink.actualPrice || drink.suggestedPrice)}
                   </div>
                 </button>
@@ -195,26 +234,43 @@ export default function TabDetail() {
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b border-white/5 pb-2">Recipe</h3>
               {viewingRecipe.recipe.length > 0 ? (
                 <div className="space-y-3">
-                  {viewingRecipe.recipe.map((ing: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center text-lg">
-                      <span className="text-foreground font-medium">
-                        {language === 'es' && ing.ingredientNameEs ? ing.ingredientNameEs : ing.ingredientName}
-                      </span>
-                      <div className="text-primary font-mono font-bold">
-                        {ing.amountInMl}ml <span className="text-muted-foreground text-sm">/</span> {(ing.amountInMl / 29.57).toFixed(1)}oz
+                  {viewingRecipe.recipe.map((ing: any, idx: number) => {
+                    const stockIng = ingredients?.find(i => i.id === ing.ingredientId);
+                    const currentStock = stockIng ? Number(stockIng.currentStock) : 0;
+                    const isLow = currentStock < (Number(ing.amountInMl) * 5);
+
+                    return (
+                      <div key={idx} className="flex justify-between items-center text-lg">
+                        <div className="flex flex-col">
+                          <span className="text-foreground font-medium">
+                            {language === 'es' && ing.ingredientNameEs ? ing.ingredientNameEs : ing.ingredientName}
+                          </span>
+                          {stockIng && (
+                            <span className={`text-[10px] font-bold uppercase ${isLow ? 'text-primary' : 'text-muted-foreground opacity-50'}`}>
+                              Stock: {stockIng.currentStock}{stockIng.unit}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-primary font-mono font-bold">
+                          {ing.amountInMl}ml <span className="text-muted-foreground text-sm">/</span> {(ing.amountInMl / 29.57).toFixed(1)}oz
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-muted-foreground py-4 text-center">No recipe details provided.</p>
               )}
             </div>
 
-            <Button className="w-full mt-8 h-12" onClick={() => {
-              handleAddDrink(viewingRecipe.id);
-              setViewingRecipe(null);
-            }}>
+            <Button 
+              className="w-full mt-8 h-12" 
+              disabled={getStockStatus(viewingRecipe).status === 'out'}
+              onClick={() => {
+                handleAddDrink(viewingRecipe.id);
+                setViewingRecipe(null);
+              }}
+            >
               Add to Ticket
             </Button>
           </div>
