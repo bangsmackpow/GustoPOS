@@ -31,14 +31,17 @@ RUN pnpm run build
 FROM node:20-slim
 WORKDIR /app
 
-# Ensure data directory exists for SQLite
-RUN mkdir -p /app/data
+# Ensure data directory exists for SQLite and is writable
+RUN mkdir -p /app/data && chmod 777 /app/data
 
 # Preserve the EXACT workspace structure to ensure all relative symlinks resolve correctly
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=builder /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
 COPY --from=builder /app/artifacts/api-server/package.json ./artifacts/api-server/package.json
+
+# Copy migrations needed for auto-migration on startup
+COPY --from=builder /app/lib/db/migrations ./lib/db/migrations
 
 # Expose the API port
 EXPOSE 3000
