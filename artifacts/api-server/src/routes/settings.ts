@@ -35,30 +35,36 @@ router.get("/settings", async (req: Request, res: Response) => {
 });
 
 router.patch("/settings", async (req: Request, res: Response) => {
-  const parsed = UpdateSettingsBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
-    return;
-  }
-  const data = parsed.data;
-  await ensureSettings();
-  const updateData: Partial<typeof settingsTable.$inferInsert> = { updatedAt: new Date() };
-  
-  if (data.usdToMxnRate != null) updateData.usdToMxnRate = Number(data.usdToMxnRate);
-  if (data.cadToMxnRate != null) updateData.cadToMxnRate = Number(data.cadToMxnRate);
-  if (data.defaultMarkupFactor != null) updateData.defaultMarkupFactor = Number(data.defaultMarkupFactor);
-  if (data.barName != null) updateData.barName = data.barName;
-  if (data.barIcon != null) updateData.barIcon = data.barIcon;
-  
-  if (data.smtpHost !== undefined) updateData.smtpHost = data.smtpHost;
-  if (data.smtpPort !== undefined) updateData.smtpPort = data.smtpPort;
-  if (data.smtpUser !== undefined) updateData.smtpUser = data.smtpUser;
-  if (data.smtpPassword !== undefined) updateData.smtpPassword = data.smtpPassword;
-  if (data.smtpFromEmail !== undefined) updateData.smtpFromEmail = data.smtpFromEmail;
-  if (data.inventoryAlertEmail !== undefined) updateData.inventoryAlertEmail = data.inventoryAlertEmail;
+  try {
+    const parsed = UpdateSettingsBody.safeParse(req.body);
+    if (!parsed.success) {
+      console.warn("Settings validation failed:", parsed.error.format());
+      return res.status(400).json({ error: "Invalid request body", details: parsed.error.format() });
+    }
+    const data = parsed.data;
+    await ensureSettings();
+    const updateData: Partial<typeof settingsTable.$inferInsert> = { updatedAt: new Date() };
+    
+    if (data.usdToMxnRate != null) updateData.usdToMxnRate = Number(data.usdToMxnRate);
+    if (data.cadToMxnRate != null) updateData.cadToMxnRate = Number(data.cadToMxnRate);
+    if (data.defaultMarkupFactor != null) updateData.defaultMarkupFactor = Number(data.defaultMarkupFactor);
+    if (data.barName != null) updateData.barName = data.barName;
+    if (data.barIcon != null) updateData.barIcon = data.barIcon;
+    
+    // Handle empty strings as null for optional SMTP fields
+    if (data.smtpHost !== undefined) updateData.smtpHost = data.smtpHost || null;
+    if (data.smtpPort !== undefined) updateData.smtpPort = data.smtpPort || null;
+    if (data.smtpUser !== undefined) updateData.smtpUser = data.smtpUser || null;
+    if (data.smtpPassword !== undefined) updateData.smtpPassword = data.smtpPassword || null;
+    if (data.smtpFromEmail !== undefined) updateData.smtpFromEmail = data.smtpFromEmail || null;
+    if (data.inventoryAlertEmail !== undefined) updateData.inventoryAlertEmail = data.inventoryAlertEmail || null;
 
-  const [settings] = await db.update(settingsTable).set(updateData).where(eq(settingsTable.id, "default")).returning();
-  res.json(formatSettings(settings));
+    const [settings] = await db.update(settingsTable).set(updateData).where(eq(settingsTable.id, "default")).returning();
+    return res.json(formatSettings(settings));
+  } catch (err: any) {
+    console.error("Failed to update settings:", err);
+    return res.status(500).json({ error: "Internal server error", message: err.message });
+  }
 });
 
 export default router;

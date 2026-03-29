@@ -187,18 +187,28 @@ export default function Settings() {
                   <input 
                     type="number" step="0.01"
                     className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
-                    value={formData.usdToMxnRate} 
-                    onChange={e => setFormData({...formData, usdToMxnRate: parseFloat(e.target.value)})} 
+                    value={formData.usdToMxnRate || ''} 
+                    onChange={e => setFormData({...formData, usdToMxnRate: parseFloat(e.target.value) || 0})} 
                   />
-                </div>
-                <div>
+                  </div>
+                  <div>
                   <label className="block text-sm font-medium text-muted-foreground mb-2">CAD → MXN</label>
                   <input 
                     type="number" step="0.01"
                     className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
-                    value={formData.cadToMxnRate} 
-                    onChange={e => setFormData({...formData, cadToMxnRate: parseFloat(e.target.value)})} 
+                    value={formData.cadToMxnRate || ''} 
+                    onChange={e => setFormData({...formData, cadToMxnRate: parseFloat(e.target.value) || 0})} 
                   />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Default Markup Factor</label>
+                  <input 
+                    type="number" step="0.1"
+                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
+                    value={formData.defaultMarkupFactor || ''} 
+                    onChange={e => setFormData({...formData, defaultMarkupFactor: parseFloat(e.target.value) || 0})} 
+                  />
+                  <p className="text-[10px] text-muted-foreground mt-2 uppercase tracking-wider">Used for automatic price suggestions (e.g. 3.0 = 3x cost)</p>
                 </div>
               </div>
             </div>
@@ -256,8 +266,8 @@ export default function Settings() {
                   <input 
                     type="number"
                     className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground text-sm" 
-                    value={formData.smtpPort} 
-                    onChange={e => setFormData({...formData, smtpPort: parseInt(e.target.value) || 0})} 
+                    value={formData.smtpPort || ''} 
+                    onChange={e => setFormData({...formData, smtpPort: e.target.value ? parseInt(e.target.value) : 0})} 
                   />
                 </div>
                 <div>
