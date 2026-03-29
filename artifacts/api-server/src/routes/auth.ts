@@ -103,7 +103,7 @@ router.get("/login", async (req: Request, res: Response) => {
   const config = await getOidcConfig();
   const callbackUrl = `${getOrigin(req)}/api/callback`;
 
-  const returnTo = getSafeReturnTo(req.query.returnTo);
+  const returnTo = getSafeReturnTo(req.query.returnTo || req.query.ReturnTo);
 
   const state = oidc.randomState();
   const nonce = oidc.randomNonce();
