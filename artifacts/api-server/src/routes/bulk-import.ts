@@ -47,7 +47,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
     res.json({ success: true, count: results.length });
   } catch (err: any) {
     console.error("Bulk import error:", err);
-    res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: err.message });
   }
 });
 
