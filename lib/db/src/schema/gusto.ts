@@ -94,6 +94,12 @@ export const settingsTable = pgTable("settings", {
   usdToMxnRate: decimal("usd_to_mxn_rate", { precision: 10, scale: 4 }).notNull().default("17.5"),
   cadToMxnRate: decimal("cad_to_mxn_rate", { precision: 10, scale: 4 }).notNull().default("12.8"),
   defaultMarkupFactor: decimal("default_markup_factor", { precision: 10, scale: 2 }).notNull().default("3.0"),
+  smtpHost: varchar("smtp_host"),
+  smtpPort: integer("smtp_port"),
+  smtpUser: varchar("smtp_user"),
+  smtpPassword: varchar("smtp_password"),
+  smtpFromEmail: varchar("smtp_from_email"),
+  inventoryAlertEmail: varchar("inventory_alert_email"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 

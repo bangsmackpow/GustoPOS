@@ -12,6 +12,12 @@ function formatSettings(s: typeof settingsTable.$inferSelect) {
     cadToMxnRate: Number(s.cadToMxnRate),
     defaultMarkupFactor: Number(s.defaultMarkupFactor),
     barName: s.barName,
+    smtpHost: s.smtpHost ?? null,
+    smtpPort: s.smtpPort ?? null,
+    smtpUser: s.smtpUser ?? null,
+    smtpPassword: s.smtpPassword ?? null,
+    smtpFromEmail: s.smtpFromEmail ?? null,
+    inventoryAlertEmail: s.inventoryAlertEmail ?? null,
   };
 }
 
@@ -35,11 +41,19 @@ router.patch("/settings", async (req: Request, res: Response) => {
   }
   const data = parsed.data;
   await ensureSettings();
-  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+  const updateData: Partial<typeof settingsTable.$inferInsert> = { updatedAt: new Date() };
+  
   if (data.usdToMxnRate != null) updateData.usdToMxnRate = String(data.usdToMxnRate);
   if (data.cadToMxnRate != null) updateData.cadToMxnRate = String(data.cadToMxnRate);
   if (data.defaultMarkupFactor != null) updateData.defaultMarkupFactor = String(data.defaultMarkupFactor);
   if (data.barName != null) updateData.barName = data.barName;
+  
+  if (data.smtpHost !== undefined) updateData.smtpHost = data.smtpHost;
+  if (data.smtpPort !== undefined) updateData.smtpPort = data.smtpPort;
+  if (data.smtpUser !== undefined) updateData.smtpUser = data.smtpUser;
+  if (data.smtpPassword !== undefined) updateData.smtpPassword = data.smtpPassword;
+  if (data.smtpFromEmail !== undefined) updateData.smtpFromEmail = data.smtpFromEmail;
+  if (data.inventoryAlertEmail !== undefined) updateData.inventoryAlertEmail = data.inventoryAlertEmail;
 
   const [settings] = await db.update(settingsTable).set(updateData).where(eq(settingsTable.id, "default")).returning();
   res.json(formatSettings(settings));

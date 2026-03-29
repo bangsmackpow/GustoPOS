@@ -585,6 +585,18 @@ export interface AppSettings {
   /** Default markup multiplier for new drinks */
   defaultMarkupFactor: number;
   barName: string;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  /** @nullable */
+  smtpPassword?: string | null;
+  /** @nullable */
+  smtpFromEmail?: string | null;
+  /** @nullable */
+  inventoryAlertEmail?: string | null;
 }
 
 export interface UpdateSettingsBody {
@@ -596,6 +608,18 @@ export interface UpdateSettingsBody {
   defaultMarkupFactor?: number | null;
   /** @nullable */
   barName?: string | null;
+  /** @nullable */
+  smtpHost?: string | null;
+  /** @nullable */
+  smtpPort?: number | null;
+  /** @nullable */
+  smtpUser?: string | null;
+  /** @nullable */
+  smtpPassword?: string | null;
+  /** @nullable */
+  smtpFromEmail?: string | null;
+  /** @nullable */
+  inventoryAlertEmail?: string | null;
 }
 
 export type GetTabsParams = {

@@ -1392,6 +1392,18 @@ components:
           description: Default markup multiplier for new drinks
         barName:
           type: string
+        smtpHost:
+          type: ["string", "null"]
+        smtpPort:
+          type: ["number", "null"]
+        smtpUser:
+          type: ["string", "null"]
+        smtpPassword:
+          type: ["string", "null"]
+        smtpFromEmail:
+          type: ["string", "null"]
+        inventoryAlertEmail:
+          type: ["string", "null"]
       required:
         - baseCurrency
         - usdToMxnRate
@@ -1409,4 +1421,16 @@ components:
         defaultMarkupFactor:
           type: ["number", "null"]
         barName:
+          type: ["string", "null"]
+        smtpHost:
+          type: ["string", "null"]
+        smtpPort:
+          type: ["number", "null"]
+        smtpUser:
+          type: ["string", "null"]
+        smtpPassword:
+          type: ["string", "null"]
+        smtpFromEmail:
+          type: ["string", "null"]
+        inventoryAlertEmail:
           type: ["string", "null"]

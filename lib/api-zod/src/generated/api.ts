@@ -830,6 +830,12 @@ export const GetSettingsResponse = zod.object({
     .number()
     .describe("Default markup multiplier for new drinks"),
   barName: zod.string(),
+  smtpHost: zod.string().nullish(),
+  smtpPort: zod.number().nullish(),
+  smtpUser: zod.string().nullish(),
+  smtpPassword: zod.string().nullish(),
+  smtpFromEmail: zod.string().nullish(),
+  inventoryAlertEmail: zod.string().nullish(),
 });
 
 /**
@@ -840,6 +846,12 @@ export const UpdateSettingsBody = zod.object({
   cadToMxnRate: zod.number().nullish(),
   defaultMarkupFactor: zod.number().nullish(),
   barName: zod.string().nullish(),
+  smtpHost: zod.string().nullish(),
+  smtpPort: zod.number().nullish(),
+  smtpUser: zod.string().nullish(),
+  smtpPassword: zod.string().nullish(),
+  smtpFromEmail: zod.string().nullish(),
+  inventoryAlertEmail: zod.string().nullish(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -850,4 +862,10 @@ export const UpdateSettingsResponse = zod.object({
     .number()
     .describe("Default markup multiplier for new drinks"),
   barName: zod.string(),
+  smtpHost: zod.string().nullish(),
+  smtpPort: zod.number().nullish(),
+  smtpUser: zod.string().nullish(),
+  smtpPassword: zod.string().nullish(),
+  smtpFromEmail: zod.string().nullish(),
+  inventoryAlertEmail: zod.string().nullish(),
 });
