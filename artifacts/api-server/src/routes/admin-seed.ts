@@ -1,8 +1,7 @@
 import express from "express";
 import type { Request, Response } from "express";
-// pg is loaded lazily at runtime to avoid bundling it in CI builds
-import fs from "fs";
-import path from "path";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 // Development admin seed endpoint
 export default function adminSeedRouter(): express.Router {
@@ -14,26 +13,36 @@ export default function adminSeedRouter(): express.Router {
       return res.status(403).json({ ok: false, error: "seed disabled" });
     }
 
-    const connectionString = process.env.DATABASE_URL;
-    if (!connectionString) {
-      return res
-        .status(500)
-        .json({ ok: false, error: "DATABASE_URL not configured" });
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) {
+      return res.status(500).json({ ok: false, error: "ADMIN_EMAIL not configured" });
     }
-    const { Pool } = await import("pg");
-    const pool = new Pool({ connectionString });
+
     try {
-      const seedSqlPath = path.resolve(
-        __dirname,
-        "../../../../db/seeds/insert-admin.sql",
-      );
-      const sql = fs.readFileSync(seedSqlPath, "utf8");
-      await pool.query(sql);
-      return res.json({ ok: true, message: "admin seeded" });
+      const adminPin = process.env.ADMIN_PIN || "0000";
+      
+      const existing = await db.select().from(usersTable).where(eq(usersTable.email, adminEmail));
+      
+      if (existing.length === 0) {
+        await db.insert(usersTable).values({
+          email: adminEmail,
+          firstName: "Admin",
+          lastName: "User",
+          role: "admin",
+          language: "en",
+          pin: adminPin,
+          isActive: true,
+        });
+        return res.json({ ok: true, message: `Admin user created: ${adminEmail}` });
+      } else {
+        // Update existing admin pin if it's different
+        await db.update(usersTable)
+          .set({ pin: adminPin, role: "admin", isActive: true })
+          .where(eq(usersTable.email, adminEmail));
+        return res.json({ ok: true, message: `Admin user updated: ${adminEmail}` });
+      }
     } catch (e: any) {
       return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
-    } finally {
-      await pool.end();
     }
   });
   return router;
