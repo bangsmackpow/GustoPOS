@@ -52,7 +52,7 @@ function verifyTotp(
 
 export default function adminLoginRouter(): express.Router {
   const router = express.Router();
-  router.post("/login", async (req: Request, res: Response) => {
+  router.post("/admin/login", async (req: Request, res: Response) => {
     const enabled =
       (process.env.ADMIN_LOGIN_ENABLED || "true").toLowerCase() === "true";
     if (!enabled) {

@@ -1,8 +1,46 @@
-import React from 'react';
-import { Wine } from 'lucide-react';
+import React, { useState } from 'react';
+import { Wine, Lock, Mail, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 export default function Login() {
+  const [showAdminForm, setShowAdminForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (data.ok) {
+        window.location.href = '/';
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Login Failed",
+          description: data.error || "Invalid credentials"
+        });
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not connect to server"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 z-0">
@@ -22,13 +60,67 @@ export default function Login() {
         <h1 className="mt-12 text-4xl font-display font-bold text-foreground mb-2">Gusto<span className="text-primary">POS</span></h1>
         <p className="text-muted-foreground mb-8 text-lg">Management & POS System</p>
         
-        <Button 
-          size="lg" 
-          className="w-full text-lg h-14"
-          onClick={() => window.location.href = '/api/login?returnTo=/'}
-        >
-          System Login
-        </Button>
+        {!showAdminForm ? (
+          <div className="space-y-4">
+            <Button 
+              size="lg" 
+              className="w-full text-lg h-14"
+              onClick={() => window.location.href = '/api/login?returnTo=/'}
+            >
+              System Login
+            </Button>
+            <button 
+              onClick={() => setShowAdminForm(true)}
+              className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center w-full gap-1"
+            >
+              Admin login with password <ChevronRight size={14} />
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleAdminLogin} className="space-y-4 text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Mail size={14} /> Email
+              </label>
+              <input 
+                type="email" 
+                required
+                className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                placeholder="admin@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Lock size={14} /> Password
+              </label>
+              <input 
+                type="password" 
+                required
+                className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+              />
+            </div>
+            <Button 
+              type="submit"
+              size="lg" 
+              className="w-full text-lg h-14"
+              disabled={isLoading}
+            >
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
+            <button 
+              type="button"
+              onClick={() => setShowAdminForm(false)}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-center"
+            >
+              Back to system login
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

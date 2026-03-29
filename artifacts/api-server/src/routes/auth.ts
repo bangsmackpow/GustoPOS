@@ -95,104 +95,119 @@ router.get("/auth/user", (req: Request, res: Response) => {
 });
 
 router.get("/login", async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
-  const callbackUrl = `${getOrigin(req)}/api/callback`;
+  try {
+    const config = await getOidcConfig();
+    const callbackUrl = `${getOrigin(req)}/api/callback`;
 
-  const returnTo = getSafeReturnTo(req.query.returnTo || req.query.ReturnTo);
+    const returnTo = getSafeReturnTo(req.query.returnTo || req.query.ReturnTo);
 
-  const state = oidc.randomState();
-  const nonce = oidc.randomNonce();
-  const codeVerifier = oidc.randomPKCECodeVerifier();
-  const codeChallenge = await oidc.calculatePKCECodeChallenge(codeVerifier);
+    const state = oidc.randomState();
+    const nonce = oidc.randomNonce();
+    const codeVerifier = oidc.randomPKCECodeVerifier();
+    const codeChallenge = await oidc.calculatePKCECodeChallenge(codeVerifier);
 
-  const redirectTo = oidc.buildAuthorizationUrl(config, {
-    redirect_uri: callbackUrl,
-    scope: "openid email profile offline_access",
-    code_challenge: codeChallenge,
-    code_challenge_method: "S256",
-    prompt: "login consent",
-    state,
-    nonce,
-  });
+    const redirectTo = oidc.buildAuthorizationUrl(config, {
+      redirect_uri: callbackUrl,
+      scope: "openid email profile offline_access",
+      code_challenge: codeChallenge,
+      code_challenge_method: "S256",
+      prompt: "login consent",
+      state,
+      nonce,
+    });
 
-  setOidcCookie(res, "code_verifier", codeVerifier);
-  setOidcCookie(res, "nonce", nonce);
-  setOidcCookie(res, "state", state);
-  setOidcCookie(res, "return_to", returnTo);
+    setOidcCookie(res, "code_verifier", codeVerifier);
+    setOidcCookie(res, "nonce", nonce);
+    setOidcCookie(res, "state", state);
+    setOidcCookie(res, "return_to", returnTo);
 
-  res.redirect(redirectTo.href);
+    res.redirect(redirectTo.href);
+  } catch (err: any) {
+    console.error("OIDC login error:", err);
+    res.status(500).send(`Authentication error: ${err.message}. Ensure REPL_ID is set correctly.`);
+  }
 });
 
 // Query params are not validated because the OIDC provider may include
 // parameters not expressed in the schema.
 router.get("/callback", async (req: Request, res: Response) => {
-  const config = await getOidcConfig();
-  const callbackUrl = `${getOrigin(req)}/api/callback`;
-
-  const codeVerifier = req.cookies?.code_verifier;
-  const nonce = req.cookies?.nonce;
-  const expectedState = req.cookies?.state;
-
-  if (!codeVerifier || !expectedState) {
-    res.redirect("/api/login");
-    return;
-  }
-
-  const currentUrl = new URL(
-    `${callbackUrl}?${new URL(req.url, `http://${req.headers.host}`).searchParams}`,
-  );
-
-  let tokens: oidc.TokenEndpointResponse & oidc.TokenEndpointResponseHelpers;
   try {
-    tokens = await oidc.authorizationCodeGrant(config, currentUrl, {
-      pkceCodeVerifier: codeVerifier,
-      expectedNonce: nonce,
-      expectedState,
-      idTokenExpected: true,
-    });
-  } catch {
-    res.redirect("/api/login");
-    return;
+    const config = await getOidcConfig();
+    const callbackUrl = `${getOrigin(req)}/api/callback`;
+
+    const codeVerifier = req.cookies?.code_verifier;
+    const nonce = req.cookies?.nonce;
+    const expectedState = req.cookies?.state;
+
+    if (!codeVerifier || !expectedState) {
+      console.warn("OIDC callback missing cookies", { codeVerifier: !!codeVerifier, expectedState: !!expectedState });
+      res.redirect("/login");
+      return;
+    }
+
+    const currentUrl = new URL(
+      `${callbackUrl}?${new URL(req.url, `http://${req.headers.host}`).searchParams}`,
+    );
+
+    let tokens: oidc.TokenEndpointResponse & oidc.TokenEndpointResponseHelpers;
+    try {
+      tokens = await oidc.authorizationCodeGrant(config, currentUrl, {
+        pkceCodeVerifier: codeVerifier,
+        expectedNonce: nonce,
+        expectedState,
+        idTokenExpected: true,
+      });
+    } catch (err: any) {
+      console.error("OIDC grant error:", err);
+      res.redirect("/login");
+      return;
+    }
+
+    const returnTo = getSafeReturnTo(req.cookies?.return_to);
+
+    res.clearCookie("code_verifier", { path: "/" });
+    res.clearCookie("nonce", { path: "/" });
+    res.clearCookie("state", { path: "/" });
+    res.clearCookie("return_to", { path: "/" });
+
+    const claims = tokens.claims();
+    if (!claims) {
+      console.error("OIDC callback missing claims");
+      res.redirect("/login");
+      return;
+    }
+
+    const dbUser = await upsertUser(
+      claims as unknown as Record<string, unknown>,
+    );
+
+    const now = Math.floor(Date.now() / 1000);
+
+    const sessionData: SessionData = {
+      user: {
+        id: dbUser.id,
+        email: dbUser.email,
+        firstName: dbUser.firstName,
+        lastName: dbUser.lastName,
+        profileImageUrl: dbUser.profileImageUrl,
+        role: dbUser.role ?? "bartender",
+        language: dbUser.language ?? "en",
+        isActive: dbUser.isActive ?? true,
+      },
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+      expires_at: tokens.expiresIn() ? now + tokens.expiresIn()! : claims.exp,
+    };
+
+    const sid = await createSession(sessionData);
+    setSessionCookie(res, sid);
+    res.redirect(returnTo);
+  } catch (err: any) {
+    console.error("OIDC callback error:", err);
+    res.status(500).send(`Authentication callback error: ${err.message}`);
   }
-
-  const returnTo = getSafeReturnTo(req.cookies?.return_to);
-
-  res.clearCookie("code_verifier", { path: "/" });
-  res.clearCookie("nonce", { path: "/" });
-  res.clearCookie("state", { path: "/" });
-  res.clearCookie("return_to", { path: "/" });
-
-  const claims = tokens.claims();
-  if (!claims) {
-    res.redirect("/api/login");
-    return;
-  }
-
-  const dbUser = await upsertUser(
-    claims as unknown as Record<string, unknown>,
-  );
-
-  const now = Math.floor(Date.now() / 1000);
-  const sessionData: SessionData = {
-    user: {
-      id: dbUser.id,
-      email: dbUser.email,
-      firstName: dbUser.firstName,
-      lastName: dbUser.lastName,
-      profileImageUrl: dbUser.profileImageUrl,
-      role: dbUser.role ?? "bartender",
-      language: dbUser.language ?? "en",
-      isActive: dbUser.isActive ?? true,
-    },
-    access_token: tokens.access_token,
-    refresh_token: tokens.refresh_token,
-    expires_at: tokens.expiresIn() ? now + tokens.expiresIn()! : claims.exp,
-  };
-
-  const sid = await createSession(sessionData);
-  setSessionCookie(res, sid);
-  res.redirect(returnTo);
 });
+
 
 router.get("/logout", async (req: Request, res: Response) => {
   const config = await getOidcConfig();
