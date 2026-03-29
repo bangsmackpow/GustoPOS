@@ -29,16 +29,16 @@ RUN pnpm run build
 
 # Stage 2: runtime image
 FROM node:20-slim
-WORKDIR /app/artifacts/api-server
+WORKDIR /app
 
-# Since we now bundle dependencies like 'pg' and 'nodemailer', 
-# we only need the dist folder and the source maps.
+# Flatten the structure for production reliability.
+# Since dependencies are bundled, we only need the dist files.
 COPY --from=builder /app/artifacts/api-server/dist ./dist
-COPY --from=builder /app/artifacts/api-server/package.json ./package.json
 
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# Run the bundled entry point
+# The error logs showed node looking for /app/dist/index.mjs
+# This structure satisfies that exactly.
 CMD ["node", "--enable-source-maps", "dist/index.mjs"]
