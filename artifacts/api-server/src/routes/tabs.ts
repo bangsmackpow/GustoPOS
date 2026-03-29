@@ -212,6 +212,7 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
 
   const drink = drinkResult[0].drink;
   const recipe = drinkResult.filter(r => r.recipe).map(r => ({
+    ingredientId: r.recipe!.ingredientId,
     amountInMl: Number(r.recipe!.amountInMl),
     costPerUnit: r.ingredient ? Number(r.ingredient.costPerUnit) : 0,
     unitSize: r.ingredient ? Number(r.ingredient.unitSize) : 1,
@@ -225,15 +226,32 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
   const suggestedPrice = costPerDrink * markupFactor + upcharge;
   const unitPriceMxn = drink.actualPrice != null ? Number(drink.actualPrice) : suggestedPrice;
 
-  const [order] = await db.insert(ordersTable).values({
-    tabId: req.params.id as string,
-    drinkId,
-    drinkName: drink.name,
-    drinkNameEs: drink.nameEs ?? null,
-    quantity,
-    unitPriceMxn: String(unitPriceMxn),
-    notes: notes ?? null,
-  } as typeof ordersTable.$inferInsert).returning();
+  // Transaction for order insertion and stock decrement
+  const order = await db.transaction(async (tx) => {
+    // 1. Decrement stock for each recipe ingredient
+    for (const item of recipe) {
+      if (item.ingredientId && item.amountInMl > 0) {
+        await tx.update(ingredientsTable)
+          .set({
+            currentStock: sql`${ingredientsTable.currentStock} - ${item.amountInMl.toString()}`
+          })
+          .where(eq(ingredientsTable.id, item.ingredientId));
+      }
+    }
+
+    // 2. Insert order
+    const [newOrder] = await tx.insert(ordersTable).values({
+      tabId: req.params.id as string,
+      drinkId,
+      drinkName: drink.name,
+      drinkNameEs: drink.nameEs ?? null,
+      quantity,
+      unitPriceMxn: String(unitPriceMxn),
+      notes: notes ?? null,
+    } as typeof ordersTable.$inferInsert).returning();
+
+    return newOrder;
+  });
 
   await recalcTabTotal(req.params.id as string);
 
@@ -247,11 +265,39 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
     return;
   }
   const data = parsed.data;
+
+  const [existingOrder] = await db.select().from(ordersTable).where(eq(ordersTable.id, req.params.id as string));
+  if (!existingOrder) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
   const updateData: Partial<typeof ordersTable.$inferInsert> = {};
   if (data.quantity != null) updateData.quantity = data.quantity;
   if (data.notes !== undefined) updateData.notes = data.notes;
 
-  const [order] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, req.params.id as string)).returning();
+  const order = await db.transaction(async (tx) => {
+    // 1. If quantity changed, adjust stock
+    if (data.quantity != null && data.quantity !== existingOrder.quantity) {
+      const diff = data.quantity - existingOrder.quantity;
+      const recipe = await tx.select()
+        .from(recipeIngredientsTable)
+        .where(eq(recipeIngredientsTable.drinkId, existingOrder.drinkId));
+
+      for (const item of recipe) {
+        await tx.update(ingredientsTable)
+          .set({
+            currentStock: sql`${ingredientsTable.currentStock} - ${(Number(item.amountInMl) * diff).toString()}`
+          })
+          .where(eq(ingredientsTable.id, item.ingredientId));
+      }
+    }
+
+    // 2. Update order
+    const [updatedOrder] = await tx.update(ordersTable).set(updateData).where(eq(ordersTable.id, req.params.id as string)).returning();
+    return updatedOrder;
+  });
+
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
@@ -266,7 +312,26 @@ router.delete("/orders/:id", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  await db.delete(ordersTable).where(eq(ordersTable.id, req.params.id as string));
+
+  // Get recipe for restoration
+  const recipe = await db.select()
+    .from(recipeIngredientsTable)
+    .where(eq(recipeIngredientsTable.drinkId, order.drinkId));
+
+  await db.transaction(async (tx) => {
+    // 1. Restore stock
+    for (const item of recipe) {
+      await tx.update(ingredientsTable)
+        .set({
+          currentStock: sql`${ingredientsTable.currentStock} + ${item.amountInMl.toString()}`
+        })
+        .where(eq(ingredientsTable.id, item.ingredientId));
+    }
+
+    // 2. Delete order
+    await tx.delete(ordersTable).where(eq(ordersTable.id, req.params.id as string));
+  });
+
   await recalcTabTotal(order.tabId);
   res.json({ success: true });
 });
