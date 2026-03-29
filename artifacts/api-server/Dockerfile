@@ -33,15 +33,18 @@ RUN pnpm run build
 FROM node:20-slim
 WORKDIR /app
 
-# To ensure symlinks work correctly in a pnpm monorepo, 
-# we preserve the exact structure of the workspace
+# Preserve the full workspace structure to ensure pnpm's relative symlinks resolve correctly
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=builder /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
-COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/artifacts/api-server/package.json ./artifacts/api-server/package.json
+
+# Work from the specific artifact directory so relative paths in package.json/node work
+WORKDIR /app/artifacts/api-server
 
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# Execute from the root to maintain relative symlink resolution
-CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
+# Run with an absolute path to the bundled entry point
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]
