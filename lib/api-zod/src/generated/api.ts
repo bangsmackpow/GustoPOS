@@ -872,3 +872,38 @@ export const UpdateSettingsResponse = zod.object({
   smtpFromEmail: zod.string().nullish(),
   inventoryAlertEmail: zod.string().nullish(),
 });
+
+/**
+ * @summary List local events and rushes
+ */
+export const GetRushesResponseItem = zod.object({
+  id: zod.string(),
+  title: zod.string(),
+  description: zod.undefined().optional(),
+  startTime: zod.date(),
+  endTime: zod.undefined().optional(),
+  impact: zod.enum(["low", "medium", "high"]),
+  type: zod.enum(["cruise", "festival", "music", "other"]),
+});
+export const GetRushesResponse = zod.array(GetRushesResponseItem);
+
+/**
+ * @summary Create a new rush event
+ */
+export const PostRushesBody = zod.object({
+  title: zod.string(),
+  description: zod.undefined().optional(),
+  startTime: zod.date(),
+  endTime: zod.undefined().optional(),
+  impact: zod.enum(["low", "medium", "high"]),
+  type: zod.enum(["cruise", "festival", "music", "other"]),
+});
+
+/**
+ * @summary Delete a rush event
+ */
+export const DeleteRushesIdParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteRushesIdResponse = zod.unknown();

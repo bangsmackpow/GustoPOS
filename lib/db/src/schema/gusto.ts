@@ -89,6 +89,17 @@ export const settingsTable = sqliteTable("settings", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
+export const rushesTable = sqliteTable("rushes", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  title: text("title").notNull(),
+  description: text("description"),
+  startTime: integer("start_time", { mode: "timestamp" }).notNull(),
+  endTime: integer("end_time", { mode: "timestamp" }),
+  impact: text("impact").notNull().default("medium"), // low, medium, high
+  type: text("type").notNull().default("event"), // cruise, festival, music, other
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 export type Ingredient = typeof ingredientsTable.$inferSelect;
 export type InsertIngredient = typeof ingredientsTable.$inferInsert;
 export type Drink = typeof drinksTable.$inferSelect;
@@ -100,3 +111,5 @@ export type Order = typeof ordersTable.$inferSelect;
 export type InsertOrder = typeof ordersTable.$inferInsert;
 export type Shift = typeof shiftsTable.$inferSelect;
 export type Settings = typeof settingsTable.$inferSelect;
+export type Rush = typeof rushesTable.$inferSelect;
+export type InsertRush = typeof rushesTable.$inferInsert;

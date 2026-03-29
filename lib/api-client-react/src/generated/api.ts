@@ -22,8 +22,10 @@ import type {
   CreateDrinkBody,
   CreateIngredientBody,
   CreateOrderBody,
+  CreateRushBody,
   CreateTabBody,
   CreateUserBody,
+  DeleteResponse,
   Drink,
   EndOfNightReport,
   GetCurrentAuthUserResponse,
@@ -31,6 +33,7 @@ import type {
   HealthStatus,
   Ingredient,
   Order,
+  Rush,
   Shift,
   ShiftOrNull,
   StaffUser,
@@ -2667,4 +2670,239 @@ export const useUpdateSettings = <
   TContext
 > => {
   return useMutation(getUpdateSettingsMutationOptions(options));
+};
+
+/**
+ * @summary List local events and rushes
+ */
+export const getGetRushesUrl = () => {
+  return `/api/rushes`;
+};
+
+export const getRushes = async (options?: RequestInit): Promise<Rush[]> => {
+  return customFetch<Rush[]>(getGetRushesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetRushesQueryKey = () => {
+  return [`/api/rushes`] as const;
+};
+
+export const getGetRushesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getRushes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getRushes>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetRushesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getRushes>>> = ({
+    signal,
+  }) => getRushes({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getRushes>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetRushesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getRushes>>
+>;
+export type GetRushesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List local events and rushes
+ */
+
+export function useGetRushes<
+  TData = Awaited<ReturnType<typeof getRushes>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getRushes>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRushesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Create a new rush event
+ */
+export const getPostRushesUrl = () => {
+  return `/api/rushes`;
+};
+
+export const postRushes = async (
+  createRushBody: CreateRushBody,
+  options?: RequestInit,
+): Promise<Rush> => {
+  return customFetch<Rush>(getPostRushesUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createRushBody),
+  });
+};
+
+export const getPostRushesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postRushes>>,
+    TError,
+    { data: BodyType<CreateRushBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof postRushes>>,
+  TError,
+  { data: BodyType<CreateRushBody> },
+  TContext
+> => {
+  const mutationKey = ["postRushes"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof postRushes>>,
+    { data: BodyType<CreateRushBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return postRushes(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PostRushesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof postRushes>>
+>;
+export type PostRushesMutationBody = BodyType<CreateRushBody>;
+export type PostRushesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create a new rush event
+ */
+export const usePostRushes = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof postRushes>>,
+    TError,
+    { data: BodyType<CreateRushBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof postRushes>>,
+  TError,
+  { data: BodyType<CreateRushBody> },
+  TContext
+> => {
+  return useMutation(getPostRushesMutationOptions(options));
+};
+
+/**
+ * @summary Delete a rush event
+ */
+export const getDeleteRushesIdUrl = (id: string) => {
+  return `/api/rushes/${id}`;
+};
+
+export const deleteRushesId = async (
+  id: string,
+  options?: RequestInit,
+): Promise<DeleteResponse> => {
+  return customFetch<DeleteResponse>(getDeleteRushesIdUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteRushesIdMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRushesId>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteRushesId>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteRushesId"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteRushesId>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteRushesId(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteRushesIdMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteRushesId>>
+>;
+
+export type DeleteRushesIdMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Delete a rush event
+ */
+export const useDeleteRushesId = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteRushesId>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteRushesId>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteRushesIdMutationOptions(options));
 };

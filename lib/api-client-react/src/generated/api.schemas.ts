@@ -626,6 +626,61 @@ export interface UpdateSettingsBody {
   inventoryAlertEmail?: string | null;
 }
 
+export type RushImpact = (typeof RushImpact)[keyof typeof RushImpact];
+
+export const RushImpact = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export type RushType = (typeof RushType)[keyof typeof RushType];
+
+export const RushType = {
+  cruise: "cruise",
+  festival: "festival",
+  music: "music",
+  other: "other",
+} as const;
+
+export interface Rush {
+  id: string;
+  title: string;
+  description?: unknown;
+  startTime: string;
+  endTime?: unknown;
+  impact: RushImpact;
+  type: RushType;
+}
+
+export type CreateRushBodyImpact =
+  (typeof CreateRushBodyImpact)[keyof typeof CreateRushBodyImpact];
+
+export const CreateRushBodyImpact = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export type CreateRushBodyType =
+  (typeof CreateRushBodyType)[keyof typeof CreateRushBodyType];
+
+export const CreateRushBodyType = {
+  cruise: "cruise",
+  festival: "festival",
+  music: "music",
+  other: "other",
+} as const;
+
+export interface CreateRushBody {
+  title: string;
+  description?: unknown;
+  startTime: string;
+  endTime?: unknown;
+  impact: CreateRushBodyImpact;
+  type: CreateRushBodyType;
+}
+
 export type GetTabsParams = {
   status?: GetTabsStatus;
   /**
