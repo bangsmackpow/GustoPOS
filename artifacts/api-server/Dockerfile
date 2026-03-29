@@ -59,6 +59,7 @@ EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# The CMD runs litestream replicate, which then spawns the node process
-# It also attempts to restore from the replica on startup if the DB file is missing
-CMD ["sh", "-c", "litestream restore -if-db-not-exists -if-replica-exists /app/data/gusto.db && litestream replicate -exec 'node --enable-source-maps artifacts/api-server/dist/index.mjs'"]
+# The CMD checks if Litestream is configured. 
+# If LITESTREAM_REPLICA_URL is present, it uses Litestream for replication.
+# Otherwise, it starts the Node.js server directly.
+CMD ["sh", "-c", "if [ -n \"$LITESTREAM_REPLICA_URL\" ]; then litestream restore -if-db-not-exists -if-replica-exists /app/data/gusto.db && litestream replicate -exec 'node --enable-source-maps artifacts/api-server/dist/index.mjs'; else node --enable-source-maps artifacts/api-server/dist/index.mjs; fi"]
