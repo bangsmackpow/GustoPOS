@@ -19,10 +19,14 @@ const __dirname = path.dirname(__filename);
 
 export async function initializeDatabase() {
   console.log("Checking database schema...");
-  // Migrations are located relative to this file in the built artifact
-  // In dev: lib/db/migrations
-  // In prod: /app/lib/db/migrations (or wherever they are copied)
-  const migrationsPath = path.resolve(__dirname, "../migrations");
+  
+  // In production Docker, we copy to /app/lib/db/migrations
+  // In dev, it might be relative.
+  const migrationsPath = process.env.NODE_ENV === 'production' 
+    ? "/app/lib/db/migrations" 
+    : path.resolve(__dirname, "../migrations");
+  
+  console.log(`Using migrations from: ${migrationsPath}`);
   
   try {
     await migrate(db, { migrationsFolder: migrationsPath });

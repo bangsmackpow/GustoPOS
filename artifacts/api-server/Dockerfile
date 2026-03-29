@@ -41,7 +41,7 @@ COPY --from=builder /app/artifacts/api-server/node_modules ./artifacts/api-serve
 COPY --from=builder /app/artifacts/api-server/package.json ./artifacts/api-server/package.json
 
 # Copy migrations needed for auto-migration on startup
-COPY --from=builder /app/lib/db/migrations ./lib/db/migrations
+COPY --from=builder /app/lib/db/migrations /app/lib/db/migrations
 
 # Expose the API port
 EXPOSE 3000
