@@ -8,16 +8,15 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
   const { ingredients } = req.body;
 
   if (!Array.isArray(ingredients)) {
-    return res.status(400).json({ error: "Invalid input: ingredients must be an array" });
+    res.status(400).json({ error: "Invalid input: ingredients must be an array" });
+    return;
   }
 
   try {
-    const results = [];
-    
     // We process sequentially or in a transaction to handle existing items
     await db.transaction(async (tx) => {
       for (const item of ingredients) {
-        const result = await tx.insert(ingredientsTable)
+        await tx.insert(ingredientsTable)
           .values({
             name: item.name,
             category: item.category || 'other',
@@ -38,16 +37,14 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
               category: item.category,
               updatedAt: new Date(),
             }
-          })
-          .returning();
-        results.push(result[0]);
+          });
       }
     });
 
-    res.json({ success: true, count: results.length });
+    res.json({ success: true, count: ingredients.length });
   } catch (err: any) {
     console.error("Bulk import error:", err);
-    return res.status(500).json({ error: err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 
