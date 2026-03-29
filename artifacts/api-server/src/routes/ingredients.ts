@@ -45,7 +45,7 @@ router.post("/ingredients", async (req: Request, res: Response) => {
 });
 
 router.get("/ingredients/:id", async (req: Request, res: Response) => {
-  const [item] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, req.params.id));
+  const [item] = await db.select().from(ingredientsTable).where(eq(ingredientsTable.id, req.params.id as string));
   if (!item) {
     res.status(404).json({ error: "Ingredient not found" });
     return;
@@ -60,7 +60,7 @@ router.patch("/ingredients/:id", async (req: Request, res: Response) => {
     return;
   }
   const data = parsed.data;
-  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+  const updateData: Partial<typeof ingredientsTable.$inferInsert> = { updatedAt: new Date() };
   if (data.name != null) updateData.name = data.name;
   if (data.nameEs != null) updateData.nameEs = data.nameEs;
   if (data.unit != null) updateData.unit = data.unit;
@@ -68,9 +68,9 @@ router.patch("/ingredients/:id", async (req: Request, res: Response) => {
   if (data.costPerUnit != null) updateData.costPerUnit = String(data.costPerUnit);
   if (data.currentStock != null) updateData.currentStock = String(data.currentStock);
   if (data.minimumStock != null) updateData.minimumStock = String(data.minimumStock);
-  if (data.category != null) updateData.category = data.category;
+  if (data.category != null) updateData.category = data.category as any;
 
-  const [item] = await db.update(ingredientsTable).set(updateData).where(eq(ingredientsTable.id, req.params.id)).returning();
+  const [item] = await db.update(ingredientsTable).set(updateData).where(eq(ingredientsTable.id, req.params.id as string)).returning();
   if (!item) {
     res.status(404).json({ error: "Ingredient not found" });
     return;
@@ -79,7 +79,7 @@ router.patch("/ingredients/:id", async (req: Request, res: Response) => {
 });
 
 router.delete("/ingredients/:id", async (req: Request, res: Response) => {
-  await db.delete(ingredientsTable).where(eq(ingredientsTable.id, req.params.id));
+  await db.delete(ingredientsTable).where(eq(ingredientsTable.id, req.params.id as string));
   res.json({ success: true });
 });
 

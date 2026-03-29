@@ -78,6 +78,7 @@ export interface StaffUser {
   profileImageUrl?: string | null;
   role: StaffUserRole;
   language: StaffUserLanguage;
+  pin?: string;
   isActive: boolean;
   createdAt: string;
 }

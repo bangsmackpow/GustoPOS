@@ -685,6 +685,8 @@ components:
         language:
           type: string
           enum: [en, es]
+        pin:
+          type: string
         isActive:
           type: boolean
         createdAt:

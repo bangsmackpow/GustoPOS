@@ -101,7 +101,7 @@ router.post("/drinks", async (req: Request, res: Response) => {
 });
 
 router.get("/drinks/:id", async (req: Request, res: Response) => {
-  const result = await getDrinkWithRecipe(req.params.id);
+  const result = await getDrinkWithRecipe(req.params.id as string);
   if (!result) {
     res.status(404).json({ error: "Drink not found" });
     return;
@@ -116,25 +116,26 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
     return;
   }
   const data = parsed.data;
-  const updateData: Record<string, unknown> = { updatedAt: new Date() };
+  const updateData: Partial<typeof drinksTable.$inferInsert> = { updatedAt: new Date() };
   if (data.name != null) updateData.name = data.name;
   if (data.nameEs !== undefined) updateData.nameEs = data.nameEs;
   if (data.description !== undefined) updateData.description = data.description;
   if (data.descriptionEs !== undefined) updateData.descriptionEs = data.descriptionEs;
-  if (data.category != null) updateData.category = data.category;
+  if (data.category != null) updateData.category = data.category as any;
   if (data.markupFactor != null) updateData.markupFactor = String(data.markupFactor);
   if (data.upcharge != null) updateData.upcharge = String(data.upcharge);
   if (data.actualPrice !== undefined) updateData.actualPrice = data.actualPrice != null ? String(data.actualPrice) : null;
   if (data.isAvailable != null) updateData.isAvailable = data.isAvailable;
 
-  const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, req.params.id)).returning();
+
+  const [drink] = await db.update(drinksTable).set(updateData).where(eq(drinksTable.id, req.params.id as string)).returning();
   if (!drink) {
     res.status(404).json({ error: "Drink not found" });
     return;
   }
 
   if (data.recipe) {
-    await db.delete(recipeIngredientsTable).where(eq(recipeIngredientsTable.drinkId, req.params.id));
+    await db.delete(recipeIngredientsTable).where(eq(recipeIngredientsTable.drinkId, req.params.id as string));
     if (data.recipe.length > 0) {
       await db.insert(recipeIngredientsTable).values(
         data.recipe.map(r => ({
@@ -151,7 +152,7 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
 });
 
 router.delete("/drinks/:id", async (req: Request, res: Response) => {
-  await db.delete(drinksTable).where(eq(drinksTable.id, req.params.id));
+  await db.delete(drinksTable).where(eq(drinksTable.id, req.params.id as string));
   res.json({ success: true });
 });
 

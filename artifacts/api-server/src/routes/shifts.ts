@@ -59,7 +59,7 @@ router.get("/shifts/active", async (req: Request, res: Response) => {
 router.post("/shifts/:id/close", async (req: Request, res: Response) => {
   const [shift] = await db.update(shiftsTable)
     .set({ status: "closed", closedAt: new Date() })
-    .where(eq(shiftsTable.id, req.params.id))
+    .where(eq(shiftsTable.id, req.params.id as string))
     .returning();
   if (!shift) {
     res.status(404).json({ error: "Shift not found" });
@@ -71,7 +71,7 @@ router.post("/shifts/:id/close", async (req: Request, res: Response) => {
 });
 
 router.get("/reports/end-of-night/:shiftId", async (req: Request, res: Response) => {
-  const shiftId = req.params.shiftId;
+  const shiftId = req.params.shiftId as string;
   const [shift] = await db.select().from(shiftsTable).where(eq(shiftsTable.id, shiftId));
   if (!shift) {
     res.status(404).json({ error: "Shift not found" });

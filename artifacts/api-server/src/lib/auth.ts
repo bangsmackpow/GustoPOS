@@ -16,6 +16,7 @@ export interface SessionUser {
   profileImageUrl?: string | null;
   role: string;
   language: string;
+  isActive: boolean;
 }
 
 export interface SessionData {

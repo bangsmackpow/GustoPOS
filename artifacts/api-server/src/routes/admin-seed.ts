@@ -29,9 +29,9 @@ export default function adminSeedRouter(): express.Router {
       );
       const sql = fs.readFileSync(seedSqlPath, "utf8");
       await pool.query(sql);
-      res.json({ ok: true, message: "admin seeded" });
+      return res.json({ ok: true, message: "admin seeded" });
     } catch (e: any) {
-      res.status(500).json({ ok: false, error: String(e?.message ?? e) });
+      return res.status(500).json({ ok: false, error: String(e?.message ?? e) });
     } finally {
       await pool.end();
     }

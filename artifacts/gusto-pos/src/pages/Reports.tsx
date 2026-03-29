@@ -9,7 +9,7 @@ export default function Reports() {
   const { language } = usePosStore();
   const { data: shifts } = useGetShifts();
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
-  const { data: report } = useGetEndOfNightReport(selectedShiftId || '', { query: { enabled: !!selectedShiftId } });
+  const { data: report } = useGetEndOfNightReport(selectedShiftId || '', { query: { enabled: !!selectedShiftId } as any });
 
   const closedShifts = shifts?.filter(s => s.status === 'closed') || [];
 

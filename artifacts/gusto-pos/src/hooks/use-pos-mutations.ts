@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
 import { 
   createTab, 
   updateTab, 
@@ -25,7 +25,7 @@ export function useCreateTabMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: createTab,
+    mutationFn: (variables: { data: Parameters<typeof createTab>[0] }) => createTab(variables.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: getGetTabsQueryKey() });
       toast({ title: "Tab opened successfully" });
@@ -38,7 +38,7 @@ export function useCloseTabMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: ({ id, data }: Parameters<typeof closeTab>[0] & { data: Parameters<typeof closeTab>[1] }) => closeTab(id, data),
+    mutationFn: (variables: { id: string, data: Parameters<typeof closeTab>[1] }) => closeTab(variables.id, variables.data),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: getGetTabsQueryKey() });
       qc.invalidateQueries({ queryKey: getGetTabQueryKey(variables.id) });
@@ -51,7 +51,7 @@ export function useAddOrderMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: ({ id, data }: Parameters<typeof addOrderToTab>[0] & { data: Parameters<typeof addOrderToTab>[1] }) => addOrderToTab(id, data),
+    mutationFn: (variables: { id: string, data: Parameters<typeof addOrderToTab>[1] }) => addOrderToTab(variables.id, variables.data),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: getGetTabQueryKey(variables.id) });
       qc.invalidateQueries({ queryKey: getGetTabsQueryKey() });
@@ -63,7 +63,7 @@ export function useAddOrderMutation() {
 export function useDeleteOrderMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id }: { id: string, tabId: string }) => deleteOrder(id),
+    mutationFn: (variables: { id: string, tabId: string }) => deleteOrder(variables.id),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: getGetTabQueryKey(variables.tabId) });
       qc.invalidateQueries({ queryKey: getGetTabsQueryKey() });
@@ -76,7 +76,7 @@ export function useStartShiftMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: startShift,
+    mutationFn: (variables: { data: Parameters<typeof startShift>[0] }) => startShift(variables.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: getGetActiveShiftQueryKey() });
       qc.invalidateQueries({ queryKey: getGetShiftsQueryKey() });
@@ -89,7 +89,7 @@ export function useCloseShiftMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: closeShift,
+    mutationFn: (variables: { id: string }) => closeShift(variables.id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: getGetActiveShiftQueryKey() });
       qc.invalidateQueries({ queryKey: getGetShiftsQueryKey() });
@@ -102,25 +102,57 @@ export function useCloseShiftMutation() {
 export function useSaveDrinkMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  return useMutation({
-    mutationFn: ({ id, data }: { id?: string, data: any }) => 
-      id ? updateDrink(id, data) : createDrink(data),
+  
+  const create = useMutation({
+    mutationFn: (variables: { data: any }) => createDrink(variables.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: getGetDrinksQueryKey() });
-      toast({ title: "Drink saved" });
+      toast({ title: "Drink created" });
     }
   });
+
+  const update = useMutation({
+    mutationFn: (variables: { id: string, data: any }) => updateDrink(variables.id, variables.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: getGetDrinksQueryKey() });
+      toast({ title: "Drink updated" });
+    }
+  });
+
+  return {
+    mutate: (variables: { id?: string, data: any }, options?: any) => 
+      variables.id 
+        ? update.mutate({ id: variables.id, data: variables.data }, options) 
+        : create.mutate({ data: variables.data }, options),
+    isPending: create.isPending || update.isPending
+  };
 }
 
 export function useSaveIngredientMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  return useMutation({
-    mutationFn: ({ id, data }: { id?: string, data: any }) => 
-      id ? updateIngredient(id, data) : createIngredient(data),
+  
+  const create = useMutation({
+    mutationFn: (variables: { data: any }) => createIngredient(variables.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: getGetIngredientsQueryKey() });
-      toast({ title: "Ingredient saved" });
+      toast({ title: "Ingredient created" });
     }
   });
+
+  const update = useMutation({
+    mutationFn: (variables: { id: string, data: any }) => updateIngredient(variables.id, variables.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: getGetIngredientsQueryKey() });
+      toast({ title: "Ingredient updated" });
+    }
+  });
+
+  return {
+    mutate: (variables: { id?: string, data: any }, options?: any) => 
+      variables.id 
+        ? update.mutate({ id: variables.id, data: variables.data }, options) 
+        : create.mutate({ data: variables.data }, options),
+    isPending: create.isPending || update.isPending
+  };
 }

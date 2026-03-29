@@ -1,8 +1,9 @@
 import express from "express";
 import type { Request, Response } from "express";
 import crypto from "crypto";
+import { createSession, SESSION_COOKIE, SESSION_TTL, type SessionData } from "../lib/auth";
 
-// Tiny base32 decoder for a lightweight TOTP helper (no extra deps)
+// Minimal TOTPs helper (no external dep)
 function base32Decode(base32: string): Buffer {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
   const clean = (base32 || "")
@@ -51,7 +52,7 @@ function verifyTotp(
 
 export default function adminLoginRouter(): express.Router {
   const router = express.Router();
-  router.post("/login", (req: Request, res: Response) => {
+  router.post("/login", async (req: Request, res: Response) => {
     const enabled =
       (process.env.ADMIN_LOGIN_ENABLED || "true").toLowerCase() === "true";
     if (!enabled) {
@@ -61,7 +62,7 @@ export default function adminLoginRouter(): express.Router {
     const password = req.body?.password;
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
-    if (email === adminEmail && password === adminPassword) {
+    if (email === adminEmail && password === adminPassword && adminEmail && adminPassword) {
       const twofaEnabled =
         (process.env.ADMIN_2FA_ENABLED || "false").toLowerCase() === "true";
       const otp = req.body?.otp;
@@ -76,8 +77,9 @@ export default function adminLoginRouter(): express.Router {
           return res.status(401).json({ ok: false, error: "Invalid 2FA code" });
         }
       }
-      if ((req as any).session) {
-        (req as any).session.user = {
+      
+      const sessionData: SessionData = {
+        user: {
           id: "admin",
           email: adminEmail,
           firstName: "Admin",
@@ -85,16 +87,24 @@ export default function adminLoginRouter(): express.Router {
           role: "admin",
           language: "en",
           isActive: true,
-        };
-        try {
-          (req as any).session.save?.();
-        } catch {}
-      }
+        },
+        access_token: "admin-token",
+      };
+
+      const sid = await createSession(sessionData);
+      res.cookie(SESSION_COOKIE, sid, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        path: "/",
+        maxAge: SESSION_TTL,
+      });
+
       return res
         .status(200)
-        .json({ ok: true, user: (req as any).session?.user });
+        .json({ ok: true, user: sessionData.user });
     }
-    res.status(401).json({ ok: false, error: "Not authorized" });
+    return res.status(401).json({ ok: false, error: "Not authorized" });
   });
   return router;
 }

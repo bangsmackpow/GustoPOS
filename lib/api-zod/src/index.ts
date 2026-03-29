@@ -1,3 +1,2 @@
-// Re-export API surface from generated API only to avoid duplicate exports
+// Re-export API surface from generated API (Zod schemas and inferred types)
 export * from "./generated/api";
-export * from "./generated/types";

@@ -114,7 +114,7 @@ router.post("/tabs", async (req: Request, res: Response) => {
 });
 
 router.get("/tabs/:id", async (req: Request, res: Response) => {
-  const [tab] = await db.select().from(tabsTable).where(eq(tabsTable.id, req.params.id));
+  const [tab] = await db.select().from(tabsTable).where(eq(tabsTable.id, req.params.id as string));
   if (!tab) {
     res.status(404).json({ error: "Tab not found" });
     return;
@@ -137,12 +137,12 @@ router.patch("/tabs/:id", async (req: Request, res: Response) => {
     return;
   }
   const data = parsed.data;
-  const updateData: Record<string, unknown> = {};
+  const updateData: Partial<typeof tabsTable.$inferInsert> = {};
   if (data.nickname != null) updateData.nickname = data.nickname;
   if (data.notes !== undefined) updateData.notes = data.notes;
-  if (data.currency != null) updateData.currency = data.currency;
+  if (data.currency != null) updateData.currency = data.currency as any;
 
-  const [tab] = await db.update(tabsTable).set(updateData).where(eq(tabsTable.id, req.params.id)).returning();
+  const [tab] = await db.update(tabsTable).set(updateData).where(eq(tabsTable.id, req.params.id as string)).returning();
   if (!tab) {
     res.status(404).json({ error: "Tab not found" });
     return;
@@ -165,7 +165,7 @@ router.post("/tabs/:id/close", async (req: Request, res: Response) => {
     paymentMethod: paymentMethod as any,
     closedAt: new Date(),
     notes: notes ?? undefined,
-  }).where(eq(tabsTable.id, req.params.id)).returning();
+  }).where(eq(tabsTable.id, req.params.id as string)).returning();
   if (!tab) {
     res.status(404).json({ error: "Tab not found" });
     return;
@@ -184,7 +184,7 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
   }
   const { drinkId, quantity, notes } = parsed.data;
 
-  const [tab] = await db.select().from(tabsTable).where(eq(tabsTable.id, req.params.id));
+  const [tab] = await db.select().from(tabsTable).where(eq(tabsTable.id, req.params.id as string));
   if (!tab) {
     res.status(404).json({ error: "Tab not found" });
     return;
@@ -226,16 +226,16 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
   const unitPriceMxn = drink.actualPrice != null ? Number(drink.actualPrice) : suggestedPrice;
 
   const [order] = await db.insert(ordersTable).values({
-    tabId: req.params.id,
+    tabId: req.params.id as string,
     drinkId,
     drinkName: drink.name,
     drinkNameEs: drink.nameEs ?? null,
     quantity,
     unitPriceMxn: String(unitPriceMxn),
     notes: notes ?? null,
-  }).returning();
+  } as typeof ordersTable.$inferInsert).returning();
 
-  await recalcTabTotal(req.params.id);
+  await recalcTabTotal(req.params.id as string);
 
   res.status(201).json(formatOrder(order));
 });
@@ -247,11 +247,11 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
     return;
   }
   const data = parsed.data;
-  const updateData: Record<string, unknown> = {};
+  const updateData: Partial<typeof ordersTable.$inferInsert> = {};
   if (data.quantity != null) updateData.quantity = data.quantity;
   if (data.notes !== undefined) updateData.notes = data.notes;
 
-  const [order] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, req.params.id)).returning();
+  const [order] = await db.update(ordersTable).set(updateData).where(eq(ordersTable.id, req.params.id as string)).returning();
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
@@ -261,12 +261,12 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
 });
 
 router.delete("/orders/:id", async (req: Request, res: Response) => {
-  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, req.params.id));
+  const [order] = await db.select().from(ordersTable).where(eq(ordersTable.id, req.params.id as string));
   if (!order) {
     res.status(404).json({ error: "Order not found" });
     return;
   }
-  await db.delete(ordersTable).where(eq(ordersTable.id, req.params.id));
+  await db.delete(ordersTable).where(eq(ordersTable.id, req.params.id as string));
   await recalcTabTotal(order.tabId);
   res.json({ success: true });
 });

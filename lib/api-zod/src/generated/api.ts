@@ -43,6 +43,7 @@ export const GetUsersResponseItem = zod.object({
   profileImageUrl: zod.string().nullish(),
   role: zod.enum(["manager", "head_bartender", "bartender", "server"]),
   language: zod.enum(["en", "es"]),
+  pin: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.date(),
 });
@@ -75,6 +76,7 @@ export const GetUserResponse = zod.object({
   profileImageUrl: zod.string().nullish(),
   role: zod.enum(["manager", "head_bartender", "bartender", "server"]),
   language: zod.enum(["en", "es"]),
+  pin: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.date(),
 });
@@ -104,6 +106,7 @@ export const UpdateUserResponse = zod.object({
   profileImageUrl: zod.string().nullish(),
   role: zod.enum(["manager", "head_bartender", "bartender", "server"]),
   language: zod.enum(["en", "es"]),
+  pin: zod.string().optional(),
   isActive: zod.boolean(),
   createdAt: zod.date(),
 });

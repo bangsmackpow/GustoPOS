@@ -187,6 +187,7 @@ router.get("/callback", async (req: Request, res: Response) => {
       profileImageUrl: dbUser.profileImageUrl,
       role: dbUser.role ?? "bartender",
       language: dbUser.language ?? "en",
+      isActive: dbUser.isActive ?? true,
     },
     access_token: tokens.access_token,
     refresh_token: tokens.refresh_token,

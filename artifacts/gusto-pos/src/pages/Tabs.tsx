@@ -4,7 +4,7 @@ import { useCreateTabMutation } from '@/hooks/use-pos-mutations';
 import { usePosStore } from '@/store';
 import { getTranslation, formatMoney } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Clock } from 'lucide-react';
+import { Plus, Users, Clock, Receipt } from 'lucide-react';
 import { Link } from 'wouter';
 import { formatDistanceToNow } from 'date-fns';
 
