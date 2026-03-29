@@ -19,7 +19,7 @@ router.get("/users", async (req: Request, res: Response) => {
     role: u.role ?? "bartender",
     language: u.language ?? "en",
     isActive: u.isActive ?? true,
-    createdAt: u.createdAt.toISOString(),
+    createdAt: u.createdAt, // Pass the Date object directly
   }))));
 });
 
@@ -44,7 +44,7 @@ router.post("/users", async (req: Request, res: Response) => {
     role: user.role ?? "bartender",
     language: user.language ?? "en",
     isActive: user.isActive ?? true,
-    createdAt: user.createdAt.toISOString(),
+    createdAt: user.createdAt,
   });
 });
 
@@ -59,7 +59,7 @@ router.get("/users/:id", async (req: Request, res: Response) => {
     role: user.role ?? "bartender",
     language: user.language ?? "en",
     isActive: user.isActive ?? true,
-    createdAt: user.createdAt.toISOString(),
+    createdAt: user.createdAt,
   }));
 });
 
@@ -89,7 +89,7 @@ router.patch("/users/:id", async (req: Request, res: Response) => {
     role: user.role ?? "bartender",
     language: user.language ?? "en",
     isActive: user.isActive ?? true,
-    createdAt: user.createdAt.toISOString(),
+    createdAt: user.createdAt,
   }));
 });
 
