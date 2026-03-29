@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, tabsTable, ordersTable, usersTable, drinksTable, recipeIngredientsTable, ingredientsTable, settingsTable } from "@workspace/db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, inArray } from "drizzle-orm";
 import {
   CreateTabBody,
   UpdateTabBody,
@@ -8,8 +8,21 @@ import {
   AddOrderToTabBody,
   UpdateOrderBody,
 } from "@workspace/api-zod";
+import { sendInventoryAlert } from "../lib/email";
 
 const router: IRouter = Router();
+
+async function checkInventoryAlerts(ingredientIds: string[]) {
+  if (ingredientIds.length === 0) return;
+  
+  const items = await db.select().from(ingredientsTable).where(inArray(ingredientsTable.id, ingredientIds));
+  for (const item of items) {
+    if (Number(item.currentStock) <= Number(item.minimumStock)) {
+      // fire and forget email
+      sendInventoryAlert(item.name, Number(item.currentStock), item.unit).catch(console.error);
+    }
+  }
+}
 
 async function getExchangeRates() {
   const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, "default"));
@@ -254,6 +267,10 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
 
   await recalcTabTotal(req.params.id as string);
 
+  // Check for low stock alerts after transaction completes
+  const ingredientIds = recipe.map(r => r.ingredientId).filter((id): id is string => !!id);
+  checkInventoryAlerts(ingredientIds).catch(console.error);
+
   res.status(201).json(formatOrder(order));
 });
 
@@ -302,6 +319,12 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
     return;
   }
   await recalcTabTotal(order.tabId);
+
+  // Check for low stock alerts
+  const recipe = await db.select().from(recipeIngredientsTable).where(eq(recipeIngredientsTable.drinkId, order.drinkId));
+  const ingredientIds = recipe.map(r => r.ingredientId);
+  checkInventoryAlerts(ingredientIds).catch(console.error);
+
   res.json(formatOrder(order));
 });
 

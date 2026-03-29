@@ -3,8 +3,37 @@ import { db, shiftsTable, tabsTable, ordersTable, usersTable, drinksTable, ingre
 import { eq, desc, sql } from "drizzle-orm";
 import {
  StartShiftBody } from "@workspace/api-zod";
+import { sendShiftReport } from "../lib/email";
 
 const router: IRouter = Router();
+
+async function getReportData(shiftId: string) {
+  const [shift] = await db.select().from(shiftsTable).where(eq(shiftsTable.id, shiftId));
+  if (!shift) return null;
+
+  const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, "default"));
+  const usdToMxn = settings ? Number(settings.usdToMxnRate) : 17.5;
+  const cadToMxn = settings ? Number(settings.cadToMxnRate) : 12.8;
+
+  const tabs = await db.select().from(tabsTable).where(eq(tabsTable.shiftId, shiftId));
+  const closedTabs = tabs.filter(t => t.status === "closed");
+
+  const tabIds = tabs.map(t => t.id);
+  const allOrders = tabIds.length > 0
+    ? await db.select().from(ordersTable).where(sql`${ordersTable.tabId} = ANY(${tabIds})`)
+    : [];
+
+  const totalMxn = closedTabs.reduce((sum, t) => sum + Number(t.totalMxn), 0);
+  const cashSalesMxn = closedTabs.filter(t => t.paymentMethod === "cash").reduce((sum, t) => sum + Number(t.totalMxn), 0);
+  const cardSalesMxn = closedTabs.filter(t => t.paymentMethod === "card").reduce((sum, t) => sum + Number(t.totalMxn), 0);
+
+  return {
+    cashSalesMxn,
+    cardSalesMxn,
+    totalSalesMxn: totalMxn,
+    totalTabsClosed: closedTabs.length,
+  };
+}
 
 function formatShift(shift: typeof shiftsTable.$inferSelect, openedByUserName?: string | null) {
   return {
@@ -68,6 +97,22 @@ router.post("/shifts/:id/close", async (req: Request, res: Response) => {
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, shift.openedByUserId));
   const userName = user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email || user.id : null;
+
+  // Send email report
+  (async () => {
+    try {
+      const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, "default"));
+      if (settings?.inventoryAlertEmail) {
+        const reportData = await getReportData(shift.id);
+        if (reportData) {
+          await sendShiftReport(shift.id, settings.inventoryAlertEmail, reportData);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to send shift report email:", err);
+    }
+  })();
+
   res.json(formatShift(shift, userName));
 });
 
