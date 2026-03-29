@@ -80,19 +80,18 @@ router.post("/drinks", async (req: Request, res: Response) => {
     description: description ?? null,
     descriptionEs: descriptionEs ?? null,
     category: category as any,
-    markupFactor: String(markupFactor),
-    upcharge: String(upcharge),
-    actualPrice: actualPrice != null ? String(actualPrice) : null,
-    isAvailable,
-  }).returning();
+    markupFactor: Number(markupFactor),
+    upcharge: Number(upcharge),
+    actualPrice: actualPrice != null ? Number(actualPrice) : null,
+  } as typeof drinksTable.$inferInsert).returning();
 
-  if (recipe.length > 0) {
+  if (recipe && recipe.length > 0) {
     await db.insert(recipeIngredientsTable).values(
       recipe.map(r => ({
         drinkId: drink.id,
         ingredientId: r.ingredientId,
-        amountInMl: String(r.amountInMl),
-      }))
+        amountInMl: Number(r.amountInMl),
+      } as typeof recipeIngredientsTable.$inferInsert))
     );
   }
 
@@ -122,9 +121,9 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
   if (data.description !== undefined) updateData.description = data.description;
   if (data.descriptionEs !== undefined) updateData.descriptionEs = data.descriptionEs;
   if (data.category != null) updateData.category = data.category as any;
-  if (data.markupFactor != null) updateData.markupFactor = String(data.markupFactor);
-  if (data.upcharge != null) updateData.upcharge = String(data.upcharge);
-  if (data.actualPrice !== undefined) updateData.actualPrice = data.actualPrice != null ? String(data.actualPrice) : null;
+  if (data.markupFactor != null) updateData.markupFactor = Number(data.markupFactor);
+  if (data.upcharge != null) updateData.upcharge = Number(data.upcharge);
+  if (data.actualPrice !== undefined) updateData.actualPrice = data.actualPrice != null ? Number(data.actualPrice) : null;
   if (data.isAvailable != null) updateData.isAvailable = data.isAvailable;
 
 
@@ -141,13 +140,14 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
         data.recipe.map(r => ({
           drinkId: drink.id,
           ingredientId: r.ingredientId,
-          amountInMl: String(r.amountInMl),
-        }))
+          amountInMl: Number(r.amountInMl),
+        } as typeof recipeIngredientsTable.$inferInsert))
       );
     }
-  }
+        }
 
-  const result = await getDrinkWithRecipe(drink.id);
+        const result = await getDrinkWithRecipe(drink.id);
+
   res.json(result);
 });
 

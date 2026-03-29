@@ -35,12 +35,12 @@ router.post("/ingredients", async (req: Request, res: Response) => {
     name: parsed.data.name,
     nameEs: parsed.data.nameEs ?? null,
     unit: parsed.data.unit,
-    unitSize: String(parsed.data.unitSize),
-    costPerUnit: String(parsed.data.costPerUnit),
-    currentStock: String(parsed.data.currentStock),
-    minimumStock: String(parsed.data.minimumStock),
+    unitSize: Number(parsed.data.unitSize),
+    costPerUnit: Number(parsed.data.costPerUnit),
+    currentStock: Number(parsed.data.currentStock),
+    minimumStock: Number(parsed.data.minimumStock),
     category: parsed.data.category as any,
-  }).returning();
+  } as typeof ingredientsTable.$inferInsert).returning();
   res.status(201).json(formatIngredient(item));
 });
 
@@ -64,10 +64,10 @@ router.patch("/ingredients/:id", async (req: Request, res: Response) => {
   if (data.name != null) updateData.name = data.name;
   if (data.nameEs != null) updateData.nameEs = data.nameEs;
   if (data.unit != null) updateData.unit = data.unit;
-  if (data.unitSize != null) updateData.unitSize = String(data.unitSize);
-  if (data.costPerUnit != null) updateData.costPerUnit = String(data.costPerUnit);
-  if (data.currentStock != null) updateData.currentStock = String(data.currentStock);
-  if (data.minimumStock != null) updateData.minimumStock = String(data.minimumStock);
+  if (data.unitSize != null) updateData.unitSize = Number(data.unitSize);
+  if (data.costPerUnit != null) updateData.costPerUnit = Number(data.costPerUnit);
+  if (data.currentStock != null) updateData.currentStock = Number(data.currentStock);
+  if (data.minimumStock != null) updateData.minimumStock = Number(data.minimumStock);
   if (data.category != null) updateData.category = data.category as any;
 
   const [item] = await db.update(ingredientsTable).set(updateData).where(eq(ingredientsTable.id, req.params.id as string)).returning();

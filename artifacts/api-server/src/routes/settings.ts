@@ -43,9 +43,9 @@ router.patch("/settings", async (req: Request, res: Response) => {
   await ensureSettings();
   const updateData: Partial<typeof settingsTable.$inferInsert> = { updatedAt: new Date() };
   
-  if (data.usdToMxnRate != null) updateData.usdToMxnRate = String(data.usdToMxnRate);
-  if (data.cadToMxnRate != null) updateData.cadToMxnRate = String(data.cadToMxnRate);
-  if (data.defaultMarkupFactor != null) updateData.defaultMarkupFactor = String(data.defaultMarkupFactor);
+  if (data.usdToMxnRate != null) updateData.usdToMxnRate = Number(data.usdToMxnRate);
+  if (data.cadToMxnRate != null) updateData.cadToMxnRate = Number(data.cadToMxnRate);
+  if (data.defaultMarkupFactor != null) updateData.defaultMarkupFactor = Number(data.defaultMarkupFactor);
   if (data.barName != null) updateData.barName = data.barName;
   
   if (data.smtpHost !== undefined) updateData.smtpHost = data.smtpHost;

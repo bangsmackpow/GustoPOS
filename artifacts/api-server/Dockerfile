@@ -31,14 +31,21 @@ RUN pnpm run build
 FROM node:20-slim
 WORKDIR /app
 
-# Flatten the structure for production reliability.
-# Since dependencies are bundled, we only need the dist files.
-COPY --from=builder /app/artifacts/api-server/dist ./dist
+# Ensure data directory exists for SQLite
+RUN mkdir -p /app/data
+
+# Preserve the full workspace structure to ensure pnpm's relative symlinks resolve correctly
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
+COPY --from=builder /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
+COPY --from=builder /app/artifacts/api-server/package.json ./artifacts/api-server/package.json
+
+# Work from the specific artifact directory so relative paths in package.json/node work
+WORKDIR /app/artifacts/api-server
 
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# The error logs showed node looking for /app/dist/index.mjs
-# This structure satisfies that exactly.
+# Run the bundled entry point
 CMD ["node", "--enable-source-maps", "dist/index.mjs"]

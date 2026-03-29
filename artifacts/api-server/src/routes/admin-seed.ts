@@ -50,9 +50,8 @@ export default function adminSeedRouter(): express.Router {
       const sqlPath = path.resolve(__dirname, "../../../../db/seeds/puerto-vallarta-starter.sql");
       const rawSql = fs.readFileSync(sqlPath, "utf8");
       
-      // Drizzle's execute for raw SQL. Split by semicolon if needed or run as one block.
-      // Postgres handles multiple statements in one query.
-      await db.execute(sql.raw(rawSql));
+      // Drizzle's run for raw SQL.
+      await db.run(sql.raw(rawSql));
       
       return res.json({ ok: true, message: "Starter data seeded successfully" });
     } catch (e: any) {

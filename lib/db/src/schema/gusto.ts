@@ -1,106 +1,90 @@
-import { boolean, decimal, integer, pgEnum, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
-export const ingredientCategoryEnum = pgEnum("ingredient_category", [
-  "spirits", "wine", "beer", "mixer", "garnish", "other"
-]);
-
-export const drinkCategoryEnum = pgEnum("drink_category", [
-  "cocktail", "beer", "wine", "shot", "non_alcoholic", "other"
-]);
-
-export const tabStatusEnum = pgEnum("tab_status", ["open", "closed"]);
-
-export const paymentMethodEnum = pgEnum("payment_method", ["cash", "card"]);
-
-export const shiftStatusEnum = pgEnum("shift_status", ["active", "closed"]);
-
-export const currencyEnum = pgEnum("currency", ["MXN", "USD", "CAD"]);
-
-export const ingredientsTable = pgTable("ingredients", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  nameEs: varchar("name_es"),
-  unit: varchar("unit").notNull(),
-  unitSize: decimal("unit_size", { precision: 10, scale: 3 }).notNull(),
-  costPerUnit: decimal("cost_per_unit", { precision: 10, scale: 2 }).notNull(),
-  currentStock: decimal("current_stock", { precision: 10, scale: 3 }).notNull().default("0"),
-  minimumStock: decimal("minimum_stock", { precision: 10, scale: 3 }).notNull().default("1"),
-  category: ingredientCategoryEnum("category").notNull().default("other"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+export const ingredientsTable = sqliteTable("ingredients", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  nameEs: text("name_es"),
+  unit: text("unit").notNull(),
+  unitSize: real("unit_size").notNull(),
+  costPerUnit: real("cost_per_unit").notNull(),
+  currentStock: real("current_stock").notNull().default(0),
+  minimumStock: real("minimum_stock").notNull().default(1),
+  category: text("category").notNull().default("other"), // spirits, wine, beer, mixer, garnish, other
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
-export const drinksTable = pgTable("drinks", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  nameEs: varchar("name_es"),
+export const drinksTable = sqliteTable("drinks", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  nameEs: text("name_es"),
   description: text("description"),
   descriptionEs: text("description_es"),
-  category: drinkCategoryEnum("category").notNull().default("other"),
-  markupFactor: decimal("markup_factor", { precision: 10, scale: 2 }).notNull().default("3.0"),
-  upcharge: decimal("upcharge", { precision: 10, scale: 2 }).notNull().default("0"),
-  actualPrice: decimal("actual_price", { precision: 10, scale: 2 }),
-  isAvailable: boolean("is_available").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  category: text("category").notNull().default("other"), // cocktail, beer, wine, shot, non_alcoholic, other
+  markupFactor: real("markup_factor").notNull().default(3.0),
+  upcharge: real("upcharge").notNull().default(0),
+  actualPrice: real("actual_price"),
+  isAvailable: integer("is_available", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
-export const recipeIngredientsTable = pgTable("recipe_ingredients", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  drinkId: varchar("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
-  ingredientId: varchar("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "restrict" }),
-  amountInMl: decimal("amount_in_ml", { precision: 10, scale: 3 }).notNull(),
+export const recipeIngredientsTable = sqliteTable("recipe_ingredients", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  drinkId: text("drink_id").notNull().references(() => drinksTable.id, { onDelete: "cascade" }),
+  ingredientId: text("ingredient_id").notNull().references(() => ingredientsTable.id, { onDelete: "restrict" }),
+  amountInMl: real("amount_in_ml").notNull(),
 });
 
-export const shiftsTable = pgTable("shifts", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: varchar("name").notNull(),
-  status: shiftStatusEnum("status").notNull().default("active"),
-  openedByUserId: varchar("opened_by_user_id").notNull(),
-  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
-  closedAt: timestamp("closed_at", { withTimezone: true }),
+export const shiftsTable = sqliteTable("shifts", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("active"), // active, closed
+  openedByUserId: text("opened_by_user_id").notNull(),
+  startedAt: integer("started_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  closedAt: integer("closed_at", { mode: "timestamp" }),
 });
 
-export const tabsTable = pgTable("tabs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  nickname: varchar("nickname").notNull(),
-  status: tabStatusEnum("status").notNull().default("open"),
-  staffUserId: varchar("staff_user_id").notNull(),
-  shiftId: varchar("shift_id").references(() => shiftsTable.id),
-  totalMxn: decimal("total_mxn", { precision: 10, scale: 2 }).notNull().default("0"),
-  paymentMethod: paymentMethodEnum("payment_method"),
-  currency: currencyEnum("currency").notNull().default("MXN"),
+export const tabsTable = sqliteTable("tabs", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  nickname: text("nickname").notNull(),
+  status: text("status").notNull().default("open"), // open, closed
+  staffUserId: text("staff_user_id").notNull(),
+  shiftId: text("shift_id").references(() => shiftsTable.id),
+  totalMxn: real("total_mxn").notNull().default(0),
+  paymentMethod: text("payment_method"), // cash, card
+  currency: text("currency").notNull().default("MXN"), // MXN, USD, CAD
   notes: text("notes"),
-  openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
-  closedAt: timestamp("closed_at", { withTimezone: true }),
+  openedAt: integer("opened_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  closedAt: integer("closed_at", { mode: "timestamp" }),
 });
 
-export const ordersTable = pgTable("orders", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tabId: varchar("tab_id").notNull().references(() => tabsTable.id, { onDelete: "cascade" }),
-  drinkId: varchar("drink_id").notNull().references(() => drinksTable.id),
-  drinkName: varchar("drink_name").notNull(),
-  drinkNameEs: varchar("drink_name_es"),
+export const ordersTable = sqliteTable("orders", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  tabId: text("tab_id").notNull().references(() => tabsTable.id, { onDelete: "cascade" }),
+  drinkId: text("drink_id").notNull().references(() => drinksTable.id),
+  drinkName: text("drink_name").notNull(),
+  drinkNameEs: text("drink_name_es"),
   quantity: integer("quantity").notNull().default(1),
-  unitPriceMxn: decimal("unit_price_mxn", { precision: 10, scale: 2 }).notNull(),
+  unitPriceMxn: real("unit_price_mxn").notNull(),
   notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
-export const settingsTable = pgTable("settings", {
-  id: varchar("id").primaryKey().default("default"),
-  barName: varchar("bar_name").notNull().default("GustoPOS"),
-  usdToMxnRate: decimal("usd_to_mxn_rate", { precision: 10, scale: 4 }).notNull().default("17.5"),
-  cadToMxnRate: decimal("cad_to_mxn_rate", { precision: 10, scale: 4 }).notNull().default("12.8"),
-  defaultMarkupFactor: decimal("default_markup_factor", { precision: 10, scale: 2 }).notNull().default("3.0"),
-  smtpHost: varchar("smtp_host"),
+export const settingsTable = sqliteTable("settings", {
+  id: text("id").primaryKey().default("default"),
+  barName: text("bar_name").notNull().default("GustoPOS"),
+  usdToMxnRate: real("usd_to_mxn_rate").notNull().default(17.5),
+  cadToMxnRate: real("cad_to_mxn_rate").notNull().default(12.8),
+  defaultMarkupFactor: real("default_markup_factor").notNull().default(3.0),
+  smtpHost: text("smtp_host"),
   smtpPort: integer("smtp_port"),
-  smtpUser: varchar("smtp_user"),
-  smtpPassword: varchar("smtp_password"),
-  smtpFromEmail: varchar("smtp_from_email"),
-  inventoryAlertEmail: varchar("inventory_alert_email"),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  smtpUser: text("smtp_user"),
+  smtpPassword: text("smtp_password"),
+  smtpFromEmail: text("smtp_from_email"),
+  inventoryAlertEmail: text("inventory_alert_email"),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
 export type Ingredient = typeof ingredientsTable.$inferSelect;

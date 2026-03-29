@@ -5,10 +5,11 @@ services:
     container_name: gustopos-api
     environment:
       - PORT=3000
+      - DATABASE_URL=file:/app/data/gusto.db
     env_file:
       - stack.env
-    depends_on:
-      - db
+    volumes:
+      - ./data:/app/data
     ports:
       - "3000:3000"
     restart: unless-stopped
@@ -21,18 +22,3 @@ services:
     ports:
       - "8080:80"
     restart: unless-stopped
-
-  db:
-    image: postgres:17
-    container_name: gustopos-db
-    env_file:
-      - stack.env
-    volumes:
-      - ./data/postgres:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "gusto"]
-      interval: 15s
-      timeout: 5s
-      retries: 3

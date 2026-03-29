@@ -75,7 +75,7 @@ function formatOrder(order: typeof ordersTable.$inferSelect) {
 async function recalcTabTotal(tabId: string) {
   const orders = await db.select().from(ordersTable).where(eq(ordersTable.tabId, tabId));
   const total = orders.reduce((sum, o) => sum + Number(o.unitPriceMxn) * o.quantity, 0);
-  await db.update(tabsTable).set({ totalMxn: String(total) }).where(eq(tabsTable.id, tabId));
+  await db.update(tabsTable).set({ totalMxn: total }).where(eq(tabsTable.id, tabId));
   return total;
 }
 
@@ -116,8 +116,8 @@ router.post("/tabs", async (req: Request, res: Response) => {
     currency: currency as any,
     notes: notes ?? null,
     status: "open",
-    totalMxn: "0",
-  }).returning();
+    totalMxn: 0,
+  } as typeof tabsTable.$inferInsert).returning();
 
   const rates = await getExchangeRates();
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, staffUserId));
@@ -245,7 +245,7 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
       if (item.ingredientId && item.amountInMl > 0) {
         await tx.update(ingredientsTable)
           .set({
-            currentStock: sql`${ingredientsTable.currentStock} - ${item.amountInMl.toString()}`
+            currentStock: sql`${ingredientsTable.currentStock} - ${item.amountInMl}` as any
           })
           .where(eq(ingredientsTable.id, item.ingredientId));
       }
@@ -258,7 +258,7 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
       drinkName: drink.name,
       drinkNameEs: drink.nameEs ?? null,
       quantity,
-      unitPriceMxn: String(unitPriceMxn),
+      unitPriceMxn: Number(unitPriceMxn),
       notes: notes ?? null,
     } as typeof ordersTable.$inferInsert).returning();
 
@@ -303,7 +303,7 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
       for (const item of recipe) {
         await tx.update(ingredientsTable)
           .set({
-            currentStock: sql`${ingredientsTable.currentStock} - ${(Number(item.amountInMl) * diff).toString()}`
+            currentStock: sql`${ingredientsTable.currentStock} - ${Number(item.amountInMl) * diff}` as any
           })
           .where(eq(ingredientsTable.id, item.ingredientId));
       }
@@ -345,7 +345,7 @@ router.delete("/orders/:id", async (req: Request, res: Response) => {
     for (const item of recipe) {
       await tx.update(ingredientsTable)
         .set({
-          currentStock: sql`${ingredientsTable.currentStock} + ${item.amountInMl.toString()}`
+          currentStock: sql`${ingredientsTable.currentStock} + ${Number(item.amountInMl)}` as any
         })
         .where(eq(ingredientsTable.id, item.ingredientId));
     }
