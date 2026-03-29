@@ -13,14 +13,20 @@ COPY pnpm-workspace.yaml pnpm-workspace.yaml
 COPY package.json package.json
 COPY pnpm-lock.yaml pnpm-lock.yaml
 COPY artifacts/api-server/package.json artifacts/api-server/package.json
+COPY artifacts/api-zod/package.json artifacts/api-zod/package.json
+COPY lib/db/package.json lib/db/package.json
+COPY lib/api-client-react/package.json lib/api-client-react/package.json
+COPY lib/api-spec/package.json lib/api-spec/package.json
+COPY lib/api-zod/package.json lib/api-zod/package.json
+COPY scripts/package.json scripts/package.json
 
-# Copy the rest of the repo (needed for build steps and shared libs)
+# Copy the rest of the repo
 COPY . .
 
-# Install all workspace dependencies and resolve links
+# Install all workspace dependencies
 RUN pnpm install --no-frozen-lockfile
     
-# Build the API server (produces dist/index.mjs as per package.json)
+# Build the API server
 WORKDIR /app/artifacts/api-server
 RUN pnpm run build
 
@@ -28,10 +34,16 @@ RUN pnpm run build
 FROM node:20-slim
 WORKDIR /app
 
+# In a pnpm monorepo, dependencies are often symlinked to the root node_modules/.pnpm
+# To be safe and keep things simple, we copy the built dist AND the necessary node_modules
 COPY --from=builder /app/artifacts/api-server/dist ./dist
-COPY --from=builder /app/artifacts/api-server/node_modules ./node_modules
+# We copy the root node_modules because artifacts/api-server/node_modules likely contains symlinks to it
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
 
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
-CMD ["node", "--enable-source-maps", "dist/index.mjs"]
+
+# We run from the root to ensure module resolution for symlinks works as expected
+CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]

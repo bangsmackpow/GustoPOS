@@ -2,177 +2,73 @@
 
 ## Overview
 
-GustoPOS is a full-stack bar management POS system for a Mexican bar. Built as a pnpm monorepo with TypeScript.
+GustoPOS is a full-stack bar management POS system tailored for a Mexican bar environment (specifically inspired by Puerto Vallarta). Built as a pnpm monorepo with TypeScript.
 
-## Stack
+## Project Status: Functional Transition
+
+The project has been migrated from a boilerplate OIDC-based setup to a **production-ready custom authentication and inventory system**.
+
+### Recent Fixes & Enhancements
+- **Custom Auth**: Replaced flaky OIDC/Replit Auth with a stable, environment-variable-backed **Admin Login** and a **PIN-based staff switcher**.
+- **Inventory Automation**: Order additions, deletions, and quantity changes now **automatically decrement/restore stock** based on drink recipes using atomic database transactions.
+- **Modernized Seeding**: Admin users and a starter list of **50+ Puerto Vallarta drink recipes** (Tequila, Raicilla, Mezcal favorites) can be seeded directly from the UI or CLI.
+- **Docker Stability**: Fixed API server crashes related to module resolution (`pg` error) and missing environment variables (`PORT`).
+- **Nginx Resilience**: Configured Nginx to defer DNS resolution for the API host, preventing startup crashes in Docker networks.
+
+## Current Stack
 
 - **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
+- **Node.js version**: 20+
 - **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
+- **API framework**: Express 5 (Node.js)
 - **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
-- **Frontend**: React + Vite (Tailwind, Recharts, Zustand, Framer Motion, Lucide React)
-- **Auth**: Replit Auth (OpenID Connect / PKCE)
+- **API codegen**: Orval (OpenAPI 3.1 -> TanStack Query hooks)
+- **Frontend**: React + Vite (Tailwind, Lucide, Zustand, Framer Motion)
+- **Reverse Proxy**: Nginx (Internal) + Cloudflare/NPM (External)
 
 ## Features
 
-- **Login**: Replit Auth + PIN-based staff switcher during shifts
-- **Dashboard**: Active shift status, open tabs summary, low stock alerts
-- **Tabs/Tickets**: Open tabs with nicknames, add drinks, close with cash/card payment. Multi-currency (MXN, USD, CAD)
-- **Drink Menu**: Recipes with cost calculation. Markup factor + upcharge = suggested price. Manager override
-- **Inventory**: Track ingredients, current stock vs. minimum. Low-stock alerts
-- **End-of-Night Reports**: Full breakdown (sales by staff, by drink, by category, top sellers, inventory used, low stock alerts)
-- **Shift Management**: Start/close shifts
-- **Settings**: Exchange rates (USD/MXN, CAD/MXN), default markup, bar name
-- **Bilingual**: English/Spanish toggle (stored per user preference)
-- **Roles**: Manager, Head Bartender, Bartender, Server
+- **Dashboard**: Active shift status, open tabs, low stock alerts.
+- **Tabs/Tickets**: Multi-currency (MXN, USD, CAD) with automatic exchange rate application.
+- **Drink Menu**: Recipes with cost calculation. Actual Price vs. Suggested (Cost * Markup + Upcharge).
+- **Inventory**: Real-time stock tracking with automated decrements on sale.
+- **Bilingual**: Full English/Spanish support for menus and UI.
+- **Reporting**: End-of-night breakdowns including inventory used and sales by staff.
 
-## Structure
-
-```text
-artifacts-monorepo/
-├── artifacts/
-│   ├── api-server/         # Express 5 API server
-│   └── gusto-pos/          # React + Vite web app (POS frontend)
-├── lib/
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── pnpm-workspace.yaml
-├── tsconfig.base.json
-├── tsconfig.json
-└── package.json
-```
+## Next Step: Email Notifications
+The system is being prepared to send automated alerts via **SMTP2GO** or custom SMTP hosts.
+- **Configuration**: Admin portal (Settings) already supports configuring SMTP Host, Port, User, Password, and recipient emails.
+- **Triggers**: Low stock alerts and end-of-night report summaries.
 
 ## Database Schema
 
-- `sessions` — Replit Auth sessions (mandatory)
-- `users` — Staff users with role, language, PIN, isActive
-- `ingredients` — Inventory items with cost, stock, unit size
-- `drinks` — Menu items with recipe references, markup, upcharge
-- `recipe_ingredients` — Many-to-many: drinks ↔ ingredients with amount
-- `tabs` — Open/closed customer tabs with currency and payment
-- `orders` — Line items on tabs (drink, quantity, price snapshot)
-- `shifts` — Shift records for end-of-night reporting
-- `settings` — App-wide settings (exchange rates, markup default)
-
-## TypeScript & Composite Projects
-
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all lib packages as project references.
-
-- **Always typecheck from the root** — run `pnpm run typecheck`
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array
-
-## API Routes
-
-All routes at `/api` prefix.
-
-- `GET/PATCH /settings` — Exchange rates, markup defaults, bar name
-- `GET /auth/user` — Current auth state
-- `GET /login` → OIDC login, `GET /callback` → OIDC callback, `GET /logout`
-- `GET/POST /users`, `GET/PATCH/DELETE /users/:id`
-- `GET/POST /ingredients`, `GET/PATCH/DELETE /ingredients/:id`
-- `GET/POST /drinks`, `GET/PATCH/DELETE /drinks/:id`
-- `GET/POST /tabs`, `GET/PATCH /tabs/:id`, `POST /tabs/:id/close`, `POST /tabs/:id/orders`
-- `PATCH/DELETE /orders/:id`
-- `GET/POST /shifts`, `GET /shifts/active`, `POST /shifts/:id/close`
-- `GET /reports/end-of-night/:shiftId`
+- `sessions` — Simple custom sessions (stored in DB for persistence).
+- `users` — Staff users with roles (Manager, Bartender, Server), language, and PIN.
+- `ingredients` — Inventory items with unit sizes (ml, oz, unit) and stock levels.
+- `drinks` — Menu items linked to multiple ingredients via recipes.
+- `recipe_ingredients` — Many-to-many link with `amountInMl`.
+- `tabs` / `orders` — Customer transactions and specific line items.
+- `settings` — Bar name, exchange rates, and **SMTP/Notification config**.
 
 ## Key Commands
 
-- `pnpm --filter @workspace/api-server run dev` — run API dev server
-- `pnpm --filter @workspace/gusto-pos run dev` — run frontend dev server
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API types
-- `pnpm --filter @workspace/db run push` — push DB schema changes
+- `pnpm run lint` — Run ESLint across the monorepo.
+- `pnpm run typecheck` — Comprehensive TypeScript validation.
+- `pnpm run build` — Build all libraries and artifacts.
+- `pnpm --filter @workspace/api-spec run codegen` — Sync frontend hooks with `openapi.yaml`.
 
-## Packages
+## Configuration (stack.env)
 
-### `artifacts/api-server` (`@workspace/api-server`)
+Required variables for the system to run:
+- `DATABASE_URL`: Postgres connection string.
+- `ADMIN_EMAIL`: Main admin login.
+- `ADMIN_PASSWORD`: Main admin password.
+- `ADMIN_PIN`: Admin staff switcher PIN (e.g., "1234").
+- `ADMIN_SEED_ENABLED`: Set to `true` to allow seeding starter data.
+- `PORT`: API server port (default `3000`).
 
-Express 5 API server. Routes live in `src/routes/`. Uses cookie-based session auth via `openid-client` and PostgreSQL session store.
-
-### `artifacts/gusto-pos` (`@workspace/gusto-pos`)
-
-React + Vite POS frontend. State managed by Zustand (active staff, language). Uses `@workspace/api-client-react` generated hooks.
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Schema in `src/schema/` (auth.ts + gusto.ts).
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-OpenAPI 3.1 spec (`openapi.yaml`) + Orval codegen config.
-
-## Future: Mobile App
-
-Architecture is ready for Expo mobile app:
-
-- Backend routes support all mobile use cases (tabs, orders, inventory)
-- Multi-currency already implemented
-- Auth supports mobile token exchange (`/mobile-auth/token-exchange`)
-- Offline sync: tabs/orders created locally can POST to API when back online
-
-## Seed Data
-
-On initial setup, sample data was seeded:
-
-- 15 ingredients (spirits, beers, wines, mixers, garnishes)
-- 8 drinks (margaritas, mezcal, beers, wine, shots) with recipes and cost calculations
-- 4 staff users: Carlos Mendez (Manager), Ana Lopez (Head Bartender), Miguel Torres (Bartender), Sofia Garcia (Server)
-
-## Deployment Troubleshooting and Secrets
-
-- Frontend shows the default Nginx welcome page (instead of the app):
-  - This usually means the frontend image does not contain the built static assets (dist) or the assets were not copied into the nginx image during the build.
-  - Quick checks:
-    1. Inspect the frontend image contents (host machine):
-       docker run --rm ghcr.io/bangsmackpow/gusto-pos-frontend:latest sh -c 'ls -la /usr/share/nginx/html'
-       You should see index.html and static assets. If you only see an empty directory or the nginx default, the dist wasn’t copied.
-    2. If dist is missing, rebuild/push the frontend image so dist is included:
-       - Build locally (or in CI):
-         cd artifacts/gusto-pos
-         pnpm install
-         pnpm run build
-       - Ensure the frontend Dockerfile copies dist to the nginx html directory when building the image, then push to GHCR and redeploy.
-       - Then refresh the stack (docker-compose pull && docker-compose up -d) or redeploy via Portainer.
-
-- Secrets management (Portainer):
-  - We now provide a stack.env example (.env.example) for local dev. For Portainer, you can:
-    - Use a stack.env file and reference it via env_file in docker-compose, or
-    - Use Portainer Secrets to inject values (recommended for production). Then reference those secrets in your docker-compose (or Portainer stack) as environment values.
-
-- Security note:
-  - Do not commit real credentials. Use .env.example for structure and Portainer Secrets for production values.
-
-## Quick run-down: Local vs. Portainer
-
-- Local: docker-compose pull; docker-compose up -d (with stack.env at repo root or env variables loaded by your shell).
-- Portainer: Create a Stack, inject values via Stack Environment (or Secrets) and run.
-
-## Deployment: GHCR + Portainer (Stack-based)
-
-- Dev login bypass (optional): To test login flow quickly without OpenID, set DEV_LOGIN=true in your environment and call POST /dev/login with the dev credentials. This only works in non-production environments.
-
-- This project now ships pre-built images on GHCR and uses a simple docker-compose stack for quick testing and deployment in Portainer.
-- Secrets management:
-  - Place sensitive values in a stack.env file at the repo root and reference it from docker-compose.yml via env_file per service. The provided stack.env includes sample values that should be overridden in your environment.
-- How to run locally (Portainer-friendly):
-  1. Create a folder for Postgres data: mkdir -p data/postgres
-  2. Ensure you have stack.env with your secrets (PORT, DATABASE*URL, POSTGRES*\* vars)
-  3. Bring up stack with docker-compose:
-     - docker-compose pull
-     - docker-compose up -d
-  4. Access:
-     - Frontend: http://localhost:8080
-     - API: http://localhost:3000
-  5. If you need to seed/migrate, run the appropriate one-shot steps (we can add a migration runner later if needed).
-
-Notes for Portainer:
-
-- In Portainer, create a Stack from docker-compose.yml and use the Stack Env feature to inject values from stack.env, or place them directly in Portainer's environment UI for the stack.
-- The stack.env file in the repo is provided as a template and should be kept out of version control if it contains real secrets.
+## Puerto Vallarta Starter Data
+The system includes a pre-configured seed for:
+- **Spirits**: Casamigos, Don Julio 70, Herradura, Hacienda El Divisadero (Raicilla), 400 Conejos (Mezcal).
+- **Beers**: Pacifico, Corona, Modelo Especial, Victoria.
+- **Recipes**: Classic Margaritas, Raicilla Sours, Micheladas, Cantaritos, and more.
