@@ -13,7 +13,7 @@ import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza, Zap, Trash2, Calendar, HardDrive, Shield } from 'lucide-react';
+import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza, Zap, Trash2, Calendar, HardDrive, Shield, Globe } from 'lucide-react';
 import { format } from 'date-fns';
 
 const BRAND_ICONS = [
