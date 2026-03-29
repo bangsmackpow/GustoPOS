@@ -586,6 +586,8 @@ export interface AppSettings {
   defaultMarkupFactor: number;
   barName: string;
   /** @nullable */
+  barIcon?: string | null;
+  /** @nullable */
   smtpHost?: string | null;
   /** @nullable */
   smtpPort?: number | null;
@@ -608,6 +610,8 @@ export interface UpdateSettingsBody {
   defaultMarkupFactor?: number | null;
   /** @nullable */
   barName?: string | null;
+  /** @nullable */
+  barIcon?: string | null;
   /** @nullable */
   smtpHost?: string | null;
   /** @nullable */

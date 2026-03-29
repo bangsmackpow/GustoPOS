@@ -4,7 +4,20 @@ import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Globe } from 'lucide-react';
+import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza } from 'lucide-react';
+
+const BRAND_ICONS = [
+  { name: 'Wine', icon: Wine },
+  { name: 'Beer', icon: Beer },
+  { name: 'Coffee', icon: Coffee },
+  { name: 'GlassWater', icon: GlassWater },
+  { name: 'Martini', icon: Martini },
+  { name: 'Microwave', icon: Microwave },
+  { name: 'IceCream', icon: IceCream },
+  { name: 'ChefHat', icon: ChefHat },
+  { name: 'Utensils', icon: Utensils },
+  { name: 'Pizza', icon: Pizza },
+];
 
 export default function Settings() {
   const { language, setLanguage } = usePosStore();
@@ -17,6 +30,7 @@ export default function Settings() {
 
   const [formData, setFormData] = useState({
     barName: '',
+    barIcon: 'Wine',
     usdToMxnRate: 0,
     cadToMxnRate: 0,
     defaultMarkupFactor: 0,
@@ -35,6 +49,7 @@ export default function Settings() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         barName: settings.barName,
+        barIcon: settings.barIcon || 'Wine',
         usdToMxnRate: settings.usdToMxnRate,
         cadToMxnRate: settings.cadToMxnRate,
         defaultMarkupFactor: settings.defaultMarkupFactor,
@@ -99,8 +114,8 @@ export default function Settings() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column: Staff Management */}
         <div className="lg:col-span-2 space-y-8">
+          {/* Staff Management */}
           <section className="glass rounded-3xl p-6">
             <div className="flex justify-between items-center mb-6 pb-2 border-b border-white/5">
               <h3 className="text-xl font-medium text-primary flex items-center gap-2">
@@ -134,40 +149,63 @@ export default function Settings() {
             </div>
           </section>
 
-          {/* General & Exchange */}
+          {/* Branding & Config */}
           <section className="glass rounded-3xl p-8 space-y-8">
-            <h3 className="text-xl font-medium text-primary border-b border-white/5 pb-2">Store Configuration</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-muted-foreground mb-2">Bar Name</label>
-                <input 
-                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
-                  value={formData.barName} 
-                  onChange={e => setFormData({...formData, barName: e.target.value})} 
-                />
-              </div>
+            <h3 className="text-xl font-medium text-primary border-b border-white/5 pb-2">Branding & Store</h3>
+            
+            <div className="space-y-6">
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">{getTranslation('exchange_rates', language)} (USD → MXN)</label>
-                <input 
-                  type="number" step="0.01"
-                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
-                  value={formData.usdToMxnRate} 
-                  onChange={e => setFormData({...formData, usdToMxnRate: parseFloat(e.target.value)})} 
-                />
+                <label className="block text-sm font-medium text-muted-foreground mb-4">Select Bar Icon</label>
+                <div className="grid grid-cols-5 gap-3">
+                  {BRAND_ICONS.map(({ name, icon: Icon }) => (
+                    <button
+                      key={name}
+                      onClick={() => setFormData({...formData, barIcon: name})}
+                      className={`p-4 rounded-2xl flex items-center justify-center transition-all ${
+                        formData.barIcon === name 
+                          ? 'bg-primary text-primary-foreground shadow-lg' 
+                          : 'bg-secondary/50 text-muted-foreground hover:bg-secondary border border-white/5'
+                      }`}
+                    >
+                      <Icon size={24} />
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">CAD → MXN</label>
-                <input 
-                  type="number" step="0.01"
-                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
-                  value={formData.cadToMxnRate} 
-                  onChange={e => setFormData({...formData, cadToMxnRate: parseFloat(e.target.value)})} 
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Bar Name</label>
+                  <input 
+                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
+                    value={formData.barName} 
+                    onChange={e => setFormData({...formData, barName: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">{getTranslation('exchange_rates', language)} (USD → MXN)</label>
+                  <input 
+                    type="number" step="0.01"
+                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
+                    value={formData.usdToMxnRate} 
+                    onChange={e => setFormData({...formData, usdToMxnRate: parseFloat(e.target.value)})} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">CAD → MXN</label>
+                  <input 
+                    type="number" step="0.01"
+                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" 
+                    value={formData.cadToMxnRate} 
+                    onChange={e => setFormData({...formData, cadToMxnRate: parseFloat(e.target.value)})} 
+                  />
+                </div>
               </div>
             </div>
+            
             <div className="flex justify-end">
               <Button onClick={handleSaveSettings} disabled={updateSettings.isPending}>
-                <Save className="mr-2" size={18} /> Save Config
+                <Save className="mr-2" size={18} /> Save Branding & Config
               </Button>
             </div>
           </section>

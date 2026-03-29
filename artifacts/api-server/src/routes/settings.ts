@@ -12,6 +12,7 @@ function formatSettings(s: typeof settingsTable.$inferSelect) {
     cadToMxnRate: Number(s.cadToMxnRate),
     defaultMarkupFactor: Number(s.defaultMarkupFactor),
     barName: s.barName,
+    barIcon: s.barIcon,
     smtpHost: s.smtpHost ?? null,
     smtpPort: s.smtpPort ?? null,
     smtpUser: s.smtpUser ?? null,
@@ -47,6 +48,7 @@ router.patch("/settings", async (req: Request, res: Response) => {
   if (data.cadToMxnRate != null) updateData.cadToMxnRate = Number(data.cadToMxnRate);
   if (data.defaultMarkupFactor != null) updateData.defaultMarkupFactor = Number(data.defaultMarkupFactor);
   if (data.barName != null) updateData.barName = data.barName;
+  if (data.barIcon != null) updateData.barIcon = data.barIcon;
   
   if (data.smtpHost !== undefined) updateData.smtpHost = data.smtpHost;
   if (data.smtpPort !== undefined) updateData.smtpPort = data.smtpPort;

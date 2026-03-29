@@ -1392,6 +1392,8 @@ components:
           description: Default markup multiplier for new drinks
         barName:
           type: string
+        barIcon:
+          type: ["string", "null"]
         smtpHost:
           type: ["string", "null"]
         smtpPort:
@@ -1421,6 +1423,8 @@ components:
         defaultMarkupFactor:
           type: ["number", "null"]
         barName:
+          type: ["string", "null"]
+        barIcon:
           type: ["string", "null"]
         smtpHost:
           type: ["string", "null"]

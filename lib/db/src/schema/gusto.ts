@@ -76,6 +76,7 @@ export const ordersTable = sqliteTable("orders", {
 export const settingsTable = sqliteTable("settings", {
   id: text("id").primaryKey().default("default"),
   barName: text("bar_name").notNull().default("GustoPOS"),
+  barIcon: text("bar_icon").notNull().default("Wine"),
   usdToMxnRate: real("usd_to_mxn_rate").notNull().default(17.5),
   cadToMxnRate: real("cad_to_mxn_rate").notNull().default(12.8),
   defaultMarkupFactor: real("default_markup_factor").notNull().default(3.0),

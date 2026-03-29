@@ -23,13 +23,18 @@ export function PinPad({ onClose, onLogin }: { onClose: () => void, onLogin?: ()
 
   const handleSubmit = React.useCallback(() => {
     if (!users) return;
-    const user = users.find(u => u.isActive && u.pin === pin);
+    
+    // Stringify and trim to handle potential numeric returns or spacing issues
+    const enteredPin = pin.trim();
+    const user = users.find(u => u.isActive && String(u.pin).trim() === enteredPin);
     
     if (user) {
+      console.log('Switching to user:', user.firstName);
       setActiveStaff(user);
       onLogin?.();
       onClose();
     } else {
+      console.warn('Invalid PIN entered');
       setError(true);
       setPin('');
     }

@@ -27,7 +27,7 @@ export const usePosStore = create<PosState>()(
     }),
     {
       name: 'gusto-pos-storage',
-      partialize: (state) => ({ language: state.language, displayCurrency: state.displayCurrency }),
+      partialize: (state) => ({ language: state.language, displayCurrency: state.displayCurrency, activeStaff: state.activeStaff }),
     }
   )
 );
