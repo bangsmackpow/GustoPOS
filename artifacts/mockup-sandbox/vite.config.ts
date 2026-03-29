@@ -30,9 +30,13 @@ if (!basePath) {
 export default defineConfig({
   base: basePath,
   plugins: [
+    // @ts-ignore
     mockupPreviewPlugin(),
+    // @ts-ignore
     react(),
+    // @ts-ignore
     tailwindcss(),
+    // @ts-ignore
     runtimeErrorOverlay(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
