@@ -15,7 +15,7 @@ export function formatMoney(amount: number, currency: string = "MXN", rate: numb
   }).format(converted);
 }
 
-// Simple translation dictionary
+// Comprehensive translation dictionary for a Mexican Bar context
 const translations = {
   en: {
     "dashboard": "Dashboard",
@@ -53,7 +53,30 @@ const translations = {
     "stock": "Stock",
     "save": "Save",
     "edit": "Edit",
-    "delete": "Delete"
+    "delete": "Delete",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "role": "Role",
+    "active": "Active",
+    "inactive": "Inactive",
+    "pin": "PIN",
+    "staff_mgmt": "Staff Management",
+    "add_staff": "Add Staff Member",
+    "tip": "Tip",
+    "payment_method": "Payment Method",
+    "notes": "Notes",
+    "nickname": "Nickname",
+    "opened_at": "Opened At",
+    "staff": "Staff",
+    "manager": "Manager",
+    "bartender": "Bartender",
+    "server": "Server",
+    "waitstaff": "Waitstaff",
+    "shift_summary": "Shift Summary",
+    "top_sellers": "Top Sellers",
+    "inventory_used": "Inventory Used",
+    "notifications": "Notifications",
+    "exchange_rates": "Exchange Rates"
   },
   es: {
     "dashboard": "Panel",
@@ -91,7 +114,30 @@ const translations = {
     "stock": "Inventario",
     "save": "Guardar",
     "edit": "Editar",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "first_name": "Nombre",
+    "last_name": "Apellido",
+    "role": "Rol",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "pin": "NIP",
+    "staff_mgmt": "Gestión de Personal",
+    "add_staff": "Agregar Personal",
+    "tip": "Propina",
+    "payment_method": "Método de Pago",
+    "notes": "Notas",
+    "nickname": "Apodo",
+    "opened_at": "Abierto el",
+    "staff": "Personal",
+    "manager": "Gerente",
+    "bartender": "Cantinero",
+    "server": "Mesero",
+    "waitstaff": "Meseros",
+    "shift_summary": "Resumen del Turno",
+    "top_sellers": "Más Vendidos",
+    "inventory_used": "Inventario Utilizado",
+    "notifications": "Notificaciones",
+    "exchange_rates": "Tipos de Cambio"
   }
 } as const;
 
