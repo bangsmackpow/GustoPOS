@@ -19,13 +19,15 @@ import {
   Settings,
   LogOut,
   User,
-  Globe
+  Globe,
+  Search
 } from 'lucide-react';
 import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { useGetCurrentAuthUser, useGetActiveShift, useGetSettings } from '@workspace/api-client-react';
 import { PinPad } from './PinPad';
+import { QuickSearch } from './QuickSearch';
 
 const NAV_ITEMS = [
   { path: '/', icon: LayoutDashboard, labelEn: 'Dashboard', labelEs: 'Panel' },
@@ -47,7 +49,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { data: shiftData } = useGetActiveShift();
   const { data: settings } = useGetSettings();
   const [showPin, setShowPin] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowSearch(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -149,6 +163,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-4">
             <button 
+              onClick={() => setShowSearch(true)}
+              className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all border border-white/5 group"
+              title="Search (⌘K)"
+            >
+              <Search size={20} className="group-hover:scale-110 transition-transform" />
+            </button>
+
+            <button 
               onClick={() => setShowPin(true)}
               className="flex items-center gap-3 glass px-4 py-2 rounded-2xl hover:bg-white/10 transition-all border border-white/5 active:scale-95"
             >
@@ -182,6 +204,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {showPin && <PinPad onClose={() => setShowPin(false)} />}
+      <QuickSearch isOpen={showSearch} onClose={() => setShowSearch(false)} />
     </div>
   );
 }
