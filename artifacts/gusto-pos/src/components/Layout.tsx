@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { 
@@ -27,16 +27,21 @@ const NAV_ITEMS = [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { language, setLanguage, activeStaff, setActiveStaff } = usePosStore();
-  const { data: auth } = useGetCurrentAuthUser();
+  const { data: auth, isLoading } = useGetCurrentAuthUser();
   const { data: shiftData } = useGetActiveShift();
   const [showPin, setShowPin] = useState(false);
 
   // If not authenticated via OIDC, redirect to Login page
-  if (auth && !auth.isAuthenticated && location !== '/login') {
-    window.location.href = '/login';
-    return null;
+  useEffect(() => {
+    if (!isLoading && auth && !auth.isAuthenticated && location !== '/login') {
+      setLocation('/login');
+    }
+  }, [auth, isLoading, location, setLocation]);
+
+  if (isLoading && location !== '/login') {
+    return <div className="h-screen w-screen flex items-center justify-center bg-background">Loading...</div>;
   }
 
   if (location === '/login') {

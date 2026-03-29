@@ -32,6 +32,4 @@
     "pino-pretty": "^13",
     "thread-stream": "3.1.0"
   }
-
-  }
 }
