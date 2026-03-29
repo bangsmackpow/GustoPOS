@@ -21,7 +21,7 @@ export default function devLoginRouter(): express.Router {
           language: "en",
           isActive: true,
         },
-        access_token: "dev-token",
+        createdAt: Date.now(),
       };
 
       const sid = await createSession(sessionData);

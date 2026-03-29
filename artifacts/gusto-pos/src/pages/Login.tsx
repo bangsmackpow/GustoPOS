@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Wine, Lock, Mail, ChevronRight } from 'lucide-react';
+import { Wine, Lock, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Login() {
-  const [showAdminForm, setShowAdminForm] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -60,67 +59,42 @@ export default function Login() {
         <h1 className="mt-12 text-4xl font-display font-bold text-foreground mb-2">Gusto<span className="text-primary">POS</span></h1>
         <p className="text-muted-foreground mb-8 text-lg">Management & POS System</p>
         
-        {!showAdminForm ? (
-          <div className="space-y-4">
-            <Button 
-              size="lg" 
-              className="w-full text-lg h-14"
-              onClick={() => window.location.href = '/api/login?returnTo=/'}
-            >
-              System Login
-            </Button>
-            <button 
-              onClick={() => setShowAdminForm(true)}
-              className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center justify-center w-full gap-1"
-            >
-              Admin login with password <ChevronRight size={14} />
-            </button>
+        <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Mail size={14} /> Email
+            </label>
+            <input 
+              type="email" 
+              required
+              className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              placeholder="admin@example.com"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+            />
           </div>
-        ) : (
-          <form onSubmit={handleAdminLogin} className="space-y-4 text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Mail size={14} /> Email
-              </label>
-              <input 
-                type="email" 
-                required
-                className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                placeholder="admin@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Lock size={14} /> Password
-              </label>
-              <input 
-                type="password" 
-                required
-                className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-                placeholder="••••••••"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-              />
-            </div>
-            <Button 
-              type="submit"
-              size="lg" 
-              className="w-full text-lg h-14"
-              disabled={isLoading}
-            >
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-            <button 
-              type="button"
-              onClick={() => setShowAdminForm(false)}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors w-full text-center"
-            >
-              Back to system login
-            </button>
-          </form>
-        )}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Lock size={14} /> Password
+            </label>
+            <input 
+              type="password" 
+              required
+              className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+              placeholder="••••••••"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+            />
+          </div>
+          <Button 
+            type="submit"
+            size="lg" 
+            className="w-full text-lg h-14"
+            disabled={isLoading}
+          >
+            {isLoading ? "Logging in..." : "Login"}
+          </Button>
+        </form>
       </div>
     </div>
   );

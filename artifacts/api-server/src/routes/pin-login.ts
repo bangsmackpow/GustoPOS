@@ -21,7 +21,7 @@ export default function pinLoginRouter(): express.Router {
           language: "en",
           isActive: true,
         },
-        access_token: "admin-token",
+        createdAt: Date.now(),
       };
 
       const sid = await createSession(sessionData);
