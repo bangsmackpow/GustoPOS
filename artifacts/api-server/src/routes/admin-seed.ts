@@ -54,8 +54,16 @@ export default function adminSeedRouter(): express.Router {
       console.log(`Loading seed from: ${sqlPath}`);
       const rawSql = fs.readFileSync(sqlPath, "utf8");
       
-      // Drizzle's run for raw SQL.
-      await db.run(sql.raw(rawSql));
+      // Split by semicolon and filter out empty strings to run each statement individually
+      // This is more reliable for raw SQL execution in some drivers
+      const statements = rawSql
+        .split(";")
+        .map(s => s.trim())
+        .filter(s => s.length > 0);
+
+      for (const statement of statements) {
+        await db.run(sql.raw(statement));
+      }
       
       return res.json({ ok: true, message: "Starter data seeded successfully" });
     } catch (e: any) {
