@@ -10,6 +10,7 @@ import settingsRouter from "./settings";
 import devLoginRouter from "./dev-login";
 import pinLoginRouter from "./pin-login";
 import adminLoginRouter from "./admin-login";
+import bulkImportRouter from "./bulk-import";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,7 @@ router.use(drinksRouter);
 router.use(tabsRouter);
 router.use(shiftsRouter);
 router.use(settingsRouter);
+router.use("/admin", bulkImportRouter);
 router.use(devLoginRouter());
 router.use(pinLoginRouter());
 router.use(adminLoginRouter());
