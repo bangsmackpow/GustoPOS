@@ -1,52 +1,88 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { cartographer } from "@replit/vite-plugin-cartographer";
 
-const rawPort = process.env.PORT;
-const port = rawPort ? Number(rawPort) : 5173; // default fallback
-if (rawPort && (Number.isNaN(port) || port <= 0)) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-const basePath = process.env.BASE_PATH ?? "/";
+const port = process.env.PORT ? parseInt(process.env.PORT) : 5173;
 
 export default defineConfig({
-  base: basePath,
   plugins: [
     react(),
     tailwindcss(),
+    cartographer(),
     runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'images/*.png'],
+      manifest: {
+        name: 'GustoPOS - Bar Management',
+        short_name: 'GustoPOS',
+        description: 'Professional Bar POS for Puerto Vallarta',
+        theme_color: '#f59e0b',
+        background_color: '#09090b',
+        display: 'standalone',
+        icons: [
+          {
+            src: 'favicon.svg',
+            sizes: '192x192',
+            type: 'image/svg+xml'
+          },
+          {
+            src: 'favicon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml'
+          }
         ]
-      : []),
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /\/api\/auth\/user/i,
+            handler: 'NetworkFirst', // Always try to get fresh auth, but fallback
+            options: {
+              cacheName: 'auth-cache'
+            }
+          },
+          {
+            urlPattern: /\/api\/.*/i,
+            handler: 'NetworkFirst', // Default for API: Try network, then cache
+            options: {
+              cacheName: 'api-data-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+              }
+            }
+          }
+        ]
+      }
+    })
   ],
   resolve: {
     alias: {
-      "@": path.resolve(import.meta.dirname, "src"),
-      "@assets": path.resolve(
-        import.meta.dirname,
-        "..",
-        "..",
-        "attached_assets",
-      ),
+      "@": path.resolve(__dirname, "./src"),
     },
-    dedupe: ["react", "react-dom"],
   },
-  root: path.resolve(import.meta.dirname),
   build: {
-    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    outDir: "dist/public",
     emptyOutDir: true,
   },
   server: {
