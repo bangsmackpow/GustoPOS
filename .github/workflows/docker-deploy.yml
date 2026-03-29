@@ -1,0 +1,20 @@
+name: Deploy to Portainer
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Docker"]
+    types: [completed]
+    branches: [main, master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Trigger Portainer Webhook
+        run: |
+          if [ -n "${{ secrets.PORTAINER_WEBHOOK_URL }}" ]; then
+            curl -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
+          else
+            echo "PORTAINER_WEBHOOK_URL secret not set, skipping deployment trigger."
+          fi

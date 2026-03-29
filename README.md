@@ -61,6 +61,14 @@ Required variables for the system to run:
 - `ADMIN_SEED_ENABLED`: Set to `true` to allow seeding starter data.
 - `PORT`: API server port (default `3000`).
 
+## Deployment (Portainer)
+
+The project includes a GitHub workflow that can automatically update your Portainer stack.
+1. In Portainer, enable the **Webhook** for your stack and copy the URL.
+2. In GitHub, go to **Settings > Secrets and variables > Actions**.
+3. Add a new repository secret named `PORTAINER_WEBHOOK_URL` with your webhook URL.
+4. Every successful push to `main` will now trigger an automatic update of your live stack.
+
 ## Puerto Vallarta Starter Data
 The system includes a pre-configured seed for:
 - **Spirits**: Casamigos, Don Julio 70, Herradura, Hacienda El Divisadero (Raicilla), 400 Conejos (Mezcal).
