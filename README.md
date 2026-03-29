@@ -13,15 +13,16 @@ We have successfully migrated the project from a generic boilerplate to a functi
 - **Session Persistence**: Fixed "login loops" by ensuring proper credential handling and proxy trust (`trust proxy`) for secure cookies behind Cloudflare.
 - **Docker & Nginx Resilience**: Resolved critical "Module Not Found" (`pg`) and "Bad Gateway" (Nginx DNS race conditions) errors by streamlining the build process and deferring host resolution.
 
-### **Phase 2: Inventory & Logic (COMPLETED)**
+### **Phase 2: Architecture & Inventory (COMPLETED)**
+- **SQLite/LibSQL Migration**: Simplified the stack by moving from PostgreSQL to a local SQLite architecture. This eliminated the `db` container, reduced latency, and simplified deployments.
+- **Litestream Backups**: Integrated real-time, zero-data-loss backups. The system automatically streams every change to an S3-compatible bucket (like Cloudflare R2) and can self-restore on startup.
 - **Inventory Automation**: Implemented atomic database transactions to **automatically decrement stock** when orders are placed and **restore stock** when orders are deleted.
-- **Starter Data**: Seeded the system with **50+ Puerto Vallarta recipes** and a full inventory of local spirits (Raicilla, Mezcal, Tequila) and Mexican beers.
-- **Admin Seeding**: Added a "Seed Starter Data" button to the Inventory portal for easy deployment.
+- **Bulk Importers**: Added CSV and Markdown support for mass-importing both Inventory items and Drink Recipes.
 
-### **Phase 3: Notifications & Scale (IN PROGRESS)**
-- **SMTP Configuration**: Integrated a full SMTP management suite (Host, Port, User, Password) into the Admin Settings.
-- **Inventory Alerts**: (Ready for Testing) Automated low-stock email reminders triggered when ingredients hit their minimum thresholds.
-- **Shift Reporting**: (Ready for Testing) Automated "End of Night" summaries sent to management upon shift closure.
+### **Phase 3: Operations & Features (IN PROGRESS)**
+- **Staff Management**: Full portal to manage team members, roles, and PINs.
+- **Recipe Recall**: Bartenders can now tap a "ⓘ" icon on any drink to see exact ml/oz measurements and stock availability.
+- **Nightly Reports**: Automated "End of Night" summaries including sales by staff, top sellers, and inventory velocity.
 
 ---
 
@@ -29,48 +30,50 @@ We have successfully migrated the project from a generic boilerplate to a functi
 
 - **Monorepo tool**: pnpm workspaces
 - **Node.js version**: 20+
-- **API framework**: Express 5 (Node.js)
-- **Database**: PostgreSQL + Drizzle ORM
+- **Database**: SQLite (via `@libsql/client`) + Drizzle ORM
+- **Backups**: Litestream (Real-time S3 replication)
 - **API codegen**: Orval (OpenAPI 3.1 -> TanStack Query hooks)
 - **Frontend**: React + Vite (Tailwind, Lucide, Zustand, Framer Motion)
 - **Reverse Proxy**: Nginx (Internal) + Cloudflare/NPM (External)
 
-## Email Notification Logic
+---
 
-The system is configured to use **SMTP2GO** or custom SMTP hosts to keep management informed without manual checks.
+## Disaster Recovery (Litestream)
 
-### 1. Low Stock Alerts
-- **Trigger**: Every time an order is added or updated, the system checks the `currentStock` vs `minimumStock` for all ingredients in the recipe.
-- **Action**: Sends an immediate email to the `inventoryAlertEmail` configured in Settings.
-- **Content**: Specifies the ingredient name and the remaining quantity.
+The system is "indestructible" by design. Every change to `gusto.db` is replicated in real-time to your cloud bucket.
+- **Auto-Restore**: If the server is wiped, the API container will automatically pull the latest backup from your bucket on startup before accepting requests.
+- **Configuration**: Set `LITESTREAM_REPLICA_URL`, `LITESTREAM_ACCESS_KEY_ID`, and `LITESTREAM_SECRET_ACCESS_KEY` in your `stack.env`.
 
-### 2. Shift Reports
-- **Trigger**: When a shift is officially closed via the Dashboard.
-- **Action**: Generates a summary of the shift's performance and emails it to management.
-- **Content**: Total Sales (MXN), Cash vs Card breakdown, and total tabs closed.
+---
+
+## Key Features
+
+- **Dashboard**: Active shift status, open tabs, live low-stock alerts, and local PV "Rush" feed.
+- **Tabs/Tickets**: Multi-currency (MXN, USD, CAD) with automatic exchange rate application.
+- **Inventory**: Real-time stock tracking with automated decrements on sale. Supports ml/oz units.
+- **Bilingual**: Full English/Spanish support for menus, recipes, and UI.
 
 ---
 
 ## Configuration (stack.env)
 
 Required variables for the system to run:
-- `DATABASE_URL`: Postgres connection string.
+- `DATABASE_URL`: `file:/app/data/gusto.db` (The location of your SQLite file).
 - `ADMIN_EMAIL`: Main admin login.
 - `ADMIN_PASSWORD`: Main admin password.
 - `ADMIN_PIN`: Admin staff switcher PIN (e.g., "1234").
-- `ADMIN_SEED_ENABLED`: Set to `true` to allow seeding starter data.
 - `PORT`: API server port (default `3000`).
+
+**For Backups:**
+- `LITESTREAM_REPLICA_URL`: Your S3/R2 bucket URL.
+- `LITESTREAM_ACCESS_KEY_ID`: Cloudflare R2 Access Key.
+- `LITESTREAM_SECRET_ACCESS_KEY`: Cloudflare R2 Secret Key.
+
+---
 
 ## Deployment (Portainer)
 
 The project includes a GitHub workflow that can automatically update your Portainer stack.
 1. In Portainer, enable the **Webhook** for your stack and copy the URL.
-2. In GitHub, go to **Settings > Secrets and variables > Actions**.
-3. Add a new repository secret named `PORTAINER_WEBHOOK_URL` with your webhook URL.
-4. Every successful push to `main` will now trigger an automatic update of your live stack.
-
-## Puerto Vallarta Starter Data
-The system includes a pre-configured seed for:
-- **Spirits**: Casamigos, Don Julio 70, Herradura, Hacienda El Divisadero (Raicilla), 400 Conejos (Mezcal).
-- **Beers**: Pacifico, Corona, Modelo Especial, Victoria.
-- **Recipes**: Classic Margaritas, Raicilla Sours, Micheladas, Cantaritos, and more.
+2. In GitHub, add a repository secret named `PORTAINER_WEBHOOK_URL`.
+3. Every push to `main` will now trigger an automatic update of your live stack.
