@@ -18,7 +18,7 @@ export const ingredientsTable = sqliteTable("ingredients", {
 
 export const drinksTable = sqliteTable("drinks", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   nameEs: text("name_es"),
   description: text("description"),
   descriptionEs: text("description_es"),

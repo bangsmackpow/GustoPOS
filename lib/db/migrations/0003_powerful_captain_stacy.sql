@@ -1,0 +1,1 @@
+DROP INDEX `drinks_name_unique`;

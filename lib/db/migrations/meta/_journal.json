@@ -22,6 +22,13 @@
       "when": 1774812856028,
       "tag": "0002_boring_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1774813706909,
+      "tag": "0003_powerful_captain_stacy",
+      "breakpoints": true
     }
   ]
 }
