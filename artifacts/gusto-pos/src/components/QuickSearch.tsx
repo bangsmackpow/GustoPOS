@@ -12,6 +12,7 @@ import {
 import { useGetDrinks, useGetTabs } from '@workspace/api-client-react';
 import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
