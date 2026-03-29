@@ -5,7 +5,7 @@ import { useAddOrderMutation, useDeleteOrderMutation, useCloseTabMutation } from
 import { usePosStore } from '@/store';
 import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, CreditCard, Banknote, Coffee, Wine, Beer } from 'lucide-react';
+import { ArrowLeft, Trash2, CreditCard, Banknote, Coffee, Wine, Beer, Info, X } from 'lucide-react';
 import { Link } from 'wouter';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -31,6 +31,7 @@ export default function TabDetail() {
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [showCloseDialog, setShowCloseDialog] = useState(false);
+  const [viewingRecipe, setViewingRecipe] = useState<any>(null);
 
   if (!tabData) return null;
 
@@ -141,26 +142,84 @@ export default function TabDetail() {
           {filteredDrinks.map(drink => {
             const Icon = CATEGORY_ICONS[drink.category] || Wine;
             return (
-              <button
+              <div 
                 key={drink.id}
-                onClick={() => handleAddDrink(drink.id)}
-                disabled={!drink.isAvailable || addOrder.isPending}
-                className="glass p-4 rounded-3xl text-left hover:-translate-y-1 transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:hover:translate-y-0 group border border-transparent hover:border-primary/30 flex flex-col h-40"
+                className="glass p-4 rounded-3xl text-left hover:-translate-y-1 transition-all duration-200 active:scale-95 group border border-transparent hover:border-primary/30 flex flex-col h-40 relative overflow-hidden"
               >
-                <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center mb-3 text-primary group-hover:scale-110 transition-transform">
-                  <Icon size={20} />
-                </div>
-                <h4 className="font-bold text-foreground leading-tight line-clamp-2 mb-auto group-hover:text-primary transition-colors">
-                  {language === 'es' && drink.nameEs ? drink.nameEs : drink.name}
-                </h4>
-                <div className="font-display font-bold text-lg mt-2">
-                  {formatMoney(drink.actualPrice || drink.suggestedPrice)}
-                </div>
-              </button>
+                <button 
+                  className="absolute top-3 right-3 text-muted-foreground hover:text-primary z-10 p-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setViewingRecipe(drink);
+                  }}
+                >
+                  <Info size={18} />
+                </button>
+
+                <button
+                  onClick={() => handleAddDrink(drink.id)}
+                  disabled={!drink.isAvailable || addOrder.isPending}
+                  className="flex-1 flex flex-col w-full text-left"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center mb-3 text-primary group-hover:scale-110 transition-transform">
+                    <Icon size={20} />
+                  </div>
+                  <h4 className="font-bold text-foreground leading-tight line-clamp-2 mb-auto group-hover:text-primary transition-colors">
+                    {language === 'es' && drink.nameEs ? drink.nameEs : drink.name}
+                  </h4>
+                  <div className="font-display font-bold text-lg mt-2">
+                    {formatMoney(drink.actualPrice || drink.suggestedPrice)}
+                  </div>
+                </button>
+              </div>
             );
           })}
         </div>
       </div>
+
+      {/* Recipe Modal */}
+      {viewingRecipe && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/90 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="glass p-8 rounded-3xl w-full max-w-md relative border border-white/10 shadow-2xl">
+            <button onClick={() => setViewingRecipe(null)} className="absolute top-6 right-6 text-muted-foreground hover:text-foreground">
+              <X size={24} />
+            </button>
+            <h2 className="text-3xl font-display font-bold text-primary mb-2">
+              {language === 'es' && viewingRecipe.nameEs ? viewingRecipe.nameEs : viewingRecipe.name}
+            </h2>
+            <p className="text-muted-foreground mb-6 italic">
+              {language === 'es' && viewingRecipe.descriptionEs ? viewingRecipe.descriptionEs : viewingRecipe.description}
+            </p>
+            
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b border-white/5 pb-2">Recipe</h3>
+              {viewingRecipe.recipe.length > 0 ? (
+                <div className="space-y-3">
+                  {viewingRecipe.recipe.map((ing: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-center text-lg">
+                      <span className="text-foreground font-medium">
+                        {language === 'es' && ing.ingredientNameEs ? ing.ingredientNameEs : ing.ingredientName}
+                      </span>
+                      <div className="text-primary font-mono font-bold">
+                        {ing.amountInMl}ml <span className="text-muted-foreground text-sm">/</span> {(ing.amountInMl / 29.57).toFixed(1)}oz
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground py-4 text-center">No recipe details provided.</p>
+              )}
+            </div>
+
+            <Button className="w-full mt-8 h-12" onClick={() => {
+              handleAddDrink(viewingRecipe.id);
+              setViewingRecipe(null);
+            }}>
+              Add to Ticket
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
