@@ -1,5 +1,6 @@
 import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
+import crypto from "crypto";
 
 export const ingredientsTable = sqliteTable("ingredients", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

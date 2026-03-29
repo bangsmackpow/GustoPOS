@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import crypto from "crypto";
 
 export const sessionsTable = sqliteTable(
   "sessions",
