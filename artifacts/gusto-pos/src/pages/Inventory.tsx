@@ -4,14 +4,39 @@ import { useSaveIngredientMutation } from '@/hooks/use-pos-mutations';
 import { usePosStore } from '@/store';
 import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Plus, Edit2, X, AlertTriangle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, Edit2, X, AlertTriangle, Database } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Inventory() {
   const { language } = usePosStore();
   const { data: ingredients } = useGetIngredients();
   const saveIngredient = useSaveIngredientMutation();
+  const { toast } = useToast();
+  const qc = useQueryClient();
   
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const handleSeedStarter = async () => {
+    if (!confirm("This will add 50+ Puerto Vallarta drinks and ingredients. Continue?")) return;
+    
+    setIsSeeding(true);
+    try {
+      const res = await fetch('/api/seed-starter', { method: 'POST' });
+      const data = await res.json();
+      if (data.ok) {
+        toast({ title: "Success", description: "Starter data seeded" });
+        qc.invalidateQueries();
+      } else {
+        toast({ variant: "destructive", title: "Error", description: data.error });
+      }
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Connection Error" });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -20,9 +45,14 @@ export default function Inventory() {
           <h1 className="text-4xl font-display">{getTranslation('inventory', language)}</h1>
           <p className="text-muted-foreground mt-1">Manage stock and ingredient costs</p>
         </div>
-        <Button onClick={() => setEditingItem({ name: '', category: 'spirits', unit: 'ml', unitSize: 750, costPerUnit: 0, currentStock: 0, minimumStock: 0 })}>
-          <Plus className="mr-2" size={18} /> Add Item
-        </Button>
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={handleSeedStarter} disabled={isSeeding}>
+            <Database className="mr-2" size={18} /> {isSeeding ? 'Seeding...' : 'Seed Starter Data'}
+          </Button>
+          <Button onClick={() => setEditingItem({ name: '', category: 'spirits', unit: 'ml', unitSize: 750, costPerUnit: 0, currentStock: 0, minimumStock: 0 })}>
+            <Plus className="mr-2" size={18} /> Add Item
+          </Button>
+        </div>
       </div>
 
       <div className="glass rounded-3xl overflow-hidden">
@@ -75,11 +105,11 @@ export default function Inventory() {
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="space-y-2 col-span-2">
                 <label className="text-sm font-medium text-muted-foreground">Name</label>
-                <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3" value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
+                <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Category</label>
-                <select className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3" value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})}>
+                <select className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})}>
                   <option value="spirits">Spirits</option>
                   <option value="wine">Wine</option>
                   <option value="beer">Beer</option>
@@ -89,23 +119,23 @@ export default function Inventory() {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Cost per Unit (MXN)</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3" value={editingItem.costPerUnit} onChange={e => setEditingItem({...editingItem, costPerUnit: parseFloat(e.target.value)})} />
+                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.costPerUnit} onChange={e => setEditingItem({...editingItem, costPerUnit: parseFloat(e.target.value)})} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Unit (e.g. ml, oz)</label>
-                <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3" value={editingItem.unit} onChange={e => setEditingItem({...editingItem, unit: e.target.value})} />
+                <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.unit} onChange={e => setEditingItem({...editingItem, unit: e.target.value})} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Unit Size (e.g. 750)</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3" value={editingItem.unitSize} onChange={e => setEditingItem({...editingItem, unitSize: parseFloat(e.target.value)})} />
+                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.unitSize} onChange={e => setEditingItem({...editingItem, unitSize: parseFloat(e.target.value)})} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Current Stock</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3" value={editingItem.currentStock} onChange={e => setEditingItem({...editingItem, currentStock: parseFloat(e.target.value)})} />
+                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.currentStock} onChange={e => setEditingItem({...editingItem, currentStock: parseFloat(e.target.value)})} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted-foreground">Minimum Stock Alert</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3" value={editingItem.minimumStock} onChange={e => setEditingItem({...editingItem, minimumStock: parseFloat(e.target.value)})} />
+                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.minimumStock} onChange={e => setEditingItem({...editingItem, minimumStock: parseFloat(e.target.value)})} />
               </div>
             </div>
 
