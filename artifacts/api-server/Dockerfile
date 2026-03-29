@@ -8,7 +8,7 @@ ENV CI=true
 # Install pnpm
 RUN npm install -g pnpm
 
-# Copy workspace metadata and api-server package for proper workspace resolution
+# Copy workspace metadata and all package.json files for proper pnpm workspace resolution
 COPY pnpm-workspace.yaml pnpm-workspace.yaml
 COPY package.json package.json
 COPY pnpm-lock.yaml pnpm-lock.yaml
@@ -33,16 +33,15 @@ RUN pnpm run build
 FROM node:20-slim
 WORKDIR /app
 
-# In a pnpm monorepo, dependencies are often symlinked to the root node_modules/.pnpm
-# To be safe and keep things simple, we copy the built dist AND the necessary node_modules
-COPY --from=builder /app/artifacts/api-server/dist ./dist
-# We copy the root node_modules because artifacts/api-server/node_modules likely contains symlinks to it
-COPY --from=builder /app/node_modules ./node_modules
+# To ensure symlinks work correctly in a pnpm monorepo, 
+# we preserve the exact structure of the workspace
+COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=builder /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# We run from the root to ensure module resolution for symlinks works as expected
+# Execute from the root to maintain relative symlink resolution
 CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
