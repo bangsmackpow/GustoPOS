@@ -21,8 +21,14 @@ function formatUser(u: typeof usersTable.$inferSelect) {
 }
 
 router.get("/users", async (req: Request, res: Response) => {
-  const users = await db.select().from(usersTable);
-  return res.json(users.map(formatUser));
+  try {
+    const users = await db.select().from(usersTable);
+    console.log(`[getUsers] Found ${users.length} users in database`);
+    return res.json(users.map(formatUser));
+  } catch (err) {
+    console.error("[getUsers] Failed to fetch users:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 router.post("/users", async (req: Request, res: Response) => {
