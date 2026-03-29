@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
 import { useGetCurrentAuthUser, useGetActiveShift } from '@workspace/api-client-react';
 import { PinPad } from './PinPad';
 
@@ -32,6 +33,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { data: auth, isLoading } = useGetCurrentAuthUser();
   const { data: shiftData } = useGetActiveShift();
   const [showPin, setShowPin] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout');
+      queryClient.setQueryData(['/api/auth/user'], { isAuthenticated: false });
+      setLocation('/login');
+    } catch (err) {
+      console.error('Logout failed', err);
+      // Fallback
+      window.location.href = '/login';
+    }
+  };
 
   // If not authenticated via OIDC, redirect to Login page
   useEffect(() => {
@@ -95,10 +109,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <Globe size={20} />
             <span className="ml-3 font-medium hidden lg:block uppercase text-sm tracking-widest">{language}</span>
           </button>
-          <button 
-            onClick={() => window.location.href = '/api/logout'}
+          <button
+            onClick={handleLogout}
             className="flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
           >
+
             <LogOut size={20} />
             <span className="ml-3 font-medium hidden lg:block">{getTranslation('logout', language)}</span>
           </button>
