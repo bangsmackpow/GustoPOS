@@ -42,10 +42,8 @@ jobs:
           BASE_PATH: /
           CI: true
         run: |
-          cd artifacts/gusto-pos
-          pnpm install
-          pnpm run build
-          ls -la dist
+          pnpm run build --filter @workspace/gusto-pos
+          ls -la artifacts/gusto-pos/dist/public
       - name: Build Frontend image
         run: |
           docker build -t ghcr.io/${{ github.repository_owner }}/gusto-pos-frontend:latest -f artifacts/gusto-pos/Dockerfile .
