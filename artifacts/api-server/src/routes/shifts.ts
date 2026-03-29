@@ -20,7 +20,7 @@ async function getReportData(shiftId: string) {
 
   const tabIds = tabs.map(t => t.id);
   const allOrders = tabIds.length > 0
-    ? await db.select().from(ordersTable).where(sql`${ordersTable.tabId} = ANY(${tabIds})`)
+    ? await db.select().from(ordersTable).where(sql`${ordersTable.tabId} IN (${sql.raw(tabIds.map(id => `'${id}'`).join(','))})`)
     : [];
 
   const totalMxn = closedTabs.reduce((sum, t) => sum + Number(t.totalMxn), 0);
@@ -136,12 +136,12 @@ router.get("/reports/end-of-night/:shiftId", async (req: Request, res: Response)
 
   const tabIds = tabs.map(t => t.id);
   const allOrders = tabIds.length > 0
-    ? await db.select().from(ordersTable).where(sql`${ordersTable.tabId} = ANY(${tabIds})`)
+    ? await db.select().from(ordersTable).where(sql`${ordersTable.tabId} IN (${sql.raw(tabIds.map(id => `'${id}'`).join(','))})`)
     : [];
 
   const allDrinkIds = [...new Set(allOrders.map(o => o.drinkId))];
   const drinks = allDrinkIds.length > 0
-    ? await db.select().from(drinksTable).where(sql`${drinksTable.id} = ANY(${allDrinkIds})`)
+    ? await db.select().from(drinksTable).where(sql`${drinksTable.id} IN (${sql.raw(allDrinkIds.map(id => `'${id}'`).join(','))})`)
     : [];
   const drinkMap = new Map(drinks.map(d => [d.id, d]));
 
