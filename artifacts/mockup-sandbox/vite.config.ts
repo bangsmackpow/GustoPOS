@@ -30,25 +30,19 @@ if (!basePath) {
 export default defineConfig({
   base: basePath,
   plugins: [
-    // @ts-ignore
     mockupPreviewPlugin(),
-    // @ts-ignore
     react(),
-    // @ts-ignore
     tailwindcss(),
-    // @ts-ignore
     runtimeErrorOverlay(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
+          (await import("@replit/vite-plugin-cartographer")).cartographer({
+            root: path.resolve(import.meta.dirname, ".."),
+          }),
         ]
       : []),
-  ],
+  ] as any,
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "src"),
