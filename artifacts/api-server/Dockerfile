@@ -32,5 +32,6 @@ COPY --from=builder /app/artifacts/api-server/dist ./dist
 COPY --from=builder /app/artifacts/api-server/node_modules ./node_modules
 
 EXPOSE 3000
+ENV PORT=3000
 ENV NODE_ENV=production
 CMD ["node", "--enable-source-maps", "dist/index.mjs"]
