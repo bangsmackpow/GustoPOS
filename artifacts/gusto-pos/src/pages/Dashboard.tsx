@@ -40,6 +40,8 @@ export default function Dashboard() {
   const openTabsCount = tabs?.length || 0;
   const totalSales = tabs?.reduce((sum, tab) => sum + Number(tab.totalMxn), 0) || 0;
 
+  const activeShiftData = activeShift?.shift;
+
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -52,12 +54,12 @@ export default function Dashboard() {
           </p>
         </div>
         
-        {activeShift ? (
+        {activeShiftData ? (
           <Button 
             variant="destructive" 
             size="lg" 
             className="rounded-2xl h-14 px-8 shadow-lg shadow-destructive/20"
-            onClick={() => closeShift.mutate({ id: activeShift.id })}
+            onClick={() => closeShift.mutate({ id: activeShiftData.id })}
             disabled={closeShift.isPending}
           >
             <Square className="mr-2" size={20} />

@@ -76,6 +76,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const BarIcon = ICON_MAP[settings?.barIcon || 'Wine'] || Wine;
+  const activeShift = shiftData?.shift;
 
   return (
     <div className="flex h-screen bg-background overflow-hidden text-foreground">
@@ -138,10 +139,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4">
             <div className="hidden md:block">
               <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-                {shiftData ? getTranslation('active_shift', language) : getTranslation('no_active_shift', language)}
+                {activeShift ? getTranslation('active_shift', language) : getTranslation('no_active_shift', language)}
               </h2>
               <p className="text-lg font-display font-bold">
-                {shiftData ? shiftData.name : '—'}
+                {activeShift ? activeShift.name : '—'}
               </p>
             </div>
           </div>
