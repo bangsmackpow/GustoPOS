@@ -3,8 +3,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-import { cartographer } from "@replit/vite-plugin-cartographer";
 
 const port = process.env.PORT ? parseInt(process.env.PORT) : 5173;
 
@@ -12,8 +10,6 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    cartographer(),
-    runtimeErrorOverlay(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'images/*.png'],
@@ -56,14 +52,14 @@ export default defineConfig({
           },
           {
             urlPattern: /\/api\/auth\/user/i,
-            handler: 'NetworkFirst', // Always try to get fresh auth, but fallback
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'auth-cache'
             }
           },
           {
             urlPattern: /\/api\/.*/i,
-            handler: 'NetworkFirst', // Default for API: Try network, then cache
+            handler: 'NetworkFirst',
             options: {
               cacheName: 'api-data-cache',
               expiration: {
