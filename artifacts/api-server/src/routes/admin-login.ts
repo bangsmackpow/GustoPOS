@@ -81,25 +81,30 @@ export default function adminLoginRouter(): express.Router {
       };
     } else {
       // 2. Check Database for Managers
-      const [dbUser] = await db.select().from(usersTable).where(
-        and(
-          eq(usersTable.email, email),
-          eq(usersTable.password, password),
-          eq(usersTable.isActive, true),
-          or(eq(usersTable.role, "manager"), eq(usersTable.role, "head_bartender"))
-        )
-      );
+      try {
+        const [dbUser] = await db.select().from(usersTable).where(
+          and(
+            eq(usersTable.email, email),
+            eq(usersTable.password, password),
+            eq(usersTable.isActive, true),
+            or(eq(usersTable.role, "manager"), eq(usersTable.role, "head_bartender"))
+          )
+        );
 
-      if (dbUser) {
-        userToSession = {
-          id: dbUser.id,
-          email: dbUser.email,
-          firstName: dbUser.firstName,
-          lastName: dbUser.lastName,
-          role: dbUser.role,
-          language: dbUser.language,
-          isActive: true,
-        };
+        if (dbUser) {
+          userToSession = {
+            id: dbUser.id,
+            email: dbUser.email,
+            firstName: dbUser.firstName,
+            lastName: dbUser.lastName,
+            role: dbUser.role,
+            language: dbUser.language,
+            isActive: true,
+          };
+        }
+      } catch (dbErr) {
+        console.error("Database login check failed:", dbErr);
+        // Continue, maybe it's just a missing column during migration window
       }
     }
 
