@@ -5,8 +5,9 @@ import { usePosStore } from '@/store';
 import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, X, AlertTriangle, Database, FileText, Upload, Check } from 'lucide-react';
+import { Plus, Edit2, X, AlertTriangle, Database, FileText, Upload, Check, FileSpreadsheet } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import Papa from 'papaparse';
 
 export default function Inventory() {
   const { language } = usePosStore();
@@ -41,18 +42,41 @@ export default function Inventory() {
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const rows = results.data.map((row: any) => ({
+          name: row.Name || row.name || row.Producto,
+          category: row.Category || row.category || row.Categoría || 'spirits',
+          unit: row.Unit || row.unit || row.Unidad || 'ml',
+          unitSize: parseFloat(row.Size || row.size || row.Tamaño) || 750,
+          costPerUnit: parseFloat(String(row.Cost || row.cost || row.Costo).replace(/[^0-9.]/g, '')) || 0,
+          currentStock: parseFloat(row.Stock || row.stock || row.Inventario) || 0,
+          minimumStock: parseFloat(row.Min || row.min || row.Mínimo) || 0,
+        }));
+        setImportPreview(rows);
+        toast({ title: "File Parsed", description: `Found ${rows.length} items` });
+      },
+      error: () => {
+        toast({ variant: "destructive", title: "Error", description: "Could not parse CSV file" });
+      }
+    });
+  };
+
   const parseMarkdownTable = () => {
     const lines = importText.trim().split('\n');
     if (lines.length < 3) return;
 
-    // Filter out separator lines (e.g., |---|---|)
     const dataLines = lines.filter(line => line.includes('|') && !line.includes('---'));
     if (dataLines.length < 2) return;
 
     const headers = dataLines[0].split('|').map(h => h.trim().toLowerCase()).filter(h => h);
     const rows = dataLines.slice(1).map(line => {
-      const values = line.split('|').map(v => v.trim()).filter((v, i) => i > 0 || line.startsWith('|') ? true : i < line.split('|').length - 1);
-      // Adjust if line starts/ends with |
       const cleanValues = line.trim().startsWith('|') ? line.trim().split('|').slice(1, -1).map(v => v.trim()) : line.trim().split('|').map(v => v.trim());
       
       const item: any = {};
@@ -162,20 +186,36 @@ export default function Inventory() {
               <X size={24} />
             </button>
             <h2 className="text-2xl font-display mb-2 flex items-center gap-2">
-              <FileText className="text-primary" /> Markdown Bulk Import
+              <FileSpreadsheet className="text-primary" /> Bulk Import (CSV or Markdown)
             </h2>
-            <p className="text-muted-foreground mb-6 text-sm">Paste a Markdown table below to bulk add ingredients. Headers: Name, Category, Unit, Size, Cost, Stock, Min</p>
+            <p className="text-muted-foreground mb-6 text-sm">Upload a CSV file or paste a Markdown table below. Headers: Name, Category, Unit, Size, Cost, Stock, Min</p>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 overflow-hidden">
               <div className="flex flex-col gap-4">
-                <textarea 
-                  className="flex-1 bg-secondary/50 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:ring-2 focus:ring-primary/50 outline-none resize-none"
-                  placeholder="| Name | Category | Unit | Size | Cost | Stock | Min |&#10;|---|---|---|---|---|---|---|&#10;| Don Julio 70 | spirits | ml | 700 | 1200 | 1400 | 700 |"
-                  value={importText}
-                  onChange={e => setImportText(e.target.value)}
-                />
-                <Button onClick={parseMarkdownTable} className="w-full h-12">
-                  <Check className="mr-2" size={18} /> Parse Table
+                <div className="p-6 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors relative">
+                  <input 
+                    type="file" 
+                    accept=".csv" 
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  <Upload size={32} className="text-primary mb-2" />
+                  <p className="font-medium">Click to upload CSV</p>
+                  <p className="text-xs text-muted-foreground mt-1">Exported from Excel or Sheets</p>
+                </div>
+
+                <div className="relative flex-1 flex flex-col">
+                  <div className="absolute top-3 right-3 text-[10px] uppercase font-bold text-muted-foreground">Or paste Markdown</div>
+                  <textarea 
+                    className="flex-1 bg-secondary/50 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:ring-2 focus:ring-primary/50 outline-none resize-none pt-8"
+                    placeholder="| Name | Category | Unit | Size | Cost | Stock | Min |"
+                    value={importText}
+                    onChange={e => setImportText(e.target.value)}
+                  />
+                </div>
+                
+                <Button onClick={parseMarkdownTable} variant="secondary" className="w-full h-12">
+                  <Check className="mr-2" size={18} /> Parse Markdown
                 </Button>
               </div>
 
@@ -199,7 +239,7 @@ export default function Inventory() {
                   ))}
                   {importPreview.length === 0 && (
                     <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm py-20">
-                      Paste and parse a table to see the preview
+                      Upload CSV or paste table to preview
                     </div>
                   )}
                 </div>
@@ -207,11 +247,11 @@ export default function Inventory() {
             </div>
 
             <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-white/10">
-              <Button variant="ghost" onClick={() => setShowImport(false)}>Cancel</Button>
+              <Button variant="ghost" onClick={() => { setShowImport(false); setImportPreview([]); }}>Cancel</Button>
               <Button 
                 onClick={handleBulkImport}
                 disabled={importPreview.length === 0 || isSeeding}
-                className="px-12 bg-primary hover:bg-primary/90 text-primary-foreground h-12"
+                className="px-12 bg-primary hover:bg-primary/90 text-primary-foreground h-12 shadow-lg shadow-primary/20"
               >
                 {isSeeding ? 'Importing...' : 'Save All to Inventory'}
               </Button>
