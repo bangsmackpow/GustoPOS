@@ -1,8 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, shiftsTable, tabsTable, ordersTable, usersTable, drinksTable, ingredientsTable, recipeIngredientsTable, settingsTable } from "@workspace/db";
 import { eq, desc, sql } from "drizzle-orm";
-import {
- StartShiftBody } from "@workspace/api-zod";
+import { StartShiftBody } from "@workspace/api-zod";
 import { sendShiftReport } from "../lib/email";
 
 const router: IRouter = Router();
@@ -51,39 +50,36 @@ router.get("/shifts", async (req: Request, res: Response) => {
   const shifts = await db.select().from(shiftsTable).orderBy(desc(shiftsTable.startedAt));
   const userIds = [...new Set(shifts.map(s => s.openedByUserId))];
   const users = userIds.length > 0
-    ? await db.select().from(usersTable).where(sql`${usersTable.id} = ANY(${userIds})`)
+    ? await db.select().from(usersTable).where(sql`${usersTable.id} IN (${sql.raw(userIds.map(id => `'${id}'`).join(','))})`)
     : [];
   const userMap = new Map(users.map(u => [u.id, `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() || u.email || u.id]));
-  res.json(shifts.map(s => formatShift(s, userMap.get(s.openedByUserId))));
+  return res.json(shifts.map(s => formatShift(s, userMap.get(s.openedByUserId))));
 });
 
 router.post("/shifts", async (req: Request, res: Response) => {
   const parsed = StartShiftBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body", details: parsed.error });
-    return;
+    return res.status(400).json({ error: "Invalid request body", details: parsed.error });
   }
   const existing = await db.select().from(shiftsTable).where(eq(shiftsTable.status, "active"));
   if (existing.length > 0) {
-    res.status(400).json({ error: "There is already an active shift. Close it before starting a new one." });
-    return;
+    return res.status(400).json({ error: "There is already an active shift. Close it before starting a new one." });
   }
   const { name, openedByUserId } = parsed.data;
   const [shift] = await db.insert(shiftsTable).values({ name, openedByUserId, status: "active" }).returning();
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, openedByUserId));
   const userName = user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email || user.id : null;
-  res.status(201).json(formatShift(shift, userName));
+  return res.status(201).json(formatShift(shift, userName));
 });
 
 router.get("/shifts/active", async (req: Request, res: Response) => {
   const [shift] = await db.select().from(shiftsTable).where(eq(shiftsTable.status, "active"));
   if (!shift) {
-    res.json({ shift: null });
-    return;
+    return res.json({ shift: null });
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, shift.openedByUserId));
   const userName = user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email || user.id : null;
-  res.json({ shift: formatShift(shift, userName) });
+  return res.json({ shift: formatShift(shift, userName) });
 });
 
 router.post("/shifts/:id/close", async (req: Request, res: Response) => {
@@ -92,8 +88,7 @@ router.post("/shifts/:id/close", async (req: Request, res: Response) => {
     .where(eq(shiftsTable.id, req.params.id as string))
     .returning();
   if (!shift) {
-    res.status(404).json({ error: "Shift not found" });
-    return;
+    return res.status(404).json({ error: "Shift not found" });
   }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, shift.openedByUserId));
   const userName = user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email || user.id : null;
@@ -113,15 +108,14 @@ router.post("/shifts/:id/close", async (req: Request, res: Response) => {
     }
   })();
 
-  res.json(formatShift(shift, userName));
+  return res.json(formatShift(shift, userName));
 });
 
 router.get("/reports/end-of-night/:shiftId", async (req: Request, res: Response) => {
   const shiftId = req.params.shiftId as string;
   const [shift] = await db.select().from(shiftsTable).where(eq(shiftsTable.id, shiftId));
   if (!shift) {
-    res.status(404).json({ error: "Shift not found" });
-    return;
+    return res.status(404).json({ error: "Shift not found" });
   }
 
   const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, "default"));
@@ -149,7 +143,7 @@ router.get("/reports/end-of-night/:shiftId", async (req: Request, res: Response)
     ? await db.select({ ri: recipeIngredientsTable, ing: ingredientsTable })
         .from(recipeIngredientsTable)
         .leftJoin(ingredientsTable, eq(recipeIngredientsTable.ingredientId, ingredientsTable.id))
-        .where(sql`${recipeIngredientsTable.drinkId} = ANY(${allDrinkIds})`)
+        .where(sql`${recipeIngredientsTable.drinkId} IN (${sql.raw(allDrinkIds.map(id => `'${id}'`).join(','))})`)
     : [];
 
   const drinkCostMap = new Map<string, number>();
@@ -226,7 +220,7 @@ router.get("/reports/end-of-night/:shiftId", async (req: Request, res: Response)
     totalSalesMxn: v.sales,
     totalCostMxn: v.cost,
     profitMxn: v.sales - v.cost,
-  })).sort((a, b) => b.totalSalesMxn - a.totalSalesMxn);
+  })).sort((a, b) => b.profitMxn - a.profitMxn); // Sort by Profit primarily
 
   const topSellers = [...salesByDrink].sort((a, b) => b.quantitySold - a.quantitySold).slice(0, 10);
 
@@ -288,7 +282,7 @@ router.get("/reports/end-of-night/:shiftId", async (req: Request, res: Response)
     notes: t.notes ?? null,
   }));
 
-  res.json({
+  return res.json({
     shift: formatShift(shift, shiftUserName),
     totalSalesMxn: totalMxn,
     totalSalesUsd: totalMxn / usdToMxn,
