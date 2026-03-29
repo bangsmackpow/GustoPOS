@@ -8,6 +8,7 @@ import tabsRouter from "./tabs";
 import shiftsRouter from "./shifts";
 import settingsRouter from "./settings";
 import devLoginRouter from "./dev-login";
+import pinLoginRouter from "./pin-login";
 import adminLoginRouter from "./admin-login";
 
 const router: IRouter = Router();
@@ -21,9 +22,10 @@ router.use(tabsRouter);
 router.use(shiftsRouter);
 router.use(settingsRouter);
 router.use(devLoginRouter());
+router.use(pinLoginRouter());
 router.use(adminLoginRouter());
-// Optional: load admin-seed route at runtime to avoid bundling pg on CI/build
 (async () => {
+  // Optional: load admin-seed route at runtime to avoid bundling pg on CI/build
   if ((process.env.ADMIN_SEED_ENABLED || "false").toLowerCase() === "true") {
     try {
       const mod = await import("./admin-seed");
@@ -33,6 +35,5 @@ router.use(adminLoginRouter());
     }
   }
 })();
-router.use(adminSeedRouter());
 
 export default router;
