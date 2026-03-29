@@ -13,7 +13,7 @@ import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza, Zap, Trash2, Calendar } from 'lucide-react';
+import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza, Zap, Trash2, Calendar, HardDrive, Shield } from 'lucide-react';
 import { format } from 'date-fns';
 
 const BRAND_ICONS = [
@@ -54,7 +54,9 @@ export default function Settings() {
     smtpUser: '',
     smtpPassword: '',
     smtpFromEmail: '',
-    inventoryAlertEmail: ''
+    inventoryAlertEmail: '',
+    enableLitestream: false,
+    enableUsbBackup: false
   });
 
   const [editingStaff, setEditingStaff] = useState<any>(null);
@@ -81,7 +83,9 @@ export default function Settings() {
         smtpUser: settings.smtpUser || '',
         smtpPassword: settings.smtpPassword || '',
         smtpFromEmail: settings.smtpFromEmail || '',
-        inventoryAlertEmail: settings.inventoryAlertEmail || ''
+        inventoryAlertEmail: settings.inventoryAlertEmail || '',
+        enableLitestream: settings.enableLitestream,
+        enableUsbBackup: settings.enableUsbBackup
       });
     }
   }, [settings, formData.barName]);
@@ -113,7 +117,8 @@ export default function Settings() {
     createRush.mutate({ 
       data: {
         ...newRush,
-        startTime: new Date(newRush.startTime).toISOString()
+        startTime: new Date(newRush.startTime).toISOString(),
+        description: newRush.description || null
       } 
     }, {
       onSuccess: () => {
@@ -303,9 +308,41 @@ export default function Settings() {
           </section>
         </div>
 
-        {/* Right Column: SMTP */}
-        <div className="lg:col-span-4">
-          <section className="glass rounded-3xl p-6 space-y-6 sticky top-8">
+        {/* Right Column: SMTP & Backups */}
+        <div className="lg:col-span-4 space-y-8">
+          {/* Backups */}
+          <section className="glass rounded-3xl p-6 space-y-6">
+            <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
+              <Shield size={18} /> Disaster Recovery
+            </h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5">
+                <div className="flex items-center gap-3">
+                  <Globe size={18} className="text-blue-400" />
+                  <div className="text-xs">
+                    <p className="font-bold uppercase">Litestream</p>
+                    <p className="text-muted-foreground">Real-time Cloud Sync</p>
+                  </div>
+                </div>
+                <input type="checkbox" checked={formData.enableLitestream} onChange={e => setFormData({...formData, enableLitestream: e.target.checked})} className="w-5 h-5 rounded-lg border-white/10 bg-secondary" />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-white/5 border border-white/5">
+                <div className="flex items-center gap-3">
+                  <HardDrive size={18} className="text-emerald-400" />
+                  <div className="text-xs">
+                    <p className="font-bold uppercase">USB Backup</p>
+                    <p className="text-muted-foreground">Local Nightly Export</p>
+                  </div>
+                </div>
+                <input type="checkbox" checked={formData.enableUsbBackup} onChange={e => setFormData({...formData, enableUsbBackup: e.target.checked})} className="w-5 h-5 rounded-lg border-white/10 bg-secondary" />
+              </div>
+            </div>
+            <Button className="w-full" variant="outline" onClick={handleSaveSettings}>Save Backup Policy</Button>
+          </section>
+
+          {/* SMTP */}
+          <section className="glass rounded-3xl p-6 space-y-6">
             <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
               <Mail size={18} /> Notifications & SMTP
             </h3>
@@ -333,7 +370,7 @@ export default function Settings() {
                 <input type="password" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2 text-foreground text-sm" value={formData.smtpPassword || ''} onChange={e => setFormData({...formData, smtpPassword: e.target.value})} />
               </div>
             </div>
-            <Button className="w-full" onClick={handleSaveSettings}>Save Notification Setup</Button>
+            <Button className="w-full" onClick={handleSaveSettings}>Save Email Setup</Button>
           </section>
         </div>
       </div>
@@ -382,7 +419,7 @@ export default function Settings() {
         </div>
       )}
 
-      {/* Staff Edit Modal (existing) */}
+      {/* Staff Edit Modal */}
       {editingStaff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
           <div className="glass p-8 rounded-3xl w-full max-w-md relative">

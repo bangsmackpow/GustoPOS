@@ -86,6 +86,8 @@ export const settingsTable = sqliteTable("settings", {
   smtpPassword: text("smtp_password"),
   smtpFromEmail: text("smtp_from_email"),
   inventoryAlertEmail: text("inventory_alert_email"),
+  enableLitestream: integer("enable_litestream", { mode: "boolean" }).notNull().default(false),
+  enableUsbBackup: integer("enable_usb_backup", { mode: "boolean" }).notNull().default(false),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 

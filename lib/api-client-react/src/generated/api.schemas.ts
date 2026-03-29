@@ -526,7 +526,9 @@ export interface SalesByDrink {
   drinkNameEs?: string | null;
   quantitySold: number;
   totalSalesMxn: number;
+  /** Total ingredient cost for all units sold */
   totalCostMxn: number;
+  /** Total profit (Revenue - Cost) */
   profitMxn: number;
 }
 
@@ -539,6 +541,8 @@ export interface SalesByCategory {
 export interface InventoryUsed {
   ingredientId: string;
   ingredientName: string;
+  /** @nullable */
+  ingredientNameEs?: string | null;
   amountUsed: number;
   unit: string;
   currentStock: number;
@@ -547,6 +551,8 @@ export interface InventoryUsed {
 export interface LowStockAlert {
   ingredientId: string;
   ingredientName: string;
+  /** @nullable */
+  ingredientNameEs?: string | null;
   currentStock: number;
   minimumStock: number;
   unit: string;
@@ -599,6 +605,8 @@ export interface AppSettings {
   smtpFromEmail?: string | null;
   /** @nullable */
   inventoryAlertEmail?: string | null;
+  enableLitestream: boolean;
+  enableUsbBackup: boolean;
 }
 
 export interface UpdateSettingsBody {
@@ -624,6 +632,10 @@ export interface UpdateSettingsBody {
   smtpFromEmail?: string | null;
   /** @nullable */
   inventoryAlertEmail?: string | null;
+  /** @nullable */
+  enableLitestream?: boolean | null;
+  /** @nullable */
+  enableUsbBackup?: boolean | null;
 }
 
 export type RushImpact = (typeof RushImpact)[keyof typeof RushImpact];
@@ -646,8 +658,10 @@ export const RushType = {
 export interface Rush {
   id: string;
   title: string;
+  /** @nullable */
   description?: string | null;
   startTime: string;
+  /** @nullable */
   endTime?: string | null;
   impact: RushImpact;
   type: RushType;
@@ -674,8 +688,10 @@ export const CreateRushBodyType = {
 
 export interface CreateRushBody {
   title: string;
+  /** @nullable */
   description?: string | null;
   startTime: string;
+  /** @nullable */
   endTime?: string | null;
   impact: CreateRushBodyImpact;
   type: CreateRushBodyType;

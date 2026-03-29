@@ -1359,8 +1359,10 @@ components:
           type: number
         totalCostMxn:
           type: number
+          description: Total ingredient cost for all units sold
         profitMxn:
           type: number
+          description: Total profit (Revenue - Cost)
       required:
         - drinkId
         - drinkName
@@ -1390,6 +1392,8 @@ components:
           type: string
         ingredientName:
           type: string
+        ingredientNameEs:
+          type: ["string", "null"]
         amountUsed:
           type: number
         unit:
@@ -1410,6 +1414,8 @@ components:
           type: string
         ingredientName:
           type: string
+        ingredientNameEs:
+          type: ["string", "null"]
         currentStock:
           type: number
         minimumStock:
@@ -1454,12 +1460,18 @@ components:
           type: ["string", "null"]
         inventoryAlertEmail:
           type: ["string", "null"]
+        enableLitestream:
+          type: boolean
+        enableUsbBackup:
+          type: boolean
       required:
         - baseCurrency
         - usdToMxnRate
         - cadToMxnRate
         - defaultMarkupFactor
         - barName
+        - enableLitestream
+        - enableUsbBackup
 
     UpdateSettingsBody:
       type: object
@@ -1486,6 +1498,10 @@ components:
           type: ["string", "null"]
         inventoryAlertEmail:
           type: ["string", "null"]
+        enableLitestream:
+          type: ["boolean", "null"]
+        enableUsbBackup:
+          type: ["boolean", "null"]
 
     Rush:
       type: object
@@ -1495,15 +1511,13 @@ components:
         title:
           type: string
         description:
-          type: string
-          nullable: true
+          type: ["string", "null"]
         startTime:
           type: string
           format: date-time
         endTime:
-          type: string
+          type: ["string", "null"]
           format: date-time
-          nullable: true
         impact:
           type: string
           enum: [low, medium, high]
@@ -1523,15 +1537,13 @@ components:
         title:
           type: string
         description:
-          type: string
-          nullable: true
+          type: ["string", "null"]
         startTime:
           type: string
           format: date-time
         endTime:
-          type: string
+          type: ["string", "null"]
           format: date-time
-          nullable: true
         impact:
           type: string
           enum: [low, medium, high]
@@ -1544,7 +1556,6 @@ components:
         - impact
         - type
 
-
     DeleteResponse:
       type: object
       properties:
@@ -1552,4 +1563,3 @@ components:
           type: boolean
       required:
         - success
-

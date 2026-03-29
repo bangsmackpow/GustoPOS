@@ -751,8 +751,10 @@ export const GetEndOfNightReportResponse = zod.object({
       drinkNameEs: zod.string().nullish(),
       quantitySold: zod.number(),
       totalSalesMxn: zod.number(),
-      totalCostMxn: zod.number(),
-      profitMxn: zod.number(),
+      totalCostMxn: zod
+        .number()
+        .describe("Total ingredient cost for all units sold"),
+      profitMxn: zod.number().describe("Total profit (Revenue - Cost)"),
     }),
   ),
   salesByCategory: zod.array(
@@ -769,14 +771,17 @@ export const GetEndOfNightReportResponse = zod.object({
       drinkNameEs: zod.string().nullish(),
       quantitySold: zod.number(),
       totalSalesMxn: zod.number(),
-      totalCostMxn: zod.number(),
-      profitMxn: zod.number(),
+      totalCostMxn: zod
+        .number()
+        .describe("Total ingredient cost for all units sold"),
+      profitMxn: zod.number().describe("Total profit (Revenue - Cost)"),
     }),
   ),
   inventoryUsed: zod.array(
     zod.object({
       ingredientId: zod.string(),
       ingredientName: zod.string(),
+      ingredientNameEs: zod.string().nullish(),
       amountUsed: zod.number(),
       unit: zod.string(),
       currentStock: zod.number(),
@@ -786,6 +791,7 @@ export const GetEndOfNightReportResponse = zod.object({
     zod.object({
       ingredientId: zod.string(),
       ingredientName: zod.string(),
+      ingredientNameEs: zod.string().nullish(),
       currentStock: zod.number(),
       minimumStock: zod.number(),
       unit: zod.string(),
@@ -837,6 +843,8 @@ export const GetSettingsResponse = zod.object({
   smtpPassword: zod.string().nullish(),
   smtpFromEmail: zod.string().nullish(),
   inventoryAlertEmail: zod.string().nullish(),
+  enableLitestream: zod.boolean(),
+  enableUsbBackup: zod.boolean(),
 });
 
 /**
@@ -854,6 +862,8 @@ export const UpdateSettingsBody = zod.object({
   smtpPassword: zod.string().nullish(),
   smtpFromEmail: zod.string().nullish(),
   inventoryAlertEmail: zod.string().nullish(),
+  enableLitestream: zod.boolean().nullish(),
+  enableUsbBackup: zod.boolean().nullish(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -871,6 +881,8 @@ export const UpdateSettingsResponse = zod.object({
   smtpPassword: zod.string().nullish(),
   smtpFromEmail: zod.string().nullish(),
   inventoryAlertEmail: zod.string().nullish(),
+  enableLitestream: zod.boolean(),
+  enableUsbBackup: zod.boolean(),
 });
 
 /**

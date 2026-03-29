@@ -19,6 +19,8 @@ function formatSettings(s: typeof settingsTable.$inferSelect) {
     smtpPassword: s.smtpPassword ?? null,
     smtpFromEmail: s.smtpFromEmail ?? null,
     inventoryAlertEmail: s.inventoryAlertEmail ?? null,
+    enableLitestream: s.enableLitestream,
+    enableUsbBackup: s.enableUsbBackup,
   };
 }
 
@@ -58,6 +60,9 @@ router.patch("/settings", async (req: Request, res: Response) => {
     if (data.smtpPassword !== undefined) updateData.smtpPassword = data.smtpPassword || null;
     if (data.smtpFromEmail !== undefined) updateData.smtpFromEmail = data.smtpFromEmail || null;
     if (data.inventoryAlertEmail !== undefined) updateData.inventoryAlertEmail = data.inventoryAlertEmail || null;
+
+    if (data.enableLitestream !== undefined) updateData.enableLitestream = data.enableLitestream ?? false;
+    if (data.enableUsbBackup !== undefined) updateData.enableUsbBackup = data.enableUsbBackup ?? false;
 
     const [settings] = await db.update(settingsTable).set(updateData).where(eq(settingsTable.id, "default")).returning();
     return res.json(formatSettings(settings));
