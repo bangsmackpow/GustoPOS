@@ -34,18 +34,17 @@ WORKDIR /app
 # Ensure data directory exists for SQLite
 RUN mkdir -p /app/data
 
-# Preserve the full workspace structure to ensure pnpm's relative symlinks resolve correctly
+# Preserve the EXACT workspace structure to ensure all relative symlinks resolve correctly
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
 COPY --from=builder /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
 COPY --from=builder /app/artifacts/api-server/package.json ./artifacts/api-server/package.json
 
-# Work from the specific artifact directory so relative paths in package.json/node work
-WORKDIR /app/artifacts/api-server
-
+# Expose the API port
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
 
-# Run the bundled entry point
-CMD ["node", "--enable-source-maps", "dist/index.mjs"]
+# Run from the root using the absolute path to the entrypoint
+# This matches the structure preserved above and satisfies module lookups
+CMD ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
