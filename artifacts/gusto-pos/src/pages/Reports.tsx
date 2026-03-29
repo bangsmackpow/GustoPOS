@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useGetShifts, useGetEndOfNightReport, useStartShiftMutation, useCloseShiftMutation } from '@workspace/api-client-react';
+import { useGetShifts, useGetEndOfNightReport } from '@workspace/api-client-react';
+import { useStartShiftMutation, useCloseShiftMutation } from '@/hooks/use-pos-mutations';
 import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,7 @@ export default function Reports() {
   
   const { data: report, isLoading: loadingReport } = useGetEndOfNightReport(
     selectedShiftId || activeShift?.id || '',
+    // @ts-ignore - Orval generated type requires queryKey even when passing partial options
     { query: { enabled: !!(selectedShiftId || activeShift?.id) } }
   );
 
