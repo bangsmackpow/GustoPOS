@@ -20,7 +20,8 @@ export default function Settings() {
   });
 
   useEffect(() => {
-    if (settings) {
+    if (settings && !formData.barName) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         barName: settings.barName,
         usdToMxnRate: settings.usdToMxnRate,
@@ -28,7 +29,7 @@ export default function Settings() {
         defaultMarkupFactor: settings.defaultMarkupFactor
       });
     }
-  }, [settings]);
+  }, [settings, formData.barName]);
 
   const handleSave = () => {
     updateSettings.mutate({ data: formData }, {

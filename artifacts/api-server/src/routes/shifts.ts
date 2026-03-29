@@ -1,7 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, shiftsTable, tabsTable, ordersTable, usersTable, drinksTable, ingredientsTable, recipeIngredientsTable, settingsTable } from "@workspace/db";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
-import { StartShiftBody } from "@workspace/api-zod";
+import { eq, desc, sql } from "drizzle-orm";
+import {
+ StartShiftBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 

@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, tabsTable, ordersTable, usersTable, drinksTable, recipeIngredientsTable, ingredientsTable, settingsTable } from "@workspace/db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import {
   CreateTabBody,
   UpdateTabBody,
@@ -70,9 +70,8 @@ router.get("/tabs", async (req: Request, res: Response) => {
   const status = req.query.status as string | undefined;
   const shiftId = req.query.shiftId as string | undefined;
 
-  let query = db.select().from(tabsTable).orderBy(desc(tabsTable.openedAt)) as any;
-
   const tabs = await db.select().from(tabsTable).orderBy(desc(tabsTable.openedAt));
+
   const rates = await getExchangeRates();
 
   const filtered = tabs.filter(t => {

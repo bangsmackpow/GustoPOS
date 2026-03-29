@@ -9,7 +9,7 @@ import { Link } from 'wouter';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function Tabs() {
-  const { language, activeStaff, displayCurrency } = usePosStore();
+  const { language, activeStaff } = usePosStore();
   const { data: tabs } = useGetTabs({ status: 'open' });
   const createTab = useCreateTabMutation();
   const [newTabName, setNewTabName] = useState('');

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Delete, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { useGetUsers } from '@workspace/api-client-react';
@@ -21,12 +21,10 @@ export function PinPad({ onClose, onLogin }: { onClose: () => void, onLogin?: ()
 
   const handleBackspace = () => setPin(prev => prev.slice(0, -1));
 
-  const handleSubmit = () => {
+  const handleSubmit = React.useCallback(() => {
     if (!users) return;
-    const user = users.find(u => u.isActive && u.pin === pin); // assuming PIN is returned or checked via API. In reality, PIN validation should be server side, but based on API spec we get users and we can do a simple match for POS.
+    const user = users.find(u => u.isActive && u.pin === pin);
     
-    // Fallback logic if PINs aren't strictly returned in getUsers:
-    // This is a POS abstraction. If matched:
     if (user) {
       setActiveStaff(user);
       onLogin?.();
@@ -35,13 +33,13 @@ export function PinPad({ onClose, onLogin }: { onClose: () => void, onLogin?: ()
       setError(true);
       setPin('');
     }
-  };
+  }, [users, pin, setActiveStaff, onLogin, onClose]);
 
   React.useEffect(() => {
     if (pin.length === 4) {
       handleSubmit();
     }
-  }, [pin]);
+  }, [pin, handleSubmit]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">

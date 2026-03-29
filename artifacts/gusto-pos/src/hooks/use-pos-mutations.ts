@@ -1,7 +1,6 @@
-import { useMutation, useQueryClient, type UseMutationOptions } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { 
   createTab, 
-  updateTab, 
   closeTab, 
   addOrderToTab, 
   deleteOrder,

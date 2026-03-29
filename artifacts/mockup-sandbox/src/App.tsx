@@ -32,10 +32,10 @@ function PreviewRenderer({
   useEffect(() => {
     let cancelled = false;
 
-    setComponent(null);
-    setError(null);
-
     async function loadComponent(): Promise<void> {
+      setComponent(null);
+      setError(null);
+
       const key = `./components/mockups/${componentPath}.tsx`;
       const loader = modules[key];
       if (!loader) {
@@ -68,7 +68,6 @@ function PreviewRenderer({
     }
 
     void loadComponent();
-
     return () => {
       cancelled = true;
     };

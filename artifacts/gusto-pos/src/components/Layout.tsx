@@ -28,7 +28,7 @@ const NAV_ITEMS = [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { language, setLanguage, activeStaff, setActiveStaff } = usePosStore();
+  const { language, setLanguage, activeStaff } = usePosStore();
   const { data: auth, isLoading } = useGetCurrentAuthUser();
   const { data: shiftData } = useGetActiveShift();
   const [showPin, setShowPin] = useState(false);
