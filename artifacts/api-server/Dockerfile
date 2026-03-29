@@ -13,7 +13,6 @@ COPY pnpm-workspace.yaml pnpm-workspace.yaml
 COPY package.json package.json
 COPY pnpm-lock.yaml pnpm-lock.yaml
 COPY artifacts/api-server/package.json artifacts/api-server/package.json
-COPY artifacts/api-zod/package.json artifacts/api-zod/package.json
 COPY lib/db/package.json lib/db/package.json
 COPY lib/api-client-react/package.json lib/api-client-react/package.json
 COPY lib/api-spec/package.json lib/api-spec/package.json
