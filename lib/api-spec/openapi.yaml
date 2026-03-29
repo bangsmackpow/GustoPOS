@@ -1495,13 +1495,15 @@ components:
         title:
           type: string
         description:
-          type: [\"string\", \"null\"]
+          type: string
+          nullable: true
         startTime:
           type: string
           format: date-time
         endTime:
-          type: [\"string\", \"null\"]
+          type: string
           format: date-time
+          nullable: true
         impact:
           type: string
           enum: [low, medium, high]
@@ -1521,13 +1523,15 @@ components:
         title:
           type: string
         description:
-          type: [\"string\", \"null\"]
+          type: string
+          nullable: true
         startTime:
           type: string
           format: date-time
         endTime:
-          type: [\"string\", \"null\"]
+          type: string
           format: date-time
+          nullable: true
         impact:
           type: string
           enum: [low, medium, high]
@@ -1539,4 +1543,13 @@ components:
         - startTime
         - impact
         - type
+
+
+    DeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
 

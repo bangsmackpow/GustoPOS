@@ -646,9 +646,9 @@ export const RushType = {
 export interface Rush {
   id: string;
   title: string;
-  description?: unknown;
+  description?: string | null;
   startTime: string;
-  endTime?: unknown;
+  endTime?: string | null;
   impact: RushImpact;
   type: RushType;
 }
@@ -674,11 +674,15 @@ export const CreateRushBodyType = {
 
 export interface CreateRushBody {
   title: string;
-  description?: unknown;
+  description?: string | null;
   startTime: string;
-  endTime?: unknown;
+  endTime?: string | null;
   impact: CreateRushBodyImpact;
   type: CreateRushBodyType;
+}
+
+export interface DeleteResponse {
+  success: boolean;
 }
 
 export type GetTabsParams = {

@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, rushesTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
-import { CreateRushBody } from "@workspace/api-zod";
+import { PostRushesBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
@@ -20,7 +20,7 @@ router.get("/rushes", async (req: Request, res: Response) => {
 });
 
 router.post("/rushes", async (req: Request, res: Response) => {
-  const parsed = CreateRushBody.safeParse(req.body);
+  const parsed = PostRushesBody.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid request body", details: parsed.error.format() });
   }

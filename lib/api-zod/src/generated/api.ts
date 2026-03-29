@@ -879,9 +879,9 @@ export const UpdateSettingsResponse = zod.object({
 export const GetRushesResponseItem = zod.object({
   id: zod.string(),
   title: zod.string(),
-  description: zod.undefined().optional(),
+  description: zod.string().nullish(),
   startTime: zod.date(),
-  endTime: zod.undefined().optional(),
+  endTime: zod.date().nullish(),
   impact: zod.enum(["low", "medium", "high"]),
   type: zod.enum(["cruise", "festival", "music", "other"]),
 });
@@ -892,9 +892,9 @@ export const GetRushesResponse = zod.array(GetRushesResponseItem);
  */
 export const PostRushesBody = zod.object({
   title: zod.string(),
-  description: zod.undefined().optional(),
+  description: zod.string().nullish(),
   startTime: zod.date(),
-  endTime: zod.undefined().optional(),
+  endTime: zod.date().nullish(),
   impact: zod.enum(["low", "medium", "high"]),
   type: zod.enum(["cruise", "festival", "music", "other"]),
 });
@@ -906,4 +906,6 @@ export const DeleteRushesIdParams = zod.object({
   id: zod.coerce.string(),
 });
 
-export const DeleteRushesIdResponse = zod.unknown();
+export const DeleteRushesIdResponse = zod.object({
+  success: zod.boolean(),
+});
