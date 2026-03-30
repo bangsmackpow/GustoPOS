@@ -6,11 +6,15 @@ import {
 
 const router: IRouter = Router();
 
-router.get("/auth/user", (req: Request, res: Response) => {
-  const session = getSessionId(req);
-  console.log(`[AuthCheck] Checking session: ${session ? 'Exists' : 'MISSING'}`);
+router.get("/auth/user", async (req: Request, res: Response) => {
+  const sid = getSessionId(req);
   
-  if (!session) {
+  if (!sid) {
+    return res.json({ isAuthenticated: false, user: null });
+  }
+
+  const session = await getSession(sid);
+  if (!session?.user) {
     return res.json({ isAuthenticated: false, user: null });
   }
   
