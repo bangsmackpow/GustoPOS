@@ -84,8 +84,8 @@ router.patch("/users/:id", async (req: Request, res: Response) => {
     if (data.email !== undefined) updateData.email = data.email;
     if (data.role !== undefined) updateData.role = data.role as any;
     if (data.language !== undefined) updateData.language = data.language as any;
-    if (data.pin !== undefined) updateData.pin = data.pin;
-    if (data.isActive !== undefined) updateData.isActive = data.isActive;
+    if (data.pin !== undefined) updateData.pin = data.pin ?? "0000";
+    if (data.isActive !== undefined) updateData.isActive = data.isActive ?? true;
     
     // Explicitly handle password update
     const rawPassword = (req.body as any).password;
