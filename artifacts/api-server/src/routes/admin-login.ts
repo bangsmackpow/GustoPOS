@@ -92,8 +92,13 @@ export default function adminLoginRouter(): express.Router {
             eq(usersTable.email, email),
             eq(usersTable.password, password),
             eq(usersTable.isActive, true),
-            or(eq(usersTable.role, "manager"), eq(usersTable.role, "head_bartender"))
-          )
+            or(
+              eq(usersTable.role, "admin"),
+              eq(usersTable.role, "manager"), 
+              eq(usersTable.role, "head_bartender")
+            )
+            )
+
         );
 
         if (dbUser) {

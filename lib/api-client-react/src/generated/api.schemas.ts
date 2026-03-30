@@ -16,6 +16,7 @@ export interface SuccessResponse {
 export type AuthUserRole = (typeof AuthUserRole)[keyof typeof AuthUserRole];
 
 export const AuthUserRole = {
+  admin: "admin",
   manager: "manager",
   head_bartender: "head_bartender",
   bartender: "bartender",
@@ -52,6 +53,7 @@ export interface GetCurrentAuthUserResponse {
 export type StaffUserRole = (typeof StaffUserRole)[keyof typeof StaffUserRole];
 
 export const StaffUserRole = {
+  admin: "admin",
   manager: "manager",
   head_bartender: "head_bartender",
   bartender: "bartender",
@@ -89,6 +91,7 @@ export type CreateUserBodyRole =
   (typeof CreateUserBodyRole)[keyof typeof CreateUserBodyRole];
 
 export const CreateUserBodyRole = {
+  admin: "admin",
   manager: "manager",
   head_bartender: "head_bartender",
   bartender: "bartender",

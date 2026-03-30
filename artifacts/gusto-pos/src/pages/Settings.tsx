@@ -473,7 +473,7 @@ export default function Settings() {
                 <input type="email" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingStaff.email || ''} onChange={e => setEditingStaff({...editingStaff, email: e.target.value})} />
               </div>
               
-              {(editingStaff.role === 'manager' || editingStaff.role === 'head_bartender') && (
+              {(editingStaff.role === 'admin' || editingStaff.role === 'manager' || editingStaff.role === 'head_bartender') && (
                 <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                   <label className="text-sm font-medium text-primary flex items-center gap-2">
                     <Lock size={14} /> Account Password
@@ -492,6 +492,7 @@ export default function Settings() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">{getTranslation('role', language)}</label>
                   <select className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingStaff.role} onChange={e => setEditingStaff({...editingStaff, role: e.target.value})}>
+                    <option value="admin">{getTranslation('admin', language)}</option>
                     <option value="manager">{getTranslation('manager', language)}</option>
                     <option value="head_bartender">{getTranslation('head_bartender', language)}</option>
                     <option value="bartender">{getTranslation('bartender', language)}</option>
