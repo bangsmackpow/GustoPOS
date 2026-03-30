@@ -17,15 +17,31 @@ COPY lib/api-spec/package.json ./lib/api-spec/
 COPY lib/api-zod/package.json ./lib/api-zod/
 COPY scripts/package.json ./scripts/
 
-# Install all dependencies
+# Install all dependencies for build
 RUN pnpm install --no-frozen-lockfile
     
 # Copy the rest of the repo
 COPY . .
 
-# Build the API server (esbuild will bundle almost all dependencies)
+# Build the API server
 WORKDIR /app/artifacts/api-server
 RUN pnpm run build
+
+# --- New Stage: Prune node_modules for production ---
+# This ensures we have the NATIVE binaries for Alpine (musl)
+FROM node:20-alpine AS prod-deps
+WORKDIR /app
+RUN npm install -g pnpm
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+COPY artifacts/api-server/package.json ./artifacts/api-server/
+COPY lib/db/package.json ./lib/db/
+COPY lib/api-client-react/package.json ./lib/api-client-react/
+COPY lib/api-spec/package.json ./lib/api-spec/
+COPY lib/api-zod/package.json ./lib/api-zod/
+COPY scripts/package.json ./scripts/
+
+# Install ONLY production dependencies (includes native @libsql binaries)
+RUN pnpm install --prod --no-frozen-lockfile
 
 # Stage 2: runtime image
 FROM node:20-alpine
@@ -34,7 +50,7 @@ WORKDIR /app
 # Install Litestream and ca-certificates
 RUN apk add --no-cache ca-certificates wget sqlite
 
-# Download Litestream binary (static)
+# Download Litestream binary
 RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz && \
     tar -xzf litestream-v0.3.13-linux-amd64.tar.gz && \
     mv litestream /usr/local/bin/litestream && \
@@ -43,10 +59,16 @@ RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.13/lit
 # Ensure data directory exists
 RUN mkdir -p /app/data && chmod 777 /app/data
 
-# Copy only the essentials from the builder
+# Copy production essentials
+# 1. The bundle
 COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
+# 2. Database artifacts
 COPY --from=builder /app/lib/db/migrations ./lib/db/migrations
 COPY --from=builder /app/db/seeds ./db/seeds
+# 3. PRUNED node_modules (required for native binaries like @libsql)
+COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=prod-deps /app/artifacts/api-server/node_modules ./artifacts/api-server/node_modules
+# 4. Configuration
 COPY --from=builder /app/artifacts/api-server/litestream.yml /etc/litestream.yml
 
 # Expose the API port
