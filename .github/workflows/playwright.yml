@@ -17,6 +17,8 @@ jobs:
       run: npm i -g pnpm@10
     - name: Install dependencies
       run: pnpm install
+    - name: Install Playwright Binary
+      run: pnpm add -D @playwright/test
     - name: Install Playwright Browsers
       run: pnpm exec playwright install --with-deps
     - name: Run Playwright tests
