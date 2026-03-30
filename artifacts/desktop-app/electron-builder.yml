@@ -1,0 +1,29 @@
+appId: com.gustopos.app
+productName: GustoPOS
+directories:
+  output: dist/build
+  buildResources: build
+files:
+  - dist/main.cjs
+  - package.json
+extraResources:
+  - from: ../api-server/dist
+    to: api
+  - from: ../../lib/db/migrations
+    to: api/migrations
+  - from: ../../db/seeds
+    to: api/seeds
+  - from: ../gusto-pos/dist/public
+    to: api/public
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+  category: public.app-category.business
+win:
+  target: nsis
+  icon: build/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true

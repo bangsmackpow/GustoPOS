@@ -37,4 +37,16 @@ app.use(authMiddleware);
 
 app.use("/api", router);
 
+// Serve frontend assets if STATIC_PATH is provided (for Electron standalone mode)
+const staticPath = process.env.STATIC_PATH;
+if (staticPath) {
+  console.log(`[API] Serving static assets from: ${staticPath}`);
+  app.use(express.static(staticPath));
+  // Handle SPA routing
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) return next();
+    res.sendFile("index.html", { root: staticPath });
+  });
+}
+
 export default app;

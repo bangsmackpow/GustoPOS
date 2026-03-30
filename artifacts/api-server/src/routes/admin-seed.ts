@@ -47,9 +47,11 @@ export default function adminSeedRouter(): express.Router {
     if (!enabled) return res.status(403).json({ ok: false, error: "seed disabled" });
 
     try {
-      const sqlPath = process.env.NODE_ENV === 'production'
-        ? "/app/db/seeds/puerto-vallarta-starter.sql"
-        : path.resolve(__dirname, "../../../../db/seeds/puerto-vallarta-starter.sql");
+      const sqlPath = process.env.SEEDS_PATH 
+        ? path.join(process.env.SEEDS_PATH, "puerto-vallarta-starter.sql")
+        : (process.env.NODE_ENV === 'production'
+          ? "/app/db/seeds/puerto-vallarta-starter.sql"
+          : path.resolve(__dirname, "../../../../db/seeds/puerto-vallarta-starter.sql"));
       
       console.log(`Loading seed from: ${sqlPath}`);
       const rawSql = fs.readFileSync(sqlPath, "utf8");

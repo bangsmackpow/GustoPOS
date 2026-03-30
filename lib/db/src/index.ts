@@ -15,9 +15,9 @@ export const client = createClient({ url: databaseUrl });
 export const db = drizzle(client, { schema });
 
 // Path to migrations (resolve relative to the workspace root in production)
-const migrationsPath = process.env.NODE_ENV === "production" 
+const migrationsPath = process.env.MIGRATIONS_PATH || (process.env.NODE_ENV === "production" 
   ? "/app/lib/db/migrations"
-  : path.resolve(import.meta.dirname, "../migrations");
+  : path.resolve(import.meta.dirname, "../migrations"));
 
 async function upsertAdmin() {
   const adminEmail = process.env.ADMIN_EMAIL;
