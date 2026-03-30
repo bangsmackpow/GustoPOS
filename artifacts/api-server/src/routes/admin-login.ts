@@ -66,10 +66,15 @@ export default function adminLoginRouter(): express.Router {
     const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
 
+    console.log(`[AdminLogin] Attempt for: ${email}`);
+    console.log(`[AdminLogin] Env AdminEmail configured: ${!!adminEmail}`);
+    console.log(`[AdminLogin] Env AdminPassword configured: ${!!adminPassword}`);
+
     let userToSession = null;
 
     // 1. Check Super Admin (Env)
     if (email === adminEmail && password === adminPassword && adminEmail && adminPassword) {
+      console.log("[AdminLogin] Super Admin match found via Env");
       userToSession = {
         id: "admin",
         email: adminEmail,

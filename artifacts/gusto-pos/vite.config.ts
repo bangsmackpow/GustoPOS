@@ -52,14 +52,11 @@ export default defineConfig({
           },
           {
             urlPattern: /\/api\/auth\/user/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'auth-cache'
-            }
+            handler: 'NetworkOnly', // IMPORTANT: Never cache auth status
           },
           {
             urlPattern: /\/api\/.*/i,
-            handler: 'NetworkFirst',
+            handler: 'NetworkFirst', // Default for API: Try network, then cache
             options: {
               cacheName: 'api-data-cache',
               expiration: {
