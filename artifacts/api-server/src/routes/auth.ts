@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import {
   clearSession,
   getSessionId,
+  getSession,
 } from "../lib/auth";
 
 const router: IRouter = Router();
