@@ -13,6 +13,13 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    # API needs writable /app/data for SQLite and /tmp for Node.js internals
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
 
   frontend:
     image: ghcr.io/bangsmackpow/gusto-pos-frontend:latest
@@ -22,3 +29,11 @@ services:
     ports:
       - "8080:80"
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    # Nginx needs some writable paths for pid files and cache
+    tmpfs:
+      - /tmp
+      - /run
+      - /var/cache/nginx

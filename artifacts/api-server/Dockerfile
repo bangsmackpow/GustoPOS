@@ -38,8 +38,8 @@ RUN apt-get update && apt-get install -y ca-certificates wget && \
     rm litestream-v0.3.13-linux-amd64.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Ensure data directory exists for SQLite and is writable
-RUN mkdir -p /app/data && chmod 777 /app/data
+# Create data directory and set permissions for non-root user
+RUN mkdir -p /app/data && chown -R node:node /app/data
 
 # Preserve the EXACT workspace structure to ensure all relative symlinks resolve correctly
 COPY --from=builder /app/node_modules ./node_modules
@@ -49,10 +49,14 @@ COPY --from=builder /app/artifacts/api-server/package.json ./artifacts/api-serve
 
 # Copy migrations and seeds needed for initialization
 COPY --from=builder /app/lib/db/migrations /app/lib/db/migrations
-COPY --from=builder /app/db/seeds /app/db/seeds
+COPY --from=builder /app/db/seeds /app/lib/db/seeds
 
 # Copy Litestream config
 COPY artifacts/api-server/litestream.yml /etc/litestream.yml
+RUN chown node:node /etc/litestream.yml
+
+# Switch to non-root user
+USER node
 
 # Expose the API port
 EXPOSE 3000
