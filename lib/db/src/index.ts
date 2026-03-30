@@ -23,49 +23,52 @@ export async function initializeDatabase() {
   console.log("Checking database schema...");
   console.log(`Using migrations from: ${migrationsPath}`);
 
+  // 1. Pre-emptive Safety SQL (Ensure core infrastructure exists before migration)
   try {
-    // 1. Run standard migrations
+    console.log("Applying pre-emptive safety checks...");
+    
+    // Create sessions table (Critical for login)
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        sid TEXT PRIMARY KEY NOT NULL,
+        sess TEXT NOT NULL,
+        expire INTEGER NOT NULL
+      )
+    `).catch(() => {});
+
+    // Add password to users if missing
+    await client.execute("ALTER TABLE users ADD COLUMN password TEXT").catch(() => {});
+    
+    // Add backup toggles to settings if missing
+    await client.execute("ALTER TABLE settings ADD COLUMN enable_litestream INTEGER DEFAULT 0 NOT NULL").catch(() => {});
+    await client.execute("ALTER TABLE settings ADD COLUMN enable_usb_backup INTEGER DEFAULT 0 NOT NULL").catch(() => {});
+    
+    // Create rushes table if missing
+    await client.execute(`
+      CREATE TABLE IF NOT EXISTS rushes (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        start_time INTEGER NOT NULL,
+        end_time INTEGER,
+        impact TEXT DEFAULT 'medium' NOT NULL,
+        type TEXT DEFAULT 'event' NOT NULL,
+        created_at INTEGER DEFAULT (unixepoch()) NOT NULL
+      )
+    `).catch(() => {});
+    
+    console.log("Pre-emptive safety checks completed.");
+  } catch (safetyErr: any) {
+    console.warn("Pre-emptive safety check encountered an issue:", safetyErr.message);
+  }
+
+  // 2. Run standard migrations
+  try {
     await migrate(db, { migrationsFolder: migrationsPath });
     console.log("Standard migrations completed successfully.");
   } catch (error: any) {
-    console.warn("Standard migration failed, attempting manual safety updates:", error.message);
-    
-    // 2. Manual Safety SQL (Double-ensure core tables exist even if migrator crashes)
-    try {
-      // Create sessions table (Critical for login)
-      await client.execute(`
-        CREATE TABLE IF NOT EXISTS sessions (
-          sid TEXT PRIMARY KEY NOT NULL,
-          sess TEXT NOT NULL,
-          expire INTEGER NOT NULL
-        )
-      `).catch(() => {});
-
-      // Add password to users
-      await client.execute("ALTER TABLE users ADD COLUMN password TEXT").catch(() => {});
-      
-      // Add backup toggles to settings
-      await client.execute("ALTER TABLE settings ADD COLUMN enable_litestream INTEGER DEFAULT 0 NOT NULL").catch(() => {});
-      await client.execute("ALTER TABLE settings ADD COLUMN enable_usb_backup INTEGER DEFAULT 0 NOT NULL").catch(() => {});
-      
-      // Create rushes table
-      await client.execute(`
-        CREATE TABLE IF NOT EXISTS rushes (
-          id TEXT PRIMARY KEY NOT NULL,
-          title TEXT NOT NULL,
-          description TEXT,
-          start_time INTEGER NOT NULL,
-          end_time INTEGER,
-          impact TEXT DEFAULT 'medium' NOT NULL,
-          type TEXT DEFAULT 'event' NOT NULL,
-          created_at INTEGER DEFAULT (unixepoch()) NOT NULL
-        )
-      `).catch(() => {});
-      
-      console.log("Manual safety updates applied.");
-    } catch (manualError: any) {
-      console.error("Manual safety updates failed:", manualError.message);
-    }
+    console.error("Standard migration failed:", error.message);
+    // We continue anyway since pre-emptive safety hopefully caught the essentials
   }
 }
 
