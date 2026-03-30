@@ -1491,6 +1491,11 @@ components:
         barIcon:
           type: ["string", "null"]
         smtpHost:
+
+          type: ["string", "null"]
+        barIcon:
+          type: ["string", "null"]
+        smtpHost:
           type: ["string", "null"]
         smtpPort:
           type: ["number", "null"]
