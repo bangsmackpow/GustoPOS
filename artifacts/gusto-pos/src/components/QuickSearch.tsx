@@ -26,8 +26,10 @@ export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () 
 
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100);
-      setSearch('');
+      setTimeout(() => {
+        inputRef.current?.focus();
+        setSearch('');
+      }, 100);
     }
   }, [isOpen]);
 
@@ -164,7 +166,7 @@ export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () 
 
             {search && filteredDrinks?.length === 0 && filteredTabs?.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
-                <p className="italic">No results found for "{search}"</p>
+                <p className="italic">No results found for &quot;{search}&quot;</p>
               </div>
             )}
 

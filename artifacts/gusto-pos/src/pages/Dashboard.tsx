@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useGetActiveShift, useGetTabs, useGetIngredients, useGetRushes } from '@workspace/api-client-react';
 import { useStartShiftMutation, useCloseShiftMutation } from '@/hooks/use-pos-mutations';
 import { usePosStore } from '@/store';
@@ -51,11 +51,14 @@ export default function Dashboard() {
   const activeShiftData = activeShift?.shift;
 
   // Only show upcoming or ongoing rushes (next 24 hours)
-  const upcomingRushes = rushes?.filter(r => {
-    const startTime = new Date(r.startTime).getTime();
+  const upcomingRushes = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity
     const now = Date.now();
-    return startTime > now - (1000 * 60 * 60 * 4); // Show started in last 4 hours or upcoming
-  }).slice(0, 5) || [];
+    return rushes?.filter(r => {
+      const startTime = new Date(r.startTime).getTime();
+      return startTime > now - (1000 * 60 * 60 * 4); // Show started in last 4 hours or upcoming
+    }).slice(0, 5) || [];
+  }, [rushes]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">

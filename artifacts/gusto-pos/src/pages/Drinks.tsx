@@ -5,7 +5,7 @@ import { usePosStore } from '@/store';
 import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, X, Info, Upload, FileSpreadsheet, Check } from 'lucide-react';
+import { Plus, Edit2, X, Info, Upload, FileSpreadsheet, Check, Package } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import Papa from 'papaparse';
 
@@ -23,6 +23,7 @@ export default function Drinks() {
   const [unitMode, setUnitMode] = useState<'ml' | 'oz'>('ml');
   const [showImport, setShowImport] = useState(false);
   const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -77,6 +78,11 @@ export default function Drinks() {
     }
   };
 
+  const filteredDrinks = drinks?.filter(d => 
+    d.name.toLowerCase().includes(search.toLowerCase()) || 
+    (d.nameEs && d.nameEs.toLowerCase().includes(search.toLowerCase()))
+  );
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
@@ -85,6 +91,14 @@ export default function Drinks() {
           <p className="text-muted-foreground mt-1">Manage drinks, recipes and pricing</p>
         </div>
         <div className="flex gap-3">
+          <div className="relative mr-4">
+            <input 
+              className="bg-secondary border border-white/10 rounded-xl px-4 py-2 text-sm w-64"
+              placeholder="Search drinks..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
           <Button variant="outline" onClick={() => setShowImport(true)}>
             <Upload className="mr-2" size={18} /> Bulk Import
           </Button>
@@ -96,43 +110,50 @@ export default function Drinks() {
 
       <div className="glass rounded-3xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-white/5 text-muted-foreground text-sm">
-                <th className="p-4 font-medium">{getTranslation('name', language)}</th>
-                <th className="p-4 font-medium">{getTranslation('category', language)}</th>
-                <th className="p-4 font-medium">{getTranslation('cost', language)}</th>
-                <th className="p-4 font-medium">{getTranslation('price', language)}</th>
-                <th className="p-4 font-medium">Margin</th>
-                <th className="p-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {drinks?.map(drink => {
-                const finalPrice = drink.actualPrice || drink.suggestedPrice;
-                const margin = ((finalPrice - drink.costPerDrink) / (finalPrice || 1)) * 100;
-                return (
-                  <tr key={drink.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 font-medium">
-                      <div>{language === 'es' && drink.nameEs ? drink.nameEs : drink.name}</div>
-                      <div className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">
-                        {drink.recipe.map((r: any) => r.ingredientName).join(', ')}
-                      </div>
-                    </td>
-                    <td className="p-4 text-muted-foreground capitalize">{drink.category.replace('_', ' ')}</td>
-                    <td className="p-4 text-destructive">{formatMoney(drink.costPerDrink)}</td>
-                    <td className="p-4 text-emerald-400 font-bold">{formatMoney(finalPrice)}</td>
-                    <td className="p-4 text-muted-foreground">{margin.toFixed(0)}%</td>
-                    <td className="p-4 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => setEditingDrink(drink)}>
-                        <Edit2 size={16} />
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {filteredDrinks && filteredDrinks.length > 0 ? (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5 text-muted-foreground text-sm">
+                  <th className="p-4 font-medium">{getTranslation('name', language)}</th>
+                  <th className="p-4 font-medium">{getTranslation('category', language)}</th>
+                  <th className="p-4 font-medium">{getTranslation('cost', language)}</th>
+                  <th className="p-4 font-medium">{getTranslation('price', language)}</th>
+                  <th className="p-4 font-medium">Margin</th>
+                  <th className="p-4 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredDrinks.map(drink => {
+                  const finalPrice = drink.actualPrice || drink.suggestedPrice;
+                  const margin = ((finalPrice - drink.costPerDrink) / (finalPrice || 1)) * 100;
+                  return (
+                    <tr key={drink.id} className="hover:bg-white/5 transition-colors">
+                      <td className="p-4 font-medium">
+                        <div>{language === 'es' && drink.nameEs ? drink.nameEs : drink.name}</div>
+                        <div className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">
+                          {drink.recipe.map((r: any) => r.ingredientName).join(', ')}
+                        </div>
+                      </td>
+                      <td className="p-4 text-muted-foreground capitalize">{drink.category.replace('_', ' ')}</td>
+                      <td className="p-4 text-destructive">{formatMoney(drink.costPerDrink)}</td>
+                      <td className="p-4 text-emerald-400 font-bold">{formatMoney(finalPrice)}</td>
+                      <td className="p-4 text-muted-foreground">{margin.toFixed(0)}%</td>
+                      <td className="p-4 text-right">
+                        <Button variant="ghost" size="icon" onClick={() => setEditingDrink(drink)}>
+                          <Edit2 size={16} />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground italic bg-white/5 rounded-3xl border border-white/5">
+              <Package size={48} className="mx-auto mb-4 opacity-20" />
+              <p>No drinks found for &quot;{search}&quot;</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -145,7 +166,7 @@ export default function Drinks() {
             <h2 className="text-2xl font-display mb-2 flex items-center gap-2">
               <FileSpreadsheet className="text-primary" /> Recipe Bulk Import
             </h2>
-            <p className="text-muted-foreground mb-6 text-sm">Upload a CSV with headers: Name, Category, Price, Ingredients (Format: "Ingredient:Amount, ...")</p>
+            <p className="text-muted-foreground mb-6 text-sm">Upload a CSV with headers: Name, Category, Price, Ingredients (Format: &quot;Ingredient:Amount, ...&quot;)</p>
             
             <div className="flex-1 overflow-hidden flex flex-col gap-6">
               <div className="p-10 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors relative">
@@ -153,11 +174,11 @@ export default function Drinks() {
                   type="file" 
                   accept=".csv" 
                   onChange={handleFileUpload}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
+                  className="absolute inset-0 opacity-0_cursor-pointer"
                 />
                 <Upload size={48} className="text-primary mb-4" />
                 <p className="text-lg font-medium">Select your Recipes CSV</p>
-                <p className="text-sm text-muted-foreground mt-2">Example: Margarita, cocktail, 140, "Tequila:60, Lime:30, Agave:15"</p>
+                <p className="text-sm text-muted-foreground mt-2">Example: Margarita, cocktail, 140, &quot;Tequila:60, Lime:30, Agave:15&quot;</p>
               </div>
 
               <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden flex flex-col flex-1">

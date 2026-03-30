@@ -11,16 +11,11 @@ async function getReportData(shiftId: string) {
   if (!shift) return null;
 
   const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, "default"));
-  const usdToMxn = settings ? Number(settings.usdToMxnRate) : 17.5;
-  const cadToMxn = settings ? Number(settings.cadToMxnRate) : 12.8;
 
   const tabs = await db.select().from(tabsTable).where(eq(tabsTable.shiftId, shiftId));
   const closedTabs = tabs.filter(t => t.status === "closed");
 
   const tabIds = tabs.map(t => t.id);
-  const allOrders = tabIds.length > 0
-    ? await db.select().from(ordersTable).where(sql`${ordersTable.tabId} IN (${sql.raw(tabIds.map(id => `'${id}'`).join(','))})`)
-    : [];
 
   const totalMxn = closedTabs.reduce((sum, t) => sum + Number(t.totalMxn), 0);
   const cashSalesMxn = closedTabs.filter(t => t.paymentMethod === "cash").reduce((sum, t) => sum + Number(t.totalMxn), 0);
@@ -119,8 +114,6 @@ router.get("/reports/end-of-night/:shiftId", async (req: Request, res: Response)
   }
 
   const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, "default"));
-  const usdToMxn = settings ? Number(settings.usdToMxnRate) : 17.5;
-  const cadToMxn = settings ? Number(settings.cadToMxnRate) : 12.8;
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, shift.openedByUserId));
   const shiftUserName = user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() || user.email || user.id : null;
@@ -282,11 +275,14 @@ router.get("/reports/end-of-night/:shiftId", async (req: Request, res: Response)
     notes: t.notes ?? null,
   }));
 
+  const usdToMxn = settings ? Number(settings.usdToMxnRate) : 17.5;
+  const cadToMxn = settings ? Number(settings.cadToMxnRate) : 12.8;
+
   return res.json({
     shift: formatShift(shift, shiftUserName),
     totalSalesMxn: totalMxn,
-    totalSalesUsd: totalMxn / usdToMxn,
-    totalSalesCad: totalMxn / cadToMxn,
+    totalSalesUsd: totalMxn / (usdToMxn || 1),
+    totalSalesCad: totalMxn / (cadToMxn || 1),
     totalTabsClosed: closedTabs.length,
     cashSalesMxn,
     cardSalesMxn,

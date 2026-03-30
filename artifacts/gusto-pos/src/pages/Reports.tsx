@@ -14,7 +14,6 @@ import {
   DollarSign, 
   AlertTriangle,
   History,
-  ArrowRight,
   Package
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -27,9 +26,9 @@ export default function Reports() {
   // Find currently active shift
   const activeShift = shifts?.find(s => s.status === 'active');
   
-  const { data: report, isLoading: loadingReport } = useGetEndOfNightReport(
+  const { data: report } = useGetEndOfNightReport(
     selectedShiftId || activeShift?.id || '',
-    // @ts-ignore - Orval generated type requires queryKey even when passing partial options
+    // @ts-expect-error - Orval generated type requires queryKey even when passing partial options
     { query: { enabled: !!(selectedShiftId || activeShift?.id) } }
   );
 
