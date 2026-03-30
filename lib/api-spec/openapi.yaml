@@ -25,6 +25,8 @@ tags:
     description: End-of-night reporting
   - name: settings
     description: App settings (currency, exchange rates)
+  - name: rushes
+    description: Local events and traffic drivers
 paths:
   /healthz:
     get:
@@ -616,6 +618,7 @@ paths:
 
   /rushes:
     get:
+      operationId: getRushes
       tags: [rushes]
       summary: List local events and rushes
       responses:
@@ -628,6 +631,7 @@ paths:
                 items:
                   $ref: "#/components/schemas/Rush"
     post:
+      operationId: postRushes
       tags: [rushes]
       summary: Create a new rush event
       requestBody:
@@ -646,6 +650,7 @@ paths:
 
   /rushes/{id}:
     delete:
+      operationId: deleteRushesId
       tags: [rushes]
       summary: Delete a rush event
       parameters:
@@ -766,6 +771,8 @@ components:
           enum: [en, es]
         pin:
           type: string
+        password:
+          type: ["string", "null"]
       required:
         - firstName
         - role
@@ -782,9 +789,11 @@ components:
         email:
           type: ["string", "null"]
         role:
-          type: ["string", "null"]
+          type: string
+          enum: [admin, manager, head_bartender, bartender, server]
         language:
-          type: ["string", "null"]
+          type: string
+          enum: [en, es]
         pin:
           type: ["string", "null"]
         password:
@@ -805,16 +814,12 @@ components:
           type: string
         unitSize:
           type: number
-          description: Size of the unit (e.g. 750 for a 750ml bottle)
         costPerUnit:
           type: number
-          description: Cost per purchase unit in base currency (MXN)
         currentStock:
           type: number
-          description: Current stock count in purchase units
         minimumStock:
           type: number
-          description: Minimum stock threshold for ordering prompts
         category:
           type: string
           enum: [spirits, wine, beer, mixer, garnish, other]
@@ -896,10 +901,8 @@ components:
           type: ["string", "null"]
         amountInMl:
           type: number
-          description: Amount used in ml (or units for garnishes)
         costContribution:
           type: number
-          description: Calculated cost contribution of this ingredient
       required:
         - ingredientId
         - ingredientName
@@ -924,19 +927,14 @@ components:
           enum: [cocktail, beer, wine, shot, non_alcoholic, other]
         costPerDrink:
           type: number
-          description: Total calculated cost in MXN
         suggestedPrice:
           type: number
-          description: Suggested sell price in MXN (cost * markup factor)
         actualPrice:
-          type: number
-          description: Actual sell price in MXN (manager override)
+          type: ["number", "null"]
         markupFactor:
           type: number
-          description: Markup multiplier (e.g. 3.0 = 3x cost)
         upcharge:
           type: number
-          description: Additional upcharge amount in MXN added on top of cost calculation
         recipe:
           type: array
           items:
@@ -1041,13 +1039,11 @@ components:
           type: string
         nickname:
           type: string
-          description: Table or customer nickname (e.g. "Table 5", "Maria")
         status:
           type: string
           enum: [open, closed]
         staffUserId:
           type: string
-          description: The bartender/server who opened the tab
         staffUserName:
           type: ["string", "null"]
         shiftId:
@@ -1060,9 +1056,6 @@ components:
         currency:
           type: string
           enum: [MXN, USD, CAD]
-        convertedTotal:
-          type: ["number", "null"]
-          description: Total in selected currency using current exchange rates
         openedAt:
           type: string
           format: date-time
@@ -1104,8 +1097,6 @@ components:
         currency:
           type: string
           enum: [MXN, USD, CAD]
-        convertedTotal:
-          type: ["number", "null"]
         openedAt:
           type: string
           format: date-time
@@ -1363,10 +1354,8 @@ components:
           type: number
         totalCostMxn:
           type: number
-          description: Total ingredient cost for all units sold
         profitMxn:
           type: number
-          description: Total profit (Revenue - Cost)
       required:
         - drinkId
         - drinkName
@@ -1441,13 +1430,10 @@ components:
           enum: [MXN]
         usdToMxnRate:
           type: number
-          description: How many MXN per 1 USD
         cadToMxnRate:
           type: number
-          description: How many MXN per 1 CAD
         defaultMarkupFactor:
           type: number
-          description: Default markup multiplier for new drinks
         barName:
           type: string
         barIcon:
@@ -1567,95 +1553,3 @@ components:
           type: boolean
       required:
         - success
-
-    UpdateSettingsBody:
-      type: object
-      properties:
-        usdToMxnRate:
-          type: [\"number\", \"null\"]
-        cadToMxnRate:
-          type: [\"number\", \"null\"]
-        defaultMarkupFactor:
-          type: [\"number\", \"null\"]
-        barName:
-          type: [\"string\", \"null\"]
-        barIcon:
-          type: [\"string\", \"null\"]
-        smtpHost:
-          type: [\"string\", \"null\"]
-        smtpPort:
-          type: [\"number\", \"null\"]
-        smtpUser:
-          type: [\"string\", \"null\"]
-        smtpPassword:
-          type: [\"string\", \"null\"]
-        smtpFromEmail:
-          type: [\"string\", \"null\"]
-        inventoryAlertEmail:
-          type: [\"string\", \"null\"]
-        enableLitestream:
-          type: [\"boolean\", \"null\"]
-        enableUsbBackup:
-          type: [\"boolean\", \"null\"]
-
-    Rush:
-      type: object
-      properties:
-        id:
-          type: string
-        title:
-          type: string
-        description:
-          type: [\"string\", \"null\"]
-        startTime:
-          type: string
-          format: date-time
-        endTime:
-          type: [\"string\", \"null\"]
-          format: date-time
-        impact:
-          type: string
-          enum: [low, medium, high]
-        type:
-          type: string
-          enum: [cruise, festival, music, other]
-      required:
-        - id
-        - title
-        - startTime
-        - impact
-        - type
-
-    CreateRushBody:
-      type: object
-      properties:
-        title:
-          type: string
-        description:
-          type: [\"string\", \"null\"]
-        startTime:
-          type: string
-          format: date-time
-        endTime:
-          type: [\"string\", \"null\"]
-          format: date-time
-        impact:
-          type: string
-          enum: [low, medium, high]
-        type:
-          type: string
-          enum: [cruise, festival, music, other]
-      required:
-        - title
-        - startTime
-        - impact
-        - type
-
-    DeleteResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-      required:
-        - success
-
