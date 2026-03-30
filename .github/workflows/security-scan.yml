@@ -1,0 +1,49 @@
+name: Security Scan (Gitleaks, Trivy, Semgrep)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  security-scan:
+    name: Run Vulnerability Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Essential for Gitleaks to scan commit history
+
+      # 1. Gitleaks: Prevent secrets/keys from being committed
+      - name: Gitleaks Scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Semgrep: Static Analysis (SAST) for Code Quality & Security
+      - name: Semgrep Scan
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: "p/default" # Uses best-practice security rules
+
+      # 3. Trivy: Software Composition Analysis (SCA) & Filesystem Scan
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          ignore-unfixed: true
+          format: 'table'
+          exit-code: '1' # Fail the build if High/Critical issues are found
+          severity: 'CRITICAL,HIGH'
+          
+      # 4. Supplemental PNPM Audit (Fast check for lockfile issues)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: PNPM Audit
+        run: |
+          npm i -g pnpm@10
+          pnpm audit --prod
