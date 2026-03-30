@@ -1491,11 +1491,6 @@ components:
         barIcon:
           type: ["string", "null"]
         smtpHost:
-
-          type: ["string", "null"]
-        barIcon:
-          type: ["string", "null"]
-        smtpHost:
           type: ["string", "null"]
         smtpPort:
           type: ["number", "null"]
@@ -1572,3 +1567,95 @@ components:
           type: boolean
       required:
         - success
+
+    UpdateSettingsBody:
+      type: object
+      properties:
+        usdToMxnRate:
+          type: [\"number\", \"null\"]
+        cadToMxnRate:
+          type: [\"number\", \"null\"]
+        defaultMarkupFactor:
+          type: [\"number\", \"null\"]
+        barName:
+          type: [\"string\", \"null\"]
+        barIcon:
+          type: [\"string\", \"null\"]
+        smtpHost:
+          type: [\"string\", \"null\"]
+        smtpPort:
+          type: [\"number\", \"null\"]
+        smtpUser:
+          type: [\"string\", \"null\"]
+        smtpPassword:
+          type: [\"string\", \"null\"]
+        smtpFromEmail:
+          type: [\"string\", \"null\"]
+        inventoryAlertEmail:
+          type: [\"string\", \"null\"]
+        enableLitestream:
+          type: [\"boolean\", \"null\"]
+        enableUsbBackup:
+          type: [\"boolean\", \"null\"]
+
+    Rush:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: [\"string\", \"null\"]
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: [\"string\", \"null\"]
+          format: date-time
+        impact:
+          type: string
+          enum: [low, medium, high]
+        type:
+          type: string
+          enum: [cruise, festival, music, other]
+      required:
+        - id
+        - title
+        - startTime
+        - impact
+        - type
+
+    CreateRushBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: [\"string\", \"null\"]
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: [\"string\", \"null\"]
+          format: date-time
+        impact:
+          type: string
+          enum: [low, medium, high]
+        type:
+          type: string
+          enum: [cruise, festival, music, other]
+      required:
+        - title
+        - startTime
+        - impact
+        - type
+
+    DeleteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+      required:
+        - success
+
