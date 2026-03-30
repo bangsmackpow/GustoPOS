@@ -30,14 +30,25 @@ export async function initializeDatabase() {
   } catch (error: any) {
     console.warn("Standard migration failed, attempting manual safety updates:", error.message);
     
-    // 2. Manual Safety SQL (Double-ensure columns exist even if migrator crashes)
+    // 2. Manual Safety SQL (Double-ensure core tables exist even if migrator crashes)
     try {
+      // Create sessions table (Critical for login)
+      await client.execute(`
+        CREATE TABLE IF NOT EXISTS sessions (
+          sid TEXT PRIMARY KEY NOT NULL,
+          sess TEXT NOT NULL,
+          expire INTEGER NOT NULL
+        )
+      `).catch(() => {});
+
       // Add password to users
       await client.execute("ALTER TABLE users ADD COLUMN password TEXT").catch(() => {});
+      
       // Add backup toggles to settings
       await client.execute("ALTER TABLE settings ADD COLUMN enable_litestream INTEGER DEFAULT 0 NOT NULL").catch(() => {});
       await client.execute("ALTER TABLE settings ADD COLUMN enable_usb_backup INTEGER DEFAULT 0 NOT NULL").catch(() => {});
-      // Create rushes table if missing
+      
+      // Create rushes table
       await client.execute(`
         CREATE TABLE IF NOT EXISTS rushes (
           id TEXT PRIMARY KEY NOT NULL,
