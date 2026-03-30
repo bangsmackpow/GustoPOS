@@ -87,21 +87,23 @@ export default function adminLoginRouter(): express.Router {
     } else {
       // 2. Check Database for Managers
       try {
-        const [dbUser] = await db.select().from(usersTable).where(
+        console.log(`[AdminLogin] Checking database for email: ${email}`);
+        const dbUsers = await db.select().from(usersTable).where(
           and(
             eq(usersTable.email, email),
-            eq(usersTable.password, password),
-            eq(usersTable.isActive, true),
-            or(
-              eq(usersTable.role, "admin"),
-              eq(usersTable.role, "manager"), 
-              eq(usersTable.role, "head_bartender")
-            )
-            )
+            eq(usersTable.isActive, true)
+          )
+        );
 
+        console.log(`[AdminLogin] Found ${dbUsers.length} active users with that email`);
+        
+        const dbUser = dbUsers.find(u => 
+          u.password === password && 
+          (u.role === "admin" || u.role === "manager" || u.role === "head_bartender")
         );
 
         if (dbUser) {
+          console.log(`[AdminLogin] Database match found for user: ${dbUser.id} (${dbUser.role})`);
           userToSession = {
             id: dbUser.id,
             email: dbUser.email,
@@ -111,6 +113,9 @@ export default function adminLoginRouter(): express.Router {
             language: dbUser.language,
             isActive: true,
           };
+        } else if (dbUsers.length > 0) {
+          console.log("[AdminLogin] User found but password or role did not match");
+          console.log(`[AdminLogin] User roles found: ${dbUsers.map(u => u.role).join(', ')}`);
         }
       } catch (dbErr) {
         console.error("Database login check failed:", dbErr);
