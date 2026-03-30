@@ -1,63 +1,54 @@
 # GustoPOS Workspace
 
 ## Overview
-
-GustoPOS is a full-stack bar management POS system tailored for a Mexican bar environment (specifically inspired by Puerto Vallarta). Built as a pnpm monorepo with TypeScript.
-
-## Deployment Options
-
-### **1. Standalone Hub Mode (Recommended for Bars)**
-Run the system on a dedicated laptop (like a MacBook Pro) inside the bar.
-- **Resilience:** Works without internet.
-- **Local Access:** Staff connect via Wi-Fi to `http://gustopos.local:8080`.
-- **Guide:** See [DEPLOY_LOCAL.md](./DEPLOY_LOCAL.md) for step-by-step instructions.
-
-### **2. Cloud Deployment**
-Run the system on a VPS (DigitalOcean, AWS, etc.) using Docker.
-- **Access:** Reached via your custom domain.
-- **Sync:** Real-time backups to Cloudflare R2.
+GustoPOS is a professional bar management system designed for both high-connectivity cloud environments and low-connectivity "Standalone Hub" environments (like a bar in Puerto Vallarta).
 
 ---
 
-## Key Project Features
+## 🚀 Choose Your Scenario
 
-- **Multi-Admin Support:** Create multiple "Manager" accounts with unique passwords. No need to share master credentials.
-- **Offline PWA:** Install the app on any iPhone or Android. It loads instantly and caches data locally to survive Wi-Fi blips.
-- **Quick Search (⌘K):** Lightning-fast command palette to find drinks, recipes, and open tabs in seconds.
-- **Business Insights:** Real-time leaderboards for **Top Profit Drivers** and **Most Common Items**.
-- **Automated Inventory:** Stock levels decrement automatically on sale and restore on deletion. Supports ml/oz units.
-- **Litestream DR:** Real-time, zero-data-loss replication to Cloudflare R2.
+### **Scenario A: Standalone Bar (Best for your friend)**
+*   **Hardware:** An offline or poorly-connected laptop (Mac/Windows) at the bar.
+*   **Solution:** **The Desktop App.**
+*   **Why:** Runs entirely locally. No Docker, no Wi-Fi, and no setup required for the staff.
+*   **Guide:** See [DEPLOY_LOCAL.md](./DEPLOY_LOCAL.md)
 
----
-
-## Core Tech Stack
-
-- **Database:** SQLite (via `@libsql/client`) + Drizzle ORM.
-- **Backups:** Litestream (S3/R2 replication).
-- **Frontend:** React + Vite + Tailwind (Mobile Optimized PWA).
-- **API:** Node.js Express + Orval (TanStack Query hooks).
+### **Scenario B: Multi-Bar / Cloud (Best for new customers)**
+*   **Hardware:** A central server (VPS) and staff using mobile phones/tablets.
+*   **Solution:** **Docker + PWA.**
+*   **Why:** Easy to update, staff can use their own devices, and data is synced to the cloud.
+*   **Guide:** Standard Docker-compose workflow.
 
 ---
 
-## Configuration (stack.env)
+## 🛠 Developer Guide
 
-Required variables for the system to run:
-- `ADMIN_EMAIL`: Main admin login.
-- `ADMIN_PASSWORD`: Main admin password.
-- `ADMIN_PIN`: PIN for staff switching (4 digits).
-- `DATABASE_URL`: `file:/app/data/gusto.db`.
+### **1. Building the Desktop App**
+To generate a standalone installer (`.dmg` for Mac or `.exe` for Windows):
+```bash
+# Build core + package for desktop
+pnpm run build:desktop
+```
+The installer will be generated in `artifacts/desktop-app/dist/build`.
 
-**For Backups:**
-- `LITESTREAM_REPLICA_URL`: `s3://bucket-name/gusto.db`.
-- `LITESTREAM_ENDPOINT`: Your Cloudflare R2 Endpoint URL.
-- `LITESTREAM_ACCESS_KEY_ID`: Your R2 Key.
-- `LITESTREAM_SECRET_ACCESS_KEY`: Your R2 Secret.
+### **2. Running Web Dev Mode**
+To work on the code with live-reloading:
+```bash
+pnpm run dev
+```
+
+### **3. Quality Control**
+```bash
+pnpm run typecheck  # Architect check (Logic)
+pnpm run lint       # Editor check (Style)
+pnpm run test:e2e   # Playwright check (Automation)
+```
 
 ---
 
-## Developer Guide
-
-1. **Install dependencies:** `pnpm install`
-2. **Generate API clients:** `pnpm --filter @workspace/api-spec run codegen`
-3. **Run Dev Mode:** `pnpm run dev` (Starts API and Frontend)
-4. **Typecheck:** `pnpm run typecheck`
+## 💎 Key Features
+- **Stateless Auth:** Blazing fast logins with zero database overhead.
+- **Offline PWA:** Install on phones; keeps working during Wi-Fi blips.
+- **Quick Search (⌘K):** Find drinks and tabs in milliseconds.
+- **Profitability Reports:** Real-time leaderboards for money-makers.
+- **Disaster Recovery:** Built-in Litestream support for Cloudflare R2.
