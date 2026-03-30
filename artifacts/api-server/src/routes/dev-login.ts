@@ -25,12 +25,11 @@ export default function devLoginRouter(): express.Router {
       };
 
       const sid = await createSession(sessionData);
-      const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
 
       res.cookie(SESSION_COOKIE, sid, {
         httpOnly: true,
-        secure: isSecure,
-        sameSite: isSecure ? "none" : "lax",
+        secure: true,
+        sameSite: "lax",
         path: "/",
         maxAge: SESSION_TTL,
       });

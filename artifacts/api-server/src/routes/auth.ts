@@ -7,32 +7,23 @@ import {
 const router: IRouter = Router();
 
 router.get("/auth/user", (req: Request, res: Response) => {
-  const isAuthenticated = !!req.user;
-  res.json({
-    isAuthenticated,
-    user: isAuthenticated ? {
-      id: req.user!.id,
-      email: req.user!.email ?? null,
-      firstName: req.user!.firstName ?? null,
-      lastName: req.user!.lastName ?? null,
-      profileImageUrl: req.user!.profileImageUrl ?? null,
-      role: req.user!.role ?? "bartender",
-      language: req.user!.language ?? "en",
-    } : undefined,
+  const session = getSessionId(req);
+  console.log(`[AuthCheck] Checking session: ${session ? 'Exists' : 'MISSING'}`);
+  
+  if (!session) {
+    return res.json({ isAuthenticated: false, user: null });
+  }
+  
+  return res.json({
+    isAuthenticated: true,
+    user: session.user,
   });
 });
 
-router.get("/auth/logout", async (req: Request, res: Response) => {
-  const sid = getSessionId(req);
-  await clearSession(res, sid);
-  res.json({ success: true });
-});
-
-// For backward compatibility with any hardcoded redirects
-router.get("/logout", async (req: Request, res: Response) => {
-  const sid = getSessionId(req);
-  await clearSession(res, sid);
-  res.redirect("/login");
+router.get("/auth/logout", (req: Request, res: Response) => {
+  console.log("[AuthLogout] Clearing session");
+  clearSession(res);
+  return res.json({ success: true });
 });
 
 export default router;
