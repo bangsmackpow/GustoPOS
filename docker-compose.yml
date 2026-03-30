@@ -15,8 +15,8 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    # API needs writable /app/data for SQLite and /tmp for Node.js internals
-    read_only: true
+    # Temporarily disabled read_only to debug connection issues
+    read_only: false
     tmpfs:
       - /tmp
       - /run
@@ -31,9 +31,11 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    read_only: true
-    # Nginx needs some writable paths for pid files and cache
+    # Temporarily disabled read_only to debug connection issues
+    read_only: false
     tmpfs:
       - /tmp
       - /run
       - /var/cache/nginx
+      - /var/log/nginx
+      - /var/lib/nginx
