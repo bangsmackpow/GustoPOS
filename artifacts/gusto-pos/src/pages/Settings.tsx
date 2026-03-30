@@ -13,7 +13,7 @@ import { usePosStore } from '@/store';
 import { getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza, Zap, Trash2, Calendar, HardDrive, Shield, Globe, Lock } from 'lucide-react';
+import { Save, Mail, Server, Users, Plus, Edit2, X, Check, Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza, Zap, Trash2, Calendar, HardDrive, Shield, Globe, Lock, Archive, UserCheck } from 'lucide-react';
 import { format } from 'date-fns';
 
 const BRAND_ICONS = [
@@ -140,6 +140,9 @@ export default function Settings() {
     });
   };
 
+  const activeUsers = users?.filter(u => u.isActive) || [];
+  const archivedUsers = users?.filter(u => !u.isActive) || [];
+
   return (
     <div className="max-w-5xl mx-auto pb-20 space-y-10">
       <div className="flex justify-between items-center">
@@ -221,22 +224,47 @@ export default function Settings() {
               </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {users?.map(user => (
-                <div key={user.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-primary/30 transition-all">
-                  <div>
-                    <div className="font-medium">{user.firstName} {user.lastName}</div>
-                    <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-1 uppercase font-bold tracking-wider">
-                      <span className="bg-secondary px-2 py-0.5 rounded">{getTranslation(user.role as any, language)}</span>
-                      <span>PIN: {user.pin}</span>
-                      {user.email && <span className="text-primary/60 ml-2">● Dashboard Access</span>}
+            <div className="space-y-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {activeUsers.map(user => (
+                  <div key={user.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-primary/30 transition-all">
+                    <div>
+                      <div className="font-medium">{user.firstName} {user.lastName}</div>
+                      <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-1 uppercase font-bold tracking-wider">
+                        <span className="bg-secondary px-2 py-0.5 rounded">{getTranslation(user.role as any, language)}</span>
+                        <span>PIN: {user.pin}</span>
+                        {user.email && <span className="text-primary/60 ml-2">● Dashboard Access</span>}
+                      </div>
                     </div>
+                    <Button variant="ghost" size="icon" onClick={() => setEditingStaff(user)}>
+                      <Edit2 size={16} />
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => setEditingStaff(user)}>
-                    <Edit2 size={16} />
-                  </Button>
+                ))}
+              </div>
+
+              {archivedUsers.length > 0 && (
+                <div>
+                  <h4 className="text-xs uppercase tracking-widest text-muted-foreground font-bold mb-4 flex items-center gap-2">
+                    <Archive size={14} /> Archived Staff
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 opacity-60">
+                    {archivedUsers.map(user => (
+                      <div key={user.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 grayscale">
+                        <div>
+                          <div className="font-medium">{user.firstName} {user.lastName}</div>
+                          <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-1">
+                            {getTranslation(user.role as any, language)}
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={() => setEditingStaff(user)}>
+                          <UserCheck size={16} className="text-primary" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
           </section>
 
@@ -475,9 +503,12 @@ export default function Settings() {
                   <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground font-mono" maxLength={4} value={editingStaff.pin || ''} onChange={e => setEditingStaff({...editingStaff, pin: e.target.value})} />
                 </div>
               </div>
-              <div className="flex items-center gap-2 pt-2">
-                <input type="checkbox" id="is-active" checked={editingStaff.isActive} onChange={e => setEditingStaff({...editingStaff, isActive: e.target.checked})} className="w-4 h-4 rounded border-white/10 bg-secondary" />
-                <label htmlFor="is-active" className="text-sm font-medium text-muted-foreground">{getTranslation('active', language)}</label>
+              <div className="flex items-center gap-2 pt-2 p-4 bg-white/5 rounded-2xl border border-white/5">
+                <input type="checkbox" id="is-active" checked={editingStaff.isActive} onChange={e => setEditingStaff({...editingStaff, isActive: e.target.checked})} className="w-5 h-5 rounded-lg border-white/10 bg-secondary" />
+                <div className="ml-2">
+                  <label htmlFor="is-active" className="text-sm font-bold text-foreground block">Currently Active</label>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Uncheck to archive (Hide from PIN Pad)</p>
+                </div>
               </div>
             </div>
 
