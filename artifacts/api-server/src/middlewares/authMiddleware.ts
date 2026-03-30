@@ -1,6 +1,5 @@
 import { type Request, type Response, type NextFunction } from "express";
 import {
-  clearSession,
   getSessionId,
   getSession,
   type SessionUser,
@@ -33,22 +32,19 @@ export async function authMiddleware(
 
   const sid = getSessionId(req);
   if (!sid) {
-    if (req.url?.includes("/api/")) {
-      console.log(`[AuthMiddleware] No Session ID found for URL: ${req.url}`);
-    }
     next();
     return;
   }
 
+  // Stateless: getSession now just verifies the JWT
   const session = await getSession(sid);
   if (!session?.user?.id) {
-    console.log(`[AuthMiddleware] Session ID ${sid.slice(0, 8)}... found but NO VALID USER in session or EXPIRED`);
-    await clearSession(res, sid);
+    // If token is invalid, we don't clear the cookie here to avoid loops,
+    // we just don't attach a user.
     next();
     return;
   }
 
-  console.log(`[AuthMiddleware] Identified User: ${session.user.id} (${session.user.role}) for URL: ${req.url}`);
   req.user = session.user;
   next();
 }

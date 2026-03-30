@@ -2,24 +2,15 @@ import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import crypto from "crypto";
 
-export const sessionsTable = sqliteTable(
-  "sessions",
-  {
-    sid: text("sid").primaryKey(),
-    sess: text("sess", { mode: "json" }).notNull(),
-    expire: integer("expire", { mode: "timestamp" }).notNull(),
-  }
-);
-
 export const usersTable = sqliteTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   email: text("email").unique(),
+  password: text("password"),
   firstName: text("first_name"),
   lastName: text("last_name"),
   profileImageUrl: text("profile_image_url"),
-  password: text("password"),
-  role: text("role").notNull().default("bartender"),
-  language: text("language").notNull().default("en"),
+  role: text("role").notNull().default("bartender"), // admin, manager, head_bartender, bartender, server
+  language: text("language").notNull().default("es"), // en, es
   pin: text("pin").notNull().default("0000"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),

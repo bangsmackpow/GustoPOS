@@ -1,10 +1,11 @@
-import crypto from "crypto";
 import { type Request, type Response } from "express";
-import { db, sessionsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import jwt from "jsonwebtoken";
 
 export const SESSION_COOKIE = "sid";
 export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
+
+// Use ADMIN_PASSWORD as secret or fallback to random string
+const JWT_SECRET = process.env.ADMIN_PASSWORD || "gustopos-default-secret-change-me";
 
 export interface SessionUser {
   id: string;
@@ -22,52 +23,49 @@ export interface SessionData {
   createdAt: number;
 }
 
+/**
+ * Creates a stateless signed JWT
+ */
 export async function createSession(data: SessionData): Promise<string> {
-  const sid = crypto.randomBytes(32).toString("hex");
-  await db.insert(sessionsTable).values({
-    sid,
-    sess: data as unknown as Record<string, unknown>,
-    expire: new Date(Date.now() + SESSION_TTL),
-  });
-  return sid;
+  // Sign the session data
+  return jwt.sign(data, JWT_SECRET, { expiresIn: "7d" });
 }
 
+/**
+ * Verifies and decodes the JWT from the sid
+ */
 export async function getSession(sid: string): Promise<SessionData | null> {
-  const [row] = await db
-    .select()
-    .from(sessionsTable)
-    .where(eq(sessionsTable.sid, sid));
-
-  if (!row || row.expire < new Date()) {
-    if (row) await deleteSession(sid);
+  try {
+    const decoded = jwt.verify(sid, JWT_SECRET) as SessionData;
+    return decoded;
+  } catch (err) {
+    console.warn("[Auth] Invalid or expired token");
     return null;
   }
-
-  return row.sess as unknown as SessionData;
 }
 
+/**
+ * Update logic not needed for stateless JWT (we just issue a new one if data changes)
+ */
 export async function updateSession(
-  sid: string,
-  data: SessionData,
+  _sid: string,
+  _data: SessionData,
 ): Promise<void> {
-  await db
-    .update(sessionsTable)
-    .set({
-      sess: data as unknown as Record<string, unknown>,
-      expire: new Date(Date.now() + SESSION_TTL),
-    })
-    .where(eq(sessionsTable.sid, sid));
+  // Stateless: nothing to update in DB. 
+  // Routes should just clear and set a new cookie if they want to update user data.
 }
 
-export async function deleteSession(sid: string): Promise<void> {
-  await db.delete(sessionsTable).where(eq(sessionsTable.sid, sid));
+/**
+ * No-op for stateless JWT (server doesn't store anything to delete)
+ */
+export async function deleteSession(_sid: string): Promise<void> {
+  // Stateless: nothing to delete on server.
 }
 
 export async function clearSession(
   res: Response,
-  sid?: string,
+  _sid?: string,
 ): Promise<void> {
-  if (sid) await deleteSession(sid);
   res.clearCookie(SESSION_COOKIE, { path: "/" });
 }
 

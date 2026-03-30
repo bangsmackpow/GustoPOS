@@ -2,8 +2,8 @@ import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import * as schema from "./schema";
 import { migrate } from "drizzle-orm/libsql/migrator";
+import { eq } from "drizzle-orm";
 import path from "path";
-import fs from "fs";
 
 const databaseUrl = process.env["DATABASE_URL"];
 
@@ -19,24 +19,66 @@ const migrationsPath = process.env.NODE_ENV === "production"
   ? "/app/lib/db/migrations"
   : path.resolve(import.meta.dirname, "../migrations");
 
+async function upsertAdmin() {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminPin = process.env.ADMIN_PIN || "0000";
+
+  if (!adminEmail || !adminPassword) {
+    console.warn("ADMIN_EMAIL or ADMIN_PASSWORD not set. Skipping admin upsert.");
+    return;
+  }
+
+  try {
+    const [existing] = await db.select().from(schema.usersTable).where(eq(schema.usersTable.email, adminEmail));
+    
+    if (existing) {
+      // Update password/pin if environment variables changed
+      await db.update(schema.usersTable)
+        .set({ 
+          password: adminPassword, 
+          pin: adminPin,
+          role: "admin",
+          isActive: true,
+          updatedAt: new Date() 
+        })
+        .where(eq(schema.usersTable.id, existing.id));
+      console.log(`[Initialize] Admin user updated: ${adminEmail}`);
+    } else {
+      // Create fresh admin
+      await db.insert(schema.usersTable).values({
+        email: adminEmail,
+        password: adminPassword,
+        pin: adminPin,
+        firstName: "System",
+        lastName: "Admin",
+        role: "admin",
+        language: "en",
+        isActive: true,
+      });
+      console.log(`[Initialize] Admin user created: ${adminEmail}`);
+    }
+  } catch (err: any) {
+    console.error("[Initialize] Failed to upsert admin user:", err.message);
+  }
+}
+
 export async function initializeDatabase() {
   console.log("Checking database schema...");
   console.log(`Using migrations from: ${migrationsPath}`);
 
-  // 1. Pre-emptive Safety SQL (Ensure core infrastructure exists before migration)
+  // 1. Run standard migrations
   try {
-    console.log("Applying pre-emptive safety checks...");
-    
-    // Create sessions table (Critical for login)
-    await client.execute(`
-      CREATE TABLE IF NOT EXISTS sessions (
-        sid TEXT PRIMARY KEY NOT NULL,
-        sess TEXT NOT NULL,
-        expire INTEGER NOT NULL
-      )
-    `).catch(() => {});
+    await migrate(db, { migrationsFolder: migrationsPath });
+    console.log("Standard migrations completed successfully.");
+  } catch (error: any) {
+    console.error("Standard migration failed:", error.message);
+    // Continue anyway, try to keep the system up
+  }
 
-    // Add password to users if missing
+  // 2. Ensure core infrastructure exists even if migration hit issues
+  try {
+    // Add password to users if missing (handles transition period)
     await client.execute("ALTER TABLE users ADD COLUMN password TEXT").catch(() => {});
     
     // Add backup toggles to settings if missing
@@ -56,20 +98,12 @@ export async function initializeDatabase() {
         created_at INTEGER DEFAULT (unixepoch()) NOT NULL
       )
     `).catch(() => {});
-    
-    console.log("Pre-emptive safety checks completed.");
   } catch (safetyErr: any) {
-    console.warn("Pre-emptive safety check encountered an issue:", safetyErr.message);
+    console.warn("Safety check encountered an issue:", safetyErr.message);
   }
 
-  // 2. Run standard migrations
-  try {
-    await migrate(db, { migrationsFolder: migrationsPath });
-    console.log("Standard migrations completed successfully.");
-  } catch (error: any) {
-    console.error("Standard migration failed:", error.message);
-    // We continue anyway since pre-emptive safety hopefully caught the essentials
-  }
+  // 3. Ensure Environment Admin is in the database
+  await upsertAdmin();
 }
 
 export * from "./schema";
