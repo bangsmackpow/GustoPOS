@@ -22,6 +22,7 @@ export default function Login() {
       const data = await response.json();
       if (data.ok) {
         window.location.href = '/';
+        window.location.reload();
       } else {
         toast({
           variant: "destructive",

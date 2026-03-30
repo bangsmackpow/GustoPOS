@@ -34,31 +34,28 @@ WORKDIR /app
 # Install Litestream and ca-certificates
 RUN apk add --no-cache ca-certificates wget sqlite
 
-# Download static Litestream binary
-RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64-static.tar.gz && \
-    tar -xzf litestream-v0.3.13-linux-amd64-static.tar.gz && \
+# Download Litestream binary (static)
+RUN wget https://github.com/benbjohnson/litestream/releases/download/v0.3.13/litestream-v0.3.13-linux-amd64.tar.gz && \
+    tar -xzf litestream-v0.3.13-linux-amd64.tar.gz && \
     mv litestream /usr/local/bin/litestream && \
-    rm litestream-v0.3.13-linux-amd64-static.tar.gz
+    rm litestream-v0.3.13-linux-amd64.tar.gz
 
 # Ensure data directory exists
 RUN mkdir -p /app/data && chmod 777 /app/data
 
 # Copy only the essentials from the builder
-# 1. The single-file bundle
 COPY --from=builder /app/artifacts/api-server/dist ./artifacts/api-server/dist
-# 2. Database artifacts
 COPY --from=builder /app/lib/db/migrations ./lib/db/migrations
-COPY --from=builder /app/db/seeds ./lib/db/seeds
-# 3. Configuration
+COPY --from=builder /app/db/seeds ./db/seeds
 COPY --from=builder /app/artifacts/api-server/litestream.yml /etc/litestream.yml
-
-# Note: We NO LONGER copy node_modules. esbuild has bundled express, drizzle, libsql, etc.
-# into the single artifacts/api-server/dist/index.mjs file.
 
 # Expose the API port
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
+
+# Reverting to root user to ensure volume permissions work on all host systems
+USER root
 
 # The CMD checks if Litestream is configured. 
 CMD ["sh", "-c", "if [ -n \"$LITESTREAM_REPLICA_URL\" ]; then litestream restore -if-db-not-exists -if-replica-exists /app/data/gusto.db && litestream replicate -exec 'node --enable-source-maps artifacts/api-server/dist/index.mjs'; else node --enable-source-maps artifacts/api-server/dist/index.mjs; fi"]
