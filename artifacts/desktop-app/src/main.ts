@@ -1,7 +1,7 @@
-import { app, BrowserWindow } from 'electron';
-import path from 'path';
-import { spawn, ChildProcess } from 'child_process';
-import net from 'net';
+import { app, BrowserWindow } from "electron";
+import path from "path";
+import { spawn, ChildProcess } from "child_process";
+import net from "net";
 
 let apiProcess: ChildProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
@@ -13,7 +13,7 @@ function findOpenPort(port: number): Promise<number> {
   return new Promise((resolve) => {
     const server = net.createServer();
     server.unref();
-    server.on('error', () => {
+    server.on("error", () => {
       resolve(findOpenPort(port + 1));
     });
     server.listen(port, () => {
@@ -27,40 +27,44 @@ function findOpenPort(port: number): Promise<number> {
 
 async function startApi() {
   const isDev = !app.isPackaged;
-  
+
   // In production, artifacts are in Resources folder
   // In dev, we point to the workspace build folders
-  const apiPath = isDev 
-    ? path.resolve(__dirname, '../../api-server/dist/index.mjs')
-    : path.join(process.resourcesPath, 'api/index.mjs');
+  const apiPath = isDev
+    ? path.resolve(__dirname, "../../api-server/dist/index.mjs")
+    : path.join(process.resourcesPath, "api/index.mjs");
 
-  const dbPath = path.join(app.getPath('userData'), 'gusto.db');
-  
-  console.log('Starting API at:', apiPath);
-  console.log('Database at:', dbPath);
+  const dbPath = path.join(app.getPath("userData"), "gusto.db");
 
-  apiProcess = spawn(process.execPath, [apiPath], {
+  console.log("Starting API at:", apiPath);
+  console.log("Database at:", dbPath);
+
+  const nodePath = isDev
+    ? "node"
+    : path.join(process.resourcesPath, "node", "bin", "node");
+
+  apiProcess = spawn(nodePath, [apiPath], {
     env: {
       ...process.env,
       PORT: API_PORT.toString(),
       DATABASE_URL: `file:${dbPath}`,
-      NODE_ENV: 'production',
+      NODE_ENV: "production",
       // Ensure migrations can be found
-      MIGRATIONS_PATH: isDev 
-        ? path.resolve(__dirname, '../../../lib/db/migrations')
-        : path.join(process.resourcesPath, 'api/migrations'),
+      MIGRATIONS_PATH: isDev
+        ? path.resolve(__dirname, "../../../lib/db/migrations")
+        : path.join(process.resourcesPath, "api/migrations"),
       SEEDS_PATH: isDev
-        ? path.resolve(__dirname, '../../../db/seeds')
-        : path.join(process.resourcesPath, 'api/seeds'),
+        ? path.resolve(__dirname, "../../../db/seeds")
+        : path.join(process.resourcesPath, "api/seeds"),
       STATIC_PATH: isDev
-        ? path.resolve(__dirname, '../../gusto-pos/dist/public')
-        : path.join(process.resourcesPath, 'api/public'),
+        ? path.resolve(__dirname, "../../gusto-pos/dist/public")
+        : path.join(process.resourcesPath, "api/public"),
     },
-    stdio: 'inherit'
+    stdio: "inherit",
   });
 
-  apiProcess.on('error', (err) => {
-    console.error('Failed to start API process:', err);
+  apiProcess.on("error", (err) => {
+    console.error("Failed to start API process:", err);
   });
 }
 
@@ -73,7 +77,7 @@ async function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    backgroundColor: '#09090b', // Matches GustoPOS theme
+    backgroundColor: "#09090b", // Matches GustoPOS theme
   });
 
   // Wait for API to be ready before loading
@@ -92,7 +96,7 @@ async function createWindow() {
 
   checkApi();
 
-  mainWindow.on('closed', () => {
+  mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }
@@ -102,19 +106,19 @@ app.whenReady().then(async () => {
   createWindow();
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });
 
-app.on('will-quit', () => {
+app.on("will-quit", () => {
   if (apiProcess) {
     apiProcess.kill();
   }

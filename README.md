@@ -21,6 +21,14 @@ GustoPOS is a professional bar management system designed for both high-connecti
 
 ---
 
+## 📈 Project Status & Roadmap
+For the latest on what's built and what's coming next, see [STATUS.md](./STATUS.md).
+
+## 🤖 AI Agent Onboarding
+If you are an AI assistant helping with this repo, please read [AGENTS.md](./AGENTS.md) first.
+
+---
+
 ## 🛠 Developer Guide
 
 ### **1. Building the Desktop App**
@@ -43,6 +51,12 @@ pnpm run typecheck  # Architect check (Logic)
 pnpm run lint       # Editor check (Style)
 pnpm run test:e2e   # Playwright check (Automation)
 ```
+
+### **4. Tech Stack**
+- **Frontend**: React (Vite), Tailwind CSS 4, Shadcn UI, TanStack Query (with local persistence), Zustand.
+- **Backend**: Express 5, Drizzle ORM, LibSQL (SQLite).
+- **Desktop**: Electron + Electron Builder.
+- **Infrastructure**: Docker, Litestream (R2 Backup).
 
 ---
 
