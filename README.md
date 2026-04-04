@@ -9,9 +9,11 @@ GustoPOS is a professional bar management system designed for both high-connecti
 
 ### **Scenario A: Standalone Bar (Best for your friend)**
 *   **Hardware:** An offline or poorly-connected laptop (Mac/Windows) at the bar.
-*   **Solution:** **The Desktop App.**
+*   **Solution:** **Airgapped Deployment** - Complete offline POS system.
 *   **Why:** Runs entirely locally. No Docker, no Wi-Fi, and no setup required for the staff.
-*   **Guide:** See [DEPLOY_LOCAL.md](./DEPLOY_LOCAL.md)
+*   **Guides:** 
+    - [Airgapped Deployment Guide](./airgapped-deployment/README.md) - Complete offline installation
+    - [DEPLOY_LOCAL.md](./DEPLOY_LOCAL.md) - Local deployment options
 
 ### **Scenario B: Multi-Bar / Cloud (Best for new customers)**
 *   **Hardware:** A central server (VPS) and staff using mobile phones/tablets.
@@ -31,31 +33,22 @@ If you are an AI assistant helping with this repo, please read [AGENTS.md](./AGE
 
 ## 🛠 Developer Guide
 
-### **1. Building the Desktop App**
-To generate a standalone installer (`.dmg` for Mac or `.exe` for Windows):
-```bash
-# Build core + package for desktop
-pnpm run build:desktop
-```
-The installer will be generated in `artifacts/desktop-app/dist/build`.
-
-### **2. Running Web Dev Mode**
+### **1. Running Web Dev Mode**
 To work on the code with live-reloading:
 ```bash
 pnpm run dev
 ```
 
-### **3. Quality Control**
+### **2. Quality Control**
 ```bash
 pnpm run typecheck  # Architect check (Logic)
 pnpm run lint       # Editor check (Style)
 pnpm run test:e2e   # Playwright check (Automation)
 ```
 
-### **4. Tech Stack**
+### **3. Tech Stack**
 - **Frontend**: React (Vite), Tailwind CSS 4, Shadcn UI, TanStack Query (with local persistence), Zustand.
 - **Backend**: Express 5, Drizzle ORM, LibSQL (SQLite).
-- **Desktop**: Electron + Electron Builder.
 - **Infrastructure**: Docker, Litestream (R2 Backup).
 
 ---
