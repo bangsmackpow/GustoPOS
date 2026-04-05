@@ -1,11 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { db } from '@/lib/db';
-import {
-  inventoryItemsTable,
-  inventoryCountsTable,
-  inventoryAdjustmentsTable,
-} from '@/lib/db/schema';
-import { eq, asc, desc } from 'drizzle-orm';
+import { db, inventoryItemsTable, inventoryCountsTable, inventoryAdjustmentsTable } from '@workspace/db';
+import { eq, desc } from 'drizzle-orm';
 import crypto from 'crypto';
 
 const router = Router();
