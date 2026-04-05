@@ -267,15 +267,21 @@ router.get('/low-stock', async (req: Request, res: Response) => {
     const items = await db.select().from(inventoryItemsTable);
 
     const lowStockItems = items.filter((item) => {
+      if (item.currentBulk === null || item.bulkSize === null || item.currentPartial === null) {
+        return false;
+      }
+      
       const current = item.currentBulk * item.bulkSize + item.currentPartial;
 
       if (item.lowStockMethod?.includes('manual')) {
-        if (current < item.lowStockManualThreshold!) return true;
+        if (item.lowStockManualThreshold && current < item.lowStockManualThreshold) return true;
       }
 
       if (item.lowStockMethod?.includes('percentage')) {
-        const pct = (current / item.lowStockPercentBase!) * 100;
-        if (pct < item.lowStockPercent!) return true;
+        if (item.lowStockPercentBase && item.lowStockPercent) {
+          const pct = (current / item.lowStockPercentBase) * 100;
+          if (pct < item.lowStockPercent) return true;
+        }
       }
 
       return false;
