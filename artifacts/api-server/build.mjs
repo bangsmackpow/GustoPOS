@@ -9,6 +9,18 @@ import { rm } from "node:fs/promises";
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
+const projectRoot = path.resolve(artifactDir, "../../");
+
+// Plugin to handle path aliases (e.g., @/lib/db -> ../../lib/db)
+const aliasPlugin = {
+  name: "alias",
+  setup(build) {
+    build.onResolve({ filter: /^@\// }, (args) => {
+      const aliasPath = path.resolve(projectRoot, args.path.slice(2));
+      return { path: aliasPath };
+    });
+  },
+};
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
@@ -103,6 +115,7 @@ async function buildAll() {
     ],
     sourcemap: "linked",
     plugins: [
+      aliasPlugin,
       // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
       esbuildPluginPino({ transports: ["pino-pretty"] }),
     ],

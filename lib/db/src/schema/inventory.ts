@@ -59,6 +59,9 @@ export const inventoryItemsTable = sqliteTable("inventory_items", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
+// Type definition for InventoryItem (derived from table)
+export type InventoryItem = typeof inventoryItemsTable.$inferSelect;
+
 /**
  * INVENTORY_COUNTS - Audit Trail
  * Every audit creates a record showing:

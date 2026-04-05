@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { type InventoryItem } from '@/lib/api-client-react';
+import { type InventoryItem } from '@/lib/db';
 
 interface InventoryAuditModalProps {
   item: InventoryItem;

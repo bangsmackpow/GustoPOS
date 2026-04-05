@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import type { InventoryItem } from '@/lib/api-client-react';
+import type { InventoryItem } from '@/lib/db';
 import { InventoryAuditModal } from './InventoryAuditModal';
 import { Search, Filter } from 'lucide-react';
 

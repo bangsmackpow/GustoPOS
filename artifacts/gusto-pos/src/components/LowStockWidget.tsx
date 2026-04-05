@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
-import type { InventoryItem } from '@/lib/api-client-react';
+import type { InventoryItem } from '@/lib/db';
 
 export function LowStockWidget() {
   const { data: lowStockItems = [], isLoading } = useQuery({
