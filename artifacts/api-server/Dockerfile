@@ -15,7 +15,7 @@ COPY lib/db/package.json ./lib/db/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
 COPY lib/api-spec/package.json ./lib/api-spec/
 COPY lib/api-zod/package.json ./lib/api-zod/
-COPY scripts/package.json ./scripts/
+COPY scripts/package.json scripts/preinstall.mjs ./scripts/
 
 # Install all dependencies for build
 RUN pnpm install --no-frozen-lockfile
@@ -27,7 +27,6 @@ COPY . .
 WORKDIR /app/artifacts/api-server
 RUN pnpm run build
 
-# --- New Stage: Prune node_modules for production ---
 # This ensures we have the NATIVE binaries for Alpine (musl)
 FROM node:20-alpine AS prod-deps
 WORKDIR /app
@@ -38,7 +37,7 @@ COPY lib/db/package.json ./lib/db/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
 COPY lib/api-spec/package.json ./lib/api-spec/
 COPY lib/api-zod/package.json ./lib/api-zod/
-COPY scripts/package.json ./scripts/
+COPY scripts/package.json scripts/preinstall.mjs ./scripts/
 
 # Install ONLY production dependencies (includes native @libsql binaries)
 RUN pnpm install --prod --no-frozen-lockfile
