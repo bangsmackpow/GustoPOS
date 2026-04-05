@@ -12,6 +12,7 @@ import pinLoginRouter from "./pin-login";
 import adminLoginRouter from "./admin-login";
 import bulkImportRouter from "./bulk-import";
 import rushesRouter from "./rushes";
+import inventoryRouter from "./inventory";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,7 @@ router.use(shiftsRouter);
 router.use(settingsRouter);
 router.use("/admin", bulkImportRouter);
 router.use(rushesRouter);
+router.use("/api/inventory", inventoryRouter);
 router.use(devLoginRouter());
 router.use(pinLoginRouter());
 router.use(adminLoginRouter());
