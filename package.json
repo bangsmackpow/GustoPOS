@@ -10,7 +10,6 @@
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "test:e2e": "playwright test",
     "build:desktop": "pnpm run build && pnpm --filter @workspace/desktop-app run build && pnpm --filter @workspace/desktop-app run package:mac"
   },
   "private": true,

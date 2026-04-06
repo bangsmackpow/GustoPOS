@@ -81,7 +81,6 @@ pnpm run dev
 ```bash
 pnpm run typecheck  # Architect check (Logic) - Must pass
 pnpm run lint       # Editor check (Style) - Must pass
-pnpm run test:e2e   # Playwright check (Automation) - Optional
 ```
 
 ### **3. Production Build**
