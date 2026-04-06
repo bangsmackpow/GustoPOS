@@ -2,12 +2,16 @@ import React, { useState } from 'react';
 import { Wine, Lock, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,25 +29,13 @@ export default function Login() {
       console.log('[Login] Response:', { ok: data.ok, status: response.status });
       
       if (data.ok) {
-        console.log('[Login] Login successful, verifying auth...');
-        // Verify auth works before redirecting
-        const authCheck = await fetch('/api/auth/user', {
-          credentials: 'include',
-        });
-        const authData = await authCheck.json();
-        console.log('[Login] Auth check result:', authData);
+        console.log('[Login] Login successful, invalidating auth cache...');
+        // Invalidate the auth query to force a fresh fetch with the new cookie
+        await queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
         
-        if (authData.isAuthenticated) {
-          console.log('[Login] Auth verified, redirecting to /');
-          window.location.href = '/';
-        } else {
-          console.error('[Login] Auth check returned false!');
-          toast({
-            variant: "destructive",
-            title: "Auth Check Failed",
-            description: "Login succeeded but auth verification failed"
-          });
-        }
+        console.log('[Login] Cache invalidated, redirecting...');
+        // Use Wouter navigation instead of window.location to avoid full page reload
+        setLocation('/');
       } else {
         console.error('[Login] Login failed:', data.error);
         toast({
