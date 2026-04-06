@@ -58,7 +58,19 @@ Thumbs.db
 # Dependencies hoisted in monorepos
 **/node_modules
 
-# Secrets
+# Secrets and environment
 *.env
 *.env.*
 !*.env.example
+
+# Temporary testing/deployment files (only tracked locally for testing)
+gusto-*.db
+gusto-deployment/
+/lint_output.txt
+/lint_result.txt
+
+# Session/IDE artifacts
+*.swp
+*.swo
+*~
+.#*

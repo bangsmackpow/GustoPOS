@@ -15,10 +15,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Prepare dependencies (no frozen lockfile)
+
+      - name: Install PNPM
+        run: npm i -g pnpm
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Verify quality gates
         run: |
-          npm i -g pnpm
-          pnpm install --no-frozen-lockfile
+          pnpm run typecheck
+          pnpm run lint
+
+      - name: Build Frontend dist
+        env:
+          PORT: 5173
+          BASE_PATH: /
+          CI: true
+        run: |
+          pnpm run build --filter @workspace/gusto-pos
+
+      - name: Verify Frontend build
+        run: |
+          ls -la artifacts/gusto-pos/dist/public/ || (echo "Build output not found" && exit 1)
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -30,28 +49,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build API image
-        run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/gusto-pos-api:latest -f artifacts/api-server/Dockerfile .
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: artifacts/api-server/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/gusto-pos-api:latest
 
-      - name: Install PNPM
-        run: npm i -g pnpm
-      - name: Build Frontend dist on CI
-        env:
-          PORT: 5173
-          BASE_PATH: /
-          CI: true
-        run: |
-          pnpm run build --filter @workspace/gusto-pos
-          ls -la artifacts/gusto-pos/dist/public
-      - name: Build Frontend image
-        run: |
-          docker build -t ghcr.io/${{ github.repository_owner }}/gusto-pos-frontend:latest -f artifacts/gusto-pos/Dockerfile .
-
-      - name: Push API image
-        run: |
-          docker push ghcr.io/${{ github.repository_owner }}/gusto-pos-api:latest
-
-      - name: Push Frontend image
-        run: |
-          docker push ghcr.io/${{ github.repository_owner }}/gusto-pos-frontend:latest
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: artifacts/gusto-pos/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/gusto-pos-frontend:latest
