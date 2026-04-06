@@ -30,7 +30,7 @@ export default function Login() {
           description: data.error || "Invalid credentials"
         });
       }
-    } catch (err: any) {
+    } catch {
       toast({
         variant: "destructive",
         title: "Error",

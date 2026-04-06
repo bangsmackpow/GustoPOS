@@ -5,7 +5,7 @@ import { usePosStore } from '@/store';
 import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, X, Info, Upload, FileSpreadsheet, Check, Package } from 'lucide-react';
+import { Plus, Edit2, X, Info, Upload, FileSpreadsheet, Package } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import Papa from 'papaparse';
 
@@ -73,7 +73,7 @@ export default function Drinks() {
         setImportPreview([]);
         qc.invalidateQueries();
       }
-    } catch (err) {
+    } catch {
       toast({ variant: "destructive", title: "Import Failed" });
     }
   };

@@ -38,7 +38,7 @@ export async function getSession(sid: string): Promise<SessionData | null> {
   try {
     const decoded = jwt.verify(sid, JWT_SECRET) as SessionData;
     return decoded;
-  } catch (err) {
+  } catch {
     console.warn("[Auth] Invalid or expired token");
     return null;
   }

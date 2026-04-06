@@ -10,12 +10,12 @@ async function getReportData(shiftId: string) {
   const [shift] = await db.select().from(shiftsTable).where(eq(shiftsTable.id, shiftId));
   if (!shift) return null;
 
-  const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, "default"));
+  const [_settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, "default"));
 
   const tabs = await db.select().from(tabsTable).where(eq(tabsTable.shiftId, shiftId));
   const closedTabs = tabs.filter(t => t.status === "closed");
 
-  const tabIds = tabs.map(t => t.id);
+  const _tabIds = tabs.map(t => t.id);
 
   const totalMxn = closedTabs.reduce((sum, t) => sum + Number(t.totalMxn), 0);
   const cashSalesMxn = closedTabs.filter(t => t.paymentMethod === "cash").reduce((sum, t) => sum + Number(t.totalMxn), 0);

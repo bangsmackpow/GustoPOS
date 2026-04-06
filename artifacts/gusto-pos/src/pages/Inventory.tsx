@@ -5,7 +5,7 @@ import { usePosStore } from '@/store';
 import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, X, AlertTriangle, Database, FileText, Upload, Check, FileSpreadsheet } from 'lucide-react';
+import { Plus, Edit2, X, AlertTriangle, Database, Upload, Check, FileSpreadsheet } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import Papa from 'papaparse';
 
@@ -35,7 +35,7 @@ export default function Inventory() {
       } else {
         toast({ variant: "destructive", title: "Error", description: data.error });
       }
-    } catch (err: any) {
+    } catch {
       toast({ variant: "destructive", title: "Connection Error" });
     } finally {
       setIsSeeding(false);
@@ -112,7 +112,7 @@ export default function Inventory() {
         setImportPreview([]);
         qc.invalidateQueries();
       }
-    } catch (err) {
+    } catch {
       toast({ variant: "destructive", title: "Import Failed" });
     } finally {
       setIsSeeding(false);

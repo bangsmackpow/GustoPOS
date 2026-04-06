@@ -11,7 +11,7 @@
  */
 
 import fs from "fs";
-import path from "path";
+import _path from "path";
 import { createReadStream } from "fs";
 import { parse } from "csv-parse";
 import crypto from "crypto";

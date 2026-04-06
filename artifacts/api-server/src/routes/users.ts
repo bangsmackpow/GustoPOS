@@ -61,7 +61,7 @@ router.get("/users/:id", async (req: Request, res: Response) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.params.id as string));
     if (!user) return res.status(404).json({ error: "User not found" });
     return res.json(formatUser(user));
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -111,7 +111,7 @@ router.delete("/users/:id", async (req: Request, res: Response) => {
   try {
     await db.delete(usersTable).where(eq(usersTable.id, req.params.id as string));
     return res.json({ success: true });
-  } catch (err) {
+  } catch {
     return res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -9,12 +9,12 @@ let mainWindow: BrowserWindow | null = null;
 const API_PORT = 3000;
 const API_URL = `http://localhost:${API_PORT}`;
 
-function findOpenPort(port: number): Promise<number> {
+function _findOpenPort(port: number): Promise<number> {
   return new Promise((resolve) => {
     const server = net.createServer();
     server.unref();
     server.on("error", () => {
-      resolve(findOpenPort(port + 1));
+      resolve(_findOpenPort(port + 1));
     });
     server.listen(port, () => {
       const { port: actualPort } = server.address() as net.AddressInfo;

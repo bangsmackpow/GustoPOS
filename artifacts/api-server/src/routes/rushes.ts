@@ -46,7 +46,7 @@ router.delete("/rushes/:id", async (req: Request, res: Response) => {
   try {
     await db.delete(rushesTable).where(eq(rushesTable.id, req.params.id as string));
     return res.json({ success: true });
-  } catch (err: any) {
+  } catch {
     return res.status(500).json({ error: "Internal server error" });
   }
 });

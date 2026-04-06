@@ -5,7 +5,7 @@ import { useAddOrderMutation, useDeleteOrderMutation, useCloseTabMutation } from
 import { usePosStore } from '@/store';
 import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Trash2, CreditCard, Banknote, Coffee, Wine, Beer, Info, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Trash2, CreditCard, Banknote, Coffee, Wine, Beer, Info, X } from 'lucide-react';
 import { Link } from 'wouter';
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -57,7 +57,7 @@ export default function TabDetail() {
     if (!ingredients || !drink.recipe || drink.recipe.length === 0) return { status: 'available', message: '' };
     
     let minServings = Infinity;
-    let missingIngredient = null;
+    // Note: missingIngredient tracking not currently used but structure preserved for future enhancement
 
     for (const r of drink.recipe) {
       const ing = ingredients.find(i => i.id === r.ingredientId);
@@ -65,7 +65,7 @@ export default function TabDetail() {
       
       const available = Number(ing.currentStock) / Number(r.amountInMl);
       if (available < minServings) minServings = available;
-      if (Number(ing.currentStock) <= 0) missingIngredient = ing;
+      // missingIngredient tracking could be added here if needed
     }
 
     if (minServings <= 0 || isFinite(minServings) === false) {

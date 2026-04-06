@@ -3,6 +3,23 @@ import { useQuery } from '@tanstack/react-query';
 import { InventoryAuditModal } from '@/components/InventoryAuditModal';
 import type { InventoryItem } from '@/types/inventory';
 
+// Check if item is low stock
+const isLowStock = (item: InventoryItem): boolean => {
+  const current = item.currentBulk * item.bulkSize + item.currentPartial;
+
+  if (item.lowStockMethod?.includes('manual')) {
+    if (current < item.lowStockManualThreshold!) return true;
+  }
+
+  if (item.lowStockMethod?.includes('percentage')) {
+    const pct = (current / item.lowStockPercentBase!) * 100;
+    if (pct < item.lowStockPercent!) return true;
+  }
+
+  // Usage-based would require historical data
+  return false;
+};
+
 export function InventoryList() {
   const [filterType, setFilterType] = useState('');
   const [filterSubtype, setFilterSubtype] = useState('');
@@ -36,23 +53,6 @@ export function InventoryList() {
       return true;
     });
   }, [items, filterType, filterSubtype, showLowStockOnly]);
-
-  // Check if item is low stock
-  const isLowStock = (item: InventoryItem) => {
-    const current = item.currentBulk * item.bulkSize + item.currentPartial;
-
-    if (item.lowStockMethod?.includes('manual')) {
-      if (current < item.lowStockManualThreshold!) return true;
-    }
-
-    if (item.lowStockMethod?.includes('percentage')) {
-      const pct = (current / item.lowStockPercentBase!) * 100;
-      if (pct < item.lowStockPercent!) return true;
-    }
-
-    // Usage-based would require historical data
-    return false;
-  };
 
   // Format date
   const formatDate = (timestamp?: number | Date) => {

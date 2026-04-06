@@ -72,7 +72,7 @@ router.post("/drinks", async (req: Request, res: Response) => {
     res.status(400).json({ error: "Invalid request body", details: parsed.error });
     return;
   }
-  const { name, nameEs, description, descriptionEs, category, markupFactor, upcharge, actualPrice, isAvailable, recipe } = parsed.data;
+  const { name, nameEs, description, descriptionEs, category, markupFactor, upcharge, actualPrice, recipe } = parsed.data;
 
   const [drink] = await db.insert(drinksTable).values({
     name,
