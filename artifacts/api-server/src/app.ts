@@ -41,12 +41,13 @@ const corsOptions = {
       return callback(null, true);
     }
     
-    // Allow requests from the same domain (production)
-    const allowedDomains = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+    // Allow production domains from environment variable
+    const allowedDomains = (process.env.CORS_ALLOWED_ORIGINS || 'bangsmackpow.qzz.io').split(',').map(d => d.trim()).filter(Boolean);
     if (allowedDomains.some(domain => origin.includes(domain))) {
       return callback(null, true);
     }
     
+    console.warn(`[CORS] Rejected origin: ${origin}`);
     callback(null, false);
   },
   credentials: true,
