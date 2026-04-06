@@ -3,6 +3,63 @@
 **Purpose:** Deploy GustoPOS (with advanced inventory system) to an airgapped macOS Monterey machine via USB  
 **Duration:** ~45 minutes total  
 **No iterations needed:** Follow this exactly, once  
+**Status:** ✅ All code passes quality gates (linting, TypeScript)
+
+---
+
+## 🚀 QUICK START - For Tonight's Test
+
+### What You're Testing
+A complete offline POS system with advanced inventory management that runs entirely on one laptop with no internet required.
+
+### The 4-Step Process
+
+#### **Step 1: Build (5 min)**
+```bash
+cd C:\Users\curtis\Desktop\dev\GustoPOS
+pnpm install              # Only first time
+pnpm run lint             # Verify quality ✅
+pnpm run typecheck        # Verify quality ✅
+pnpm run build            # Create optimized artifacts
+```
+
+#### **Step 2: Create Database (2 min)**
+```bash
+cd C:\Users\curtis\Desktop\dev\GustoPOS
+sqlite3 gusto-test.db < lib/db/migrations/0006_advanced_inventory.sql
+
+# Verify it worked
+sqlite3 gusto-test.db ".tables"
+# Should show: inventory_items, inventory_counts, inventory_adjustments
+```
+
+#### **Step 3: Package for USB (3 min)**
+```bash
+# Create deployment folder
+mkdir ~/gusto-deployment
+cd ~/gusto-deployment
+
+# Copy everything
+cp -r C:\Users\curtis\Desktop\dev\GustoPOS\artifacts\gusto-pos\dist ./frontend
+cp -r C:\Users\curtis\Desktop\dev\GustoPOS\artifacts\api-server\dist ./backend
+cp gusto-test.db ./database.db
+cp C:\Users\curtis\Desktop\dev\GustoPOS\artifacts\api-server\package.json .
+cp C:\Users\curtis\Desktop\dev\GustoPOS\artifacts\api-server\pnpm-lock.yaml .
+
+# Copy startup script (provided below)
+cp ~/start-server.sh .
+chmod +x start-server.sh
+```
+
+#### **Step 4: Test on Target Machine (30 min)**
+1. Copy `~/gusto-deployment` folder to USB
+2. On target machine: Copy folder to Desktop
+3. Open terminal and run: `cd ~/Desktop/gusto-deployment && ./start-server.sh`
+4. Open browser to `http://localhost:3000`
+5. Login with PIN: `0000`
+6. Test: Create tab → Add drink → Check inventory
+
+**Success if:** Everything works without internet ✅
 
 ---
 

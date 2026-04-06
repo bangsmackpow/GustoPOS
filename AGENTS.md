@@ -81,19 +81,23 @@ See `AIRLOCK_DEPLOYMENT.md` for complete instructions on packaging for airgapped
 - **Stateless Auth**: High-speed, low-SQL logins. Prefer PIN-based or Token-based auth patterns.
 - **Markup Logic**: Always consider `markup_factor` when pricing drinks. The inventory system tracks `ml` to allow for precise recipe-based cost analysis.
 - **Inventory Flexibility**: The bulk+partial model works for ANY item type (not case-specific). Tracking type (tare/weight/count) determines calculation method.
+- **Component Memoization**: Move helper functions outside components to avoid React Compiler warnings. See `InventoryList.tsx` for the `isLowStock` pattern.
+- **Type-Only Constants**: Variables used only in `typeof` expressions should be ignored by linters with `/* eslint-disable-next-line */` comments. See `use-toast.ts` for pattern.
 
 ## 🛑 Gotchas
-- **Windows Environment**: The owner uses Windows. Ensure commands and paths are cross-platform compatible.
+- **Windows Environment**: The owner uses Windows. Ensure commands and paths are cross-platform compatible. Use backslashes (`\`) for paths.
 - **PNPM Workspace**: Always run `pnpm install` from the root. Use `pnpm --filter <pkg> <cmd>` for package-specific tasks.
 - **Tailwind 4**: We are using the bleeding-edge Tailwind CSS 4. CSS-in-JS is minimal; prefer standard utility classes.
 - **Inventory Routes**: Routes are registered at `/api/inventory/*` (not `/inventory/*` at root). Always test with full path.
 - **CSV Import**: Exact 10-column order required - see `scripts/import-inventory-csv.ts` for validation.
+- **Quality Gates**: All PRs must pass `pnpm run lint` and `pnpm run typecheck` before merge. No exceptions.
 
 ## 📚 Key Documentation
 
-For agents working on inventory features:
+For agents working on this codebase:
+- **[STATUS.md](./STATUS.md)** - Latest project status and quality gates
 - **[SYSTEM_LIVE.md](SESSION_FILES/SYSTEM_LIVE.md)** - Current integration status
 - **[BUILD_COMPLETE.md](SESSION_FILES/BUILD_COMPLETE.md)** - What was built
 - **[IMPLEMENTATION_COMPLETE.md](SESSION_FILES/IMPLEMENTATION_COMPLETE.md)** - Technical specs
 - **[QUICK_REFERENCE.md](SESSION_FILES/QUICK_REFERENCE.md)** - Quick overview
-- **[AIRLOCK_DEPLOYMENT.md](./AIRLOCK_DEPLOYMENT.md)** - Offline deployment guide
+- **[AIRLOCK_DEPLOYMENT.md](./AIRLOCK_DEPLOYMENT.md)** - Offline deployment guide (for tonight's test)
