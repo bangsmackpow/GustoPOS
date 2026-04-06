@@ -22,9 +22,10 @@ export default function Login() {
 
       const data = await response.json();
       if (data.ok) {
-        // Success! Force a full page reload to clear all caches and start fresh
-        window.location.href = '/';
-        window.location.reload();
+        // Give the cookie a moment to be set by the browser, then navigate
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
       } else {
         toast({
           variant: "destructive",
