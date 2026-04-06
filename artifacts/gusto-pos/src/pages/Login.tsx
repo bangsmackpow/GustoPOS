@@ -22,10 +22,22 @@ export default function Login() {
 
       const data = await response.json();
       if (data.ok) {
-        // Give the cookie a moment to be set by the browser, then navigate
-        setTimeout(() => {
+        // Verify auth works before redirecting
+        const authCheck = await fetch('/api/auth/user', {
+          credentials: 'include',
+        });
+        const authData = await authCheck.json();
+        
+        if (authData.isAuthenticated) {
+          // Auth confirmed, now redirect
           window.location.href = '/';
-        }, 100);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Auth Check Failed",
+            description: "Login succeeded but auth verification failed"
+          });
+        }
       } else {
         toast({
           variant: "destructive",
