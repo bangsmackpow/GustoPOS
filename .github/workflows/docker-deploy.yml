@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
+      - name: Wait for images to be available
+        run: sleep 30  # Give registry time to propagate images
+
       - name: Trigger Portainer Webhook
         run: |
           if [ -n "${{ secrets.PORTAINER_WEBHOOK_URL }}" ]; then
