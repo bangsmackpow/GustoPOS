@@ -65,12 +65,12 @@ export default function adminLoginRouter(): express.Router {
       res.cookie(SESSION_COOKIE, sid, {
         httpOnly: true,
         secure: isSecure,
-        sameSite: "lax", // Most compatible for local networks
+        sameSite: "none",  // Required for cross-domain/reverse proxy scenarios
         path: "/",
         maxAge: SESSION_TTL,
       });
 
-      console.log(`[AdminLogin] Success! Token issued for: ${email}`);
+      console.log(`[AdminLogin] Success! Token issued for: ${email} (secure=${isSecure})`);
       return res.status(200).json({ ok: true, user: sessionData.user });
 
     } catch (err: any) {
