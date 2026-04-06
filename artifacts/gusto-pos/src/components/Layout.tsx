@@ -45,7 +45,7 @@ const ICON_MAP: Record<string, any> = {
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
   const { language, setLanguage, activeStaff, setActiveStaff } = usePosStore();
-  const { data: auth, isLoading, refetch } = useGetCurrentAuthUser();
+  const { data: auth, isLoading } = useGetCurrentAuthUser();
   const { data: shiftData } = useGetActiveShift();
   const { data: settings } = useGetSettings();
   const [showPin, setShowPin] = useState(false);
@@ -74,13 +74,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       window.location.href = '/login';
     }
   };
-
-  useEffect(() => {
-    // If we're navigating away from login, always refetch to get fresh auth state
-    if (location !== '/login' && !isLoading) {
-      refetch();
-    }
-  }, [location]);
 
   useEffect(() => {
     if (!isLoading && auth && !auth.isAuthenticated && location !== '/login') {
