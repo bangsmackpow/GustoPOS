@@ -55,6 +55,10 @@ source "virtualbox-iso" "gustopos" {
   shutdown_command = "poweroff"
   headless         = true
 
+  ssh_username = "root"
+  ssh_password = "gustopos"
+  ssh_timeout  = "20m"
+
   memory              = var.memory
   cpus                = var.cpus
   disk_size           = var.disk_size

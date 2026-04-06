@@ -1,0 +1,66 @@
+#!/bin/sh
+# gustopos-restore - Restore GustoPOS data from backup
+
+if [ -z "$1" ]; then
+    echo "Usage: gustopos-restore <backup_timestamp>"
+    echo ""
+    echo "Available backups:"
+    ls -1 /data/backups/gustopos_backup_*.meta 2>/dev/null | sed 's|.*/gustopos_backup_||; s|.meta||' || echo "No backups found"
+    exit 1
+fi
+
+TIMESTAMP="$1"
+BACKUP_DIR="/data/backups"
+BACKUP_PATH="$BACKUP_DIR/gustopos_backup_$TIMESTAMP"
+
+if [ ! -f "$BACKUP_PATH.sql" ]; then
+    echo "ERROR: Backup not found: $BACKUP_PATH"
+    exit 1
+fi
+
+echo "=========================================="
+echo "GustoPOS Restore from $TIMESTAMP"
+echo "=========================================="
+echo ""
+
+# Show what we're about to restore
+if [ -f "$BACKUP_PATH.meta" ]; then
+    cat "$BACKUP_PATH.meta"
+    echo ""
+fi
+
+read -p "Continue with restore? (y/N) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "Restore cancelled."
+    exit 1
+fi
+
+echo ""
+echo "[1/3] Stopping containers..."
+docker-compose -f /etc/gustopos/docker-compose.yml down
+
+echo "[2/3] Restoring database..."
+docker-compose -f /etc/gustopos/docker-compose.yml up -d postgres
+sleep 5
+docker exec gustopos-postgres psql -U gustopos -d gustopos < "$BACKUP_PATH.sql"
+echo "✓ Database restored"
+
+echo "[3/3] Restoring logs (if available)..."
+if [ -f "$BACKUP_PATH-logs.tar.gz" ]; then
+    cd /data && tar -xzf "$BACKUP_PATH-logs.tar.gz"
+    echo "✓ Logs restored"
+else
+    echo "✓ No logs to restore"
+fi
+
+echo "Starting containers..."
+docker-compose -f /etc/gustopos/docker-compose.yml up -d
+
+echo ""
+echo "=========================================="
+echo "Restore Complete!"
+echo "=========================================="
+echo ""
+echo "Containers are starting. Check logs with: gustopos-logs"
+echo ""
