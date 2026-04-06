@@ -66,10 +66,8 @@ export default function adminLoginRouter(): express.Router {
 
       const sid = await createSession(sessionData);
       
-      // Force secure flag for production domain, otherwise check headers
-      // Production reverse proxy doesn't always send x-forwarded-proto
-      const isProduction = req.get("host")?.includes("bangsmackpow.qzz.io");
-      const isSecure = isProduction || req.secure || req.headers["x-forwarded-proto"] === "https";
+      // Smart Secure flag: only use secure cookies if we are on HTTPS
+      const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
       
       res.cookie(SESSION_COOKIE, sid, {
         httpOnly: true,
@@ -79,7 +77,7 @@ export default function adminLoginRouter(): express.Router {
         maxAge: SESSION_TTL,
       });
 
-      console.log(`[AdminLogin] Success! Token issued for: ${email} (secure=${isSecure}, domain=${req.get("host")})`);
+      console.log(`[AdminLogin] Success! Token issued for: ${email} (secure=${isSecure}, proto=${req.get("x-forwarded-proto")})`);
       return res.status(200).json({ ok: true, user: sessionData.user });
 
     } catch (err: any) {
