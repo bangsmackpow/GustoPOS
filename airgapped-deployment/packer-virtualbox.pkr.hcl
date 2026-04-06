@@ -42,7 +42,7 @@ source "virtualbox-iso" "gustopos" {
   iso_url      = var.iso_url
   iso_checksum = var.iso_checksum
 
-  http_directory = "http"
+  http_directory = "${path.root}/http"
   boot_wait      = "30s"
   boot_command = [
     "root<enter><wait>",
@@ -121,19 +121,19 @@ build {
 
   # Copy docker-compose configuration
   provisioner "file" {
-    source      = "../docker-compose.yml"
+    source      = "${path.root}/../docker-compose.yml"
     destination = "/etc/gustopos/docker-compose.yml"
   }
 
   # Copy helper scripts
   provisioner "file" {
-    source      = "scripts/"
+    source      = "${path.root}/scripts/"
     destination = "/opt/gustopos/scripts"
   }
 
   # Copy environment template
   provisioner "file" {
-    source      = "env.template"
+    source      = "${path.root}/env.template"
     destination = "/etc/gustopos/.env.template"
   }
 
