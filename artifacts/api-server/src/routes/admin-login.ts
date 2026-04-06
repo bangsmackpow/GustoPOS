@@ -22,6 +22,13 @@ export default function adminLoginRouter(): express.Router {
 
     try {
       console.log(`[AdminLogin] Login attempt for: ${email}`);
+      console.log(`[AdminLogin] Request headers:`, {
+        host: req.get("host"),
+        xForwardedProto: req.get("x-forwarded-proto"),
+        xForwardedFor: req.get("x-forwarded-for"),
+        xRealIp: req.get("x-real-ip"),
+        secure: req.secure,
+      });
       
       // Query database for user (unifies Env Admin and DB Managers)
       const [dbUser] = await db.select().from(usersTable).where(
