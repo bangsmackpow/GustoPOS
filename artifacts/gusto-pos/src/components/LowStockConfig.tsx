@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { InventoryItem } from '@/lib/db';
+import type { InventoryItem } from '@/types/inventory';
 
 interface LowStockConfigProps {
   item: InventoryItem;
@@ -8,19 +8,19 @@ interface LowStockConfigProps {
 }
 
 export function LowStockConfig({ item, onClose }: LowStockConfigProps) {
-  const [lowStockMethod, setLowStockMethod] = useState(
+  const [lowStockMethod, setLowStockMethod] = useState<string>(
     item.lowStockMethod || 'manual'
   );
-  const [manualThreshold, setManualThreshold] = useState(
+  const [manualThreshold, setManualThreshold] = useState<number>(
     item.lowStockManualThreshold || 5
   );
-  const [percentThreshold, setPercentThreshold] = useState(
+  const [percentThreshold, setPercentThreshold] = useState<number>(
     item.lowStockPercent || 20
   );
-  const [percentBase, setPercentBase] = useState(
+  const [percentBase, setPercentBase] = useState<number>(
     item.lowStockPercentBase || 100
   );
-  const [usageDays, setUsageDays] = useState(
+  const [usageDays, setUsageDays] = useState<number>(
     item.lowStockUsageDays || 2
   );
   const [isSubmitting, setIsSubmitting] = useState(false);

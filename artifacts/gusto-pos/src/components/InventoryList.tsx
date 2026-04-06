@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
-import type { InventoryItem } from '@/lib/db';
+import type { InventoryItem } from '@/types/inventory';
 import { InventoryAuditModal } from './InventoryAuditModal';
 import { Search, Filter } from 'lucide-react';
 
@@ -171,7 +171,7 @@ export function InventoryList() {
                       item.lowStockPercent!);
 
                 const lastAuditDate = item.lastAuditedAt
-                  ? new Date(item.lastAuditedAt * 1000).toLocaleDateString()
+                  ? new Date(typeof item.lastAuditedAt === 'number' ? item.lastAuditedAt * 1000 : item.lastAuditedAt).toLocaleDateString()
                   : 'Never';
 
                 return (
@@ -219,9 +219,10 @@ export function InventoryList() {
       </div>
 
       {/* Audit Modal */}
-      {showAuditModal && selectedItem && (
+      {selectedItem && (
         <InventoryAuditModal
           item={selectedItem}
+          isOpen={showAuditModal}
           onClose={() => {
             setShowAuditModal(false);
             setSelectedItem(null);

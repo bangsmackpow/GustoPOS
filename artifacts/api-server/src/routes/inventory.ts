@@ -25,7 +25,7 @@ router.get('/items', async (req: Request, res: Response) => {
  */
 router.get('/items/:id', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
 
     const item = await db
       .select()
@@ -46,13 +46,13 @@ router.get('/items/:id', async (req: Request, res: Response) => {
       .orderBy(desc(inventoryCountsTable.auditDate))
       .limit(10);
 
-    res.json({
+    return res.json({
       ...item,
       recentAudits: audits,
     });
   } catch (error) {
     console.error('Error fetching inventory item:', error);
-    res.status(500).json({ error: 'Failed to fetch inventory item' });
+    return res.status(500).json({ error: 'Failed to fetch inventory item' });
   }
 });
 
@@ -62,7 +62,7 @@ router.get('/items/:id', async (req: Request, res: Response) => {
  */
 router.post('/items/:id/audit', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const {
       auditEntryMethod,
       reportedBulk,
@@ -93,7 +93,7 @@ router.post('/items/:id/audit', async (req: Request, res: Response) => {
 
     // Insert audit record
     const auditId = crypto.randomUUID();
-    const now = Math.floor(Date.now() / 1000);
+    const now = new Date();
 
     await db.insert(inventoryCountsTable).values({
       id: auditId,
@@ -110,7 +110,6 @@ router.post('/items/:id/audit', async (req: Request, res: Response) => {
       variancePercent,
       varianceReason,
       notes,
-      createdAt: now,
     });
 
     // Update item's current stock and last audit
@@ -125,14 +124,14 @@ router.post('/items/:id/audit', async (req: Request, res: Response) => {
       })
       .where(eq(inventoryItemsTable.id, id));
 
-    res.json({
+    return res.json({
       success: true,
       auditId,
       message: 'Audit recorded successfully',
     });
   } catch (error) {
     console.error('Error recording audit:', error);
-    res.status(500).json({ error: 'Failed to record audit' });
+    return res.status(500).json({ error: 'Failed to record audit' });
   }
 });
 
@@ -142,7 +141,7 @@ router.post('/items/:id/audit', async (req: Request, res: Response) => {
  */
 router.post('/items/:id/adjust', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const { adjustmentBulk, adjustmentPartial, reason } = req.body;
 
     const staffId = (req as any).user?.id || 'unknown';
@@ -161,7 +160,7 @@ router.post('/items/:id/adjust', async (req: Request, res: Response) => {
 
     // Insert adjustment record
     const adjustmentId = crypto.randomUUID();
-    const now = Math.floor(Date.now() / 1000);
+    const now = new Date();
 
     await db.insert(inventoryAdjustmentsTable).values({
       id: adjustmentId,
@@ -186,7 +185,7 @@ router.post('/items/:id/adjust', async (req: Request, res: Response) => {
       })
       .where(eq(inventoryItemsTable.id, id));
 
-    res.json({
+    return res.json({
       success: true,
       adjustmentId,
       newBulk: Math.max(0, newBulk),
@@ -195,7 +194,7 @@ router.post('/items/:id/adjust', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error recording adjustment:', error);
-    res.status(500).json({ error: 'Failed to record adjustment' });
+    return res.status(500).json({ error: 'Failed to record adjustment' });
   }
 });
 
@@ -205,7 +204,7 @@ router.post('/items/:id/adjust', async (req: Request, res: Response) => {
  */
 router.put('/items/:id/config', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const {
       lowStockMethod,
       lowStockManualThreshold,
@@ -214,7 +213,7 @@ router.put('/items/:id/config', async (req: Request, res: Response) => {
       lowStockUsageDays,
     } = req.body;
 
-    const now = Math.floor(Date.now() / 1000);
+    const now = new Date();
 
     await db
       .update(inventoryItemsTable)
@@ -228,10 +227,10 @@ router.put('/items/:id/config', async (req: Request, res: Response) => {
       })
       .where(eq(inventoryItemsTable.id, id));
 
-    res.json({ success: true, message: 'Configuration updated' });
+    return res.json({ success: true, message: 'Configuration updated' });
   } catch (error) {
     console.error('Error updating config:', error);
-    res.status(500).json({ error: 'Failed to update configuration' });
+    return res.status(500).json({ error: 'Failed to update configuration' });
   }
 });
 
@@ -241,7 +240,7 @@ router.put('/items/:id/config', async (req: Request, res: Response) => {
  */
 router.get('/items/:id/counts', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const limit = parseInt(req.query.limit as string) || 50;
 
     const audits = await db
@@ -251,10 +250,10 @@ router.get('/items/:id/counts', async (req: Request, res: Response) => {
       .orderBy(desc(inventoryCountsTable.auditDate))
       .limit(limit);
 
-    res.json(audits);
+    return res.json(audits);
   } catch (error) {
     console.error('Error fetching audit history:', error);
-    res.status(500).json({ error: 'Failed to fetch audit history' });
+    return res.status(500).json({ error: 'Failed to fetch audit history' });
   }
 });
 

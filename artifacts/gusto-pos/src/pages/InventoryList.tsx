@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { InventoryAuditModal } from '@/components/InventoryAuditModal';
-import type { InventoryItem } from '@/lib/api-client-react';
+import type { InventoryItem } from '@/types/inventory';
 
 export function InventoryList() {
   const [filterType, setFilterType] = useState('');
@@ -21,15 +21,15 @@ export function InventoryList() {
   });
 
   // Get unique types and subtypes
-  const types = useMemo(() => [...new Set(items.map((i) => i.type))], [items]);
+  const types = useMemo(() => [...new Set(items.map((i: InventoryItem) => i.type))].filter(Boolean) as string[], [items]);
   const subtypes = useMemo(() => {
     if (!filterType) return [];
-    return [...new Set(items.filter((i) => i.type === filterType).map((i) => i.subtype))];
+    return [...new Set(items.filter((i: InventoryItem) => i.type === filterType).map((i: InventoryItem) => i.subtype))].filter(Boolean) as string[];
   }, [items, filterType]);
 
   // Filter items
   const filtered = useMemo(() => {
-    return items.filter((item) => {
+    return items.filter((item: InventoryItem) => {
       if (filterType && item.type !== filterType) return false;
       if (filterSubtype && item.subtype !== filterSubtype) return false;
       if (showLowStockOnly && !isLowStock(item)) return false;
@@ -55,9 +55,10 @@ export function InventoryList() {
   };
 
   // Format date
-  const formatDate = (timestamp?: number) => {
+  const formatDate = (timestamp?: number | Date) => {
     if (!timestamp) return 'Never';
-    return new Date(timestamp * 1000).toLocaleDateString();
+    const ms = typeof timestamp === 'number' ? timestamp * 1000 : timestamp.getTime();
+    return new Date(ms).toLocaleDateString();
   };
 
   if (isLoading) {
@@ -177,7 +178,7 @@ export function InventoryList() {
                 </td>
               </tr>
             ) : (
-              filtered.map((item) => (
+              filtered.map((item: InventoryItem) => (
                 <tr key={item.id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{item.name}</td>
                   <td className="px-4 py-3 text-gray-600">{item.type}</td>
