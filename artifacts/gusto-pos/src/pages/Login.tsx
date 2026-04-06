@@ -22,8 +22,8 @@ export default function Login() {
 
       const data = await response.json();
       if (data.ok) {
+        // Success! Redirect to home, which will trigger auth check
         window.location.href = '/';
-        window.location.reload();
       } else {
         toast({
           variant: "destructive",
