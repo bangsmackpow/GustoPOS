@@ -29,7 +29,30 @@ app.use(
     },
   }),
 );
-app.use(cors({ credentials: true, origin: true }));
+
+// CORS configuration for credentials (httpOnly cookies)
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Allow requests with no origin (mobile apps, desktop, curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost variants for development/Docker
+    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+      return callback(null, true);
+    }
+    
+    // Allow requests from the same domain (production)
+    const allowedDomains = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').filter(Boolean);
+    if (allowedDomains.some(domain => origin.includes(domain))) {
+      return callback(null, true);
+    }
+    
+    callback(null, false);
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
