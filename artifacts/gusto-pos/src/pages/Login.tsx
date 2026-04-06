@@ -13,6 +13,7 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
+      console.log('[Login] Attempting login for:', email);
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -21,17 +22,22 @@ export default function Login() {
       });
 
       const data = await response.json();
+      console.log('[Login] Response:', { ok: data.ok, status: response.status });
+      
       if (data.ok) {
+        console.log('[Login] Login successful, verifying auth...');
         // Verify auth works before redirecting
         const authCheck = await fetch('/api/auth/user', {
           credentials: 'include',
         });
         const authData = await authCheck.json();
+        console.log('[Login] Auth check result:', authData);
         
         if (authData.isAuthenticated) {
-          // Auth confirmed, now redirect
+          console.log('[Login] Auth verified, redirecting to /');
           window.location.href = '/';
         } else {
+          console.error('[Login] Auth check returned false!');
           toast({
             variant: "destructive",
             title: "Auth Check Failed",
@@ -39,13 +45,15 @@ export default function Login() {
           });
         }
       } else {
+        console.error('[Login] Login failed:', data.error);
         toast({
           variant: "destructive",
           title: "Login Failed",
           description: data.error || "Invalid credentials"
         });
       }
-    } catch {
+    } catch (err) {
+      console.error('[Login] Error:', err);
       toast({
         variant: "destructive",
         title: "Error",
