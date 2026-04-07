@@ -59,6 +59,7 @@ COPY --from=builder /app/artifacts/api-server/litestream.yml /etc/litestream.yml
 EXPOSE 3000
 ENV PORT=3000
 ENV NODE_ENV=production
+ENV MIGRATIONS_PATH=/app/lib/db/migrations
 
 # Reverting to root user to ensure volume permissions work on all host systems
 USER root

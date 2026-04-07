@@ -15,7 +15,7 @@ if (!databaseUrl) {
 
 // Ensure the database directory exists (for file: URLs)
 if (databaseUrl.startsWith("file:")) {
-  const dbPath = databaseUrl.replace(/^file:\/{1,3}/, "");
+  const dbPath = databaseUrl.replace(/^file:/, "");
   const dbDir = path.dirname(dbPath);
   if (!fs.existsSync(dbDir)) {
     console.log(`Creating database directory: ${dbDir}`);
