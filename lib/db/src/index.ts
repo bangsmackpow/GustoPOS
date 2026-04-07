@@ -21,16 +21,12 @@ if (databaseUrl.startsWith("file:")) {
     console.log(`Creating database directory: ${dbDir}`);
     fs.mkdirSync(dbDir, { recursive: true });
   }
-  // Don't create an empty file - let SQLite create it
-  // An empty file is not a valid SQLite database
-  if (!fs.existsSync(dbPath)) {
-    console.log(`Database file will be created by SQLite: ${dbPath}`);
-  }
 }
 
 export const client = createClient({ url: databaseUrl });
 export const db = drizzle(client, { schema });
 
+// Use absolute path for migrations in production
 const migrationsPath =
   process.env.MIGRATIONS_PATH || path.resolve(__dirname, "migrations");
 
@@ -91,27 +87,7 @@ async function upsertAdmin() {
     }
   } catch (err: any) {
     console.error("[Initialize] ✗ FAILED to upsert admin user:", err.message);
-    console.error("[Initialize] Error stack:", err.stack);
     throw new Error(`Admin user initialization failed: ${err.message}`);
-  }
-}
-
-async function migrateAllPinsToBcrypt() {
-  try {
-    const users = await db.select().from(schema.usersTable);
-    for (const user of users) {
-      if (user.pin && !user.pin.startsWith("$2")) {
-        const hashedPin = await bcrypt.hash(user.pin, 10);
-        await db
-          .update(schema.usersTable)
-          .set({ pin: hashedPin, updatedAt: new Date() })
-          .where(eq(schema.usersTable.id, user.id));
-        console.log(`[PIN MIGRATION] Upgraded PIN for user: ${user.email}`);
-      }
-    }
-    console.log(`[PIN MIGRATION] All plaintext PINs migrated to bcrypt.`);
-  } catch (err) {
-    console.error(`[PIN MIGRATION] Error migrating PINs:`, err);
   }
 }
 
@@ -127,15 +103,15 @@ export async function initializeDatabase() {
   }
 
   try {
+    // Rely on Drizzle's official migrator
     await migrate(db, { migrationsFolder: migrationsPath });
-    console.log("Migration tracker updated.");
+    console.log("✓ Migration check complete.");
   } catch (error: any) {
-    console.error("Migration tracking error:", error.message);
-    // Don't throw - migrations might still have been applied
+    console.error("Migration execution error:", error.message);
+    // Continue - the tables might already exist
   }
 
-  // Verify the inventory_items table exists after migration
-  // If not, apply migrations manually as libSQL might not execute them
+  // Verification Step: Ensure critical tables are present
   try {
     const tables = await db
       .select({ name: sql<string>`name` })
@@ -143,50 +119,7 @@ export async function initializeDatabase() {
       .where(sql`type = 'table' AND name = 'inventory_items'`);
 
     if (tables.length === 0) {
-      console.warn(
-        "inventory_items table not found. Applying migrations manually...",
-      );
-
-      // Read and execute the migration file directly
-      const migrationFile = path.join(
-        migrationsPath,
-        "0000_create_initial_schema.sql",
-      );
-      if (fs.existsSync(migrationFile)) {
-        const migrationSQL = fs.readFileSync(migrationFile, "utf-8");
-        // Execute each SQL statement
-        const statements = migrationSQL
-          .split(";")
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
-
-        console.log(
-          `Executing ${statements.length} SQL statements from migration...`,
-        );
-        for (const statement of statements) {
-          try {
-            await db.run(sql.raw(statement));
-          } catch (err: any) {
-            // Some statements might fail if tables already exist, that's OK
-            console.log(`  SQL statement result: ${err.message}`);
-          }
-        }
-        console.log("Manual migration execution completed.");
-      } else {
-        throw new Error(`Migration file not found: ${migrationFile}`);
-      }
-    }
-
-    // Verify again
-    const tablesAfter = await db
-      .select({ name: sql<string>`name` })
-      .from(sql`sqlite_master`)
-      .where(sql`type = 'table' AND name = 'inventory_items'`);
-
-    if (tablesAfter.length === 0) {
-      throw new Error(
-        "inventory_items table failed to create even after manual execution",
-      );
+      throw new Error("Critical table 'inventory_items' is missing after migration.");
     }
     console.log("✓ Database schema verified successfully.");
   } catch (error: any) {
@@ -205,7 +138,6 @@ export async function initializeDatabase() {
       "[Initialize] ✗ CRITICAL: Admin initialization failed:",
       error.message,
     );
-    console.error("[Initialize] Stack:", error.stack);
     throw error;
   }
 }
