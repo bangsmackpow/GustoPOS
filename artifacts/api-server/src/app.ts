@@ -4,6 +4,8 @@ import express, {
   type Response,
   type NextFunction,
 } from "express";
+import fs from "fs";
+import path from "path";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
@@ -82,8 +84,6 @@ if (staticPath) {
   // Serve index.html for Electron without service worker registration
   app.get("/", (req, res) => {
     if (req.headers["user-agent"]?.includes("Electron")) {
-      const fs = require("fs");
-      const path = require("path");
       const indexPath = path.join(staticPath, "index.html");
       let html = fs.readFileSync(indexPath, "utf8");
       // Remove service worker registration script tag

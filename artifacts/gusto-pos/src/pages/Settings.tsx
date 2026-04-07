@@ -1,39 +1,3 @@
-const [showDeleteDataModal, setShowDeleteDataModal] = useState(false);
-const [deletingRush, setDeletingRush] = useState<any>(null);
-
-// Declare hooks and state for missing variables
-const qc = useQueryClient();
-const { toast } = useToast();
-const language = usePosStore.getState().language || "en";
-
-// Example state declarations (replace with actual logic as needed)
-const [editingStaff, setEditingStaff] = useState<any>(null);
-const createUser = { mutate: () => {} };
-const updateUser = { mutate: () => {} };
-const createRush = { mutate: () => {} };
-const [newRush, setNewRush] = useState<any>({});
-const [showAddRush, setShowAddRush] = useState(false);
-const refetchRushes = () => {};
-const [isSeeding, setIsSeeding] = useState(false);
-const [showSeedModal, setShowSeedModal] = useState(false);
-const ingredientPreview: any[] = [];
-const handleResetImport = () => {};
-// Add index signature to allow dynamic key access for inventory items
-type InventoryItem = {
-  name: string;
-  nameEs: string;
-  type: string;
-  subtype: string | null;
-  baseUnit: string;
-  baseUnitAmount: number;
-  orderCost: number;
-  currentStock: number;
-  servingSize: number;
-  lowStockThreshold: number;
-  unitsPerCase: number;
-  isOnMenu: boolean;
-  [key: string]: string | number | boolean | null | undefined;
-};
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -638,34 +602,6 @@ export default function Settings() {
       title: "Mappings applied",
       description: `${parsed.length} ingredients ready to import`,
     });
-    // Handle user aborting import due to blanks
-    const handleAbortBlankImport = () => {
-      setShowBlankFieldModal(false);
-      setBlankFieldRows([]);
-      setPendingImport([]);
-      toast({
-        variant: "destructive",
-        title: "Import Aborted",
-        description: "Please fill in all required fields before importing.",
-      });
-    };
-
-    // Handle user proceeding with blanks: mark incomplete (isOnMenu: false)
-    const handleProceedBlankImport = () => {
-      const marked = pendingImport.map((item, idx) => {
-        const isBlank = blankFieldRows.some((row) => row.row === idx + 1);
-        return isBlank ? { ...item, isOnMenu: false } : item;
-      });
-      setIngredientPreview(marked);
-      setMappingStep("preview");
-      setShowBlankFieldModal(false);
-      setBlankFieldRows([]);
-      setPendingImport([]);
-      toast({
-        title: "Mappings applied",
-        description: `${marked.length} ingredients ready to import. Items with missing fields will not be added to the menu until completed.`,
-      });
-    };
   };
 
   const handleResetImport = () => {
@@ -1733,7 +1669,7 @@ export default function Settings() {
               <Upload className="text-primary" /> Ingredient Bulk Import
             </h2>
             <p className="text-muted-foreground mb-6 text-sm">
-              Upload a CSV and map your columns to the app's fields
+              Upload a CSV and map your columns to the app&apos;s fields
             </p>
 
             {/* Step 1: Upload */}
@@ -1750,7 +1686,7 @@ export default function Settings() {
                   Select your Ingredients CSV
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  Any CSV format — you'll map columns next
+                  Any CSV format — you&apos;ll map columns next
                 </p>
               </div>
             )}
@@ -1877,8 +1813,8 @@ export default function Settings() {
             </div>
 
             <p className="text-muted-foreground mb-6">
-              Are you sure you want to delete the rush event "
-              {deletingRush.title}"? This action cannot be undone.
+              Are you sure you want to delete the rush event &quot;
+              {deletingRush.title}&quot;? This action cannot be undone.
             </p>
 
             <div className="grid grid-cols-2 gap-3">

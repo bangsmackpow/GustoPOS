@@ -80,4 +80,4 @@ ENV NODE_ENV=production
 USER root
 
 # The CMD checks if Litestream is configured. 
-CMD ["sh", "-c", "if [ -n \"$LITESTREAM_REPLICA_URL\" ]; then litestream restore -if-db-not-exists -if-replica-exists /app/data/gusto.db && litestream replicate -exec 'node --enable-source-maps artifacts/api-server/dist/index.mjs'; else node --enable-source-maps artifacts/api-server/dist/index.mjs; fi"]
+CMD ["sh", "-c", "if [ -n \"$LITESTREAM_REPLICA_URL\" ]; then litestream restore -if-db-not-exists -if-replica-exists /app/data/gusto.db && litestream replicate -exec 'node --enable-source-maps artifacts/api-server/dist/index.cjs'; else node --enable-source-maps artifacts/api-server/dist/index.cjs; fi"]

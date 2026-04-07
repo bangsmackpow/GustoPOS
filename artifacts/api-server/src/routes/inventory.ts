@@ -102,10 +102,10 @@ router.post("/items", async (req: Request, res: Response) => {
         baseUnit: data.baseUnit ?? "ml",
         baseUnitAmount: Number(data.baseUnitAmount) || 750,
         servingSize: Number(data.servingSize) || 44.36,
-        pourSize: Number(data.pourSize) ?? 1.5,
+        pourSize: Number(data.pourSize) || 1.5,
         bottleSizeMl: data.bottleSizeMl ? Number(data.bottleSizeMl) : null,
         glassWeightG: data.glassWeightG ? Number(data.glassWeightG) : null,
-        density: Number(data.density) ?? 0.94,
+        density: Number(data.density) || 0.94,
         tareWeightG: data.tareWeightG ? Number(data.tareWeightG) : null,
         fullBottleWeightG: data.fullBottleWeightG
           ? Number(data.fullBottleWeightG)

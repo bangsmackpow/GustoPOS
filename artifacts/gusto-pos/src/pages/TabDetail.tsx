@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useRoute } from "wouter";
+import { useRoute, Link } from "wouter";
 import {
   useGetTab,
   useGetDrinks,
@@ -11,7 +11,6 @@ import {
   useCloseTabMutation,
 } from "@/hooks/use-pos-mutations";
 import { useUpdateOrderMutation } from "@/hooks/use-update-order-mutation";
-const updateOrder = useUpdateOrderMutation();
 import { usePosStore } from "@/store";
 import { formatMoney, getTranslation } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,6 @@ import {
   Loader2,
   Edit2,
 } from "lucide-react";
-import { Link } from "wouter";
 
 const CATEGORY_ICONS: Record<string, any> = {
   cocktail: Wine,
@@ -42,6 +40,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 export default function TabDetail() {
+  const updateOrder = useUpdateOrderMutation();
   const [, params] = useRoute("/tabs/:id");
   const tabId = params?.id || "";
 
@@ -339,7 +338,6 @@ export default function TabDetail() {
                     </span>
                     <button
                       onClick={() => setEditingOrder(order)}
-                      disabled={deleteOrder.isPending}
                       className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
                     >
                       <Edit2 size={14} />
@@ -356,76 +354,6 @@ export default function TabDetail() {
               ))
             )}
           </div>
-
-          {/* Edit Order Quantity Modal */}
-          {editingOrder && (
-            <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-background/80 backdrop-blur animate-in fade-in duration-200">
-              <div className="glass p-8 rounded-3xl w-full max-w-xs relative border border-white/10 shadow-2xl">
-                <button
-                  onClick={() => setEditingOrder(null)}
-                  className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-                >
-                  <X size={20} />
-                </button>
-                <h3 className="text-xl font-bold mb-4">Edit Quantity</h3>
-                <div className="flex flex-col gap-4">
-                  <label className="text-sm font-medium">Quantity</label>
-                  <input
-                    type="number"
-                    min={1}
-                    value={editingOrder.quantity}
-                    onChange={(e) =>
-                      setEditingOrder({
-                        ...editingOrder,
-                        quantity: Math.max(1, Number(e.target.value)),
-                      })
-                    }
-                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                  />
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        updateOrder.mutate(
-                          {
-                            id: editingOrder.id,
-                            tabId: tabData?.id || "",
-                            data: { quantity: Number(editingOrder.quantity) },
-                          },
-                          {
-                            onSuccess: () => {
-                              setEditingOrder(null);
-                              toast({ title: "Order quantity updated" });
-                            },
-                            onError: (error: any) => {
-                              toast({
-                                variant: "destructive",
-                                title: "Error",
-                                description:
-                                  error.message ||
-                                  "Failed to update order quantity.",
-                              });
-                            },
-                          },
-                        );
-                      }}
-                      disabled={updateOrder.isPending}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setEditingOrder(null)}
-                      disabled={updateOrder.isPending}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           <div className="mt-6 pt-6 border-t border-white/10 space-y-4">
             <div className="flex justify-between items-end">
