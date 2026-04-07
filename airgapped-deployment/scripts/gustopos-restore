@@ -1,5 +1,5 @@
 #!/bin/sh
-# gustopos-restore - Restore GustoPOS data from backup
+# gustopos-restore - Restore GustoPOS SQLite data from backup
 
 if [ -z "$1" ]; then
     echo "Usage: gustopos-restore <backup_timestamp>"
@@ -12,9 +12,10 @@ fi
 TIMESTAMP="$1"
 BACKUP_DIR="/data/backups"
 BACKUP_PATH="$BACKUP_DIR/gustopos_backup_$TIMESTAMP"
+DB_PATH="/data/db/gusto.db"
 
-if [ ! -f "$BACKUP_PATH.sql" ]; then
-    echo "ERROR: Backup not found: $BACKUP_PATH"
+if [ ! -f "$BACKUP_PATH.db" ]; then
+    echo "ERROR: Backup file not found: $BACKUP_PATH.db"
     exit 1
 fi
 
@@ -29,26 +30,26 @@ if [ -f "$BACKUP_PATH.meta" ]; then
     echo ""
 fi
 
-read -p "Continue with restore? (y/N) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Restore cancelled."
-    exit 1
-fi
+printf "Continue with restore? (y/N) "
+read reply
+case "$reply" in
+    [Yy]*) ;;
+    *) echo "Restore cancelled."; exit 1 ;;
+esac
 
 echo ""
 echo "[1/3] Stopping containers..."
 docker-compose -f /etc/gustopos/docker-compose.yml down
 
-echo "[2/3] Restoring database..."
-docker-compose -f /etc/gustopos/docker-compose.yml up -d postgres
-sleep 5
-docker exec gustopos-postgres psql -U gustopos -d gustopos < "$BACKUP_PATH.sql"
-echo "✓ Database restored"
+echo "[2/3] Restoring SQLite database..."
+mkdir -p /data/db
+cp "$BACKUP_PATH.db" "$DB_PATH"
+echo "✓ Database file restored to $DB_PATH"
 
 echo "[3/3] Restoring logs (if available)..."
 if [ -f "$BACKUP_PATH-logs.tar.gz" ]; then
-    cd /data && tar -xzf "$BACKUP_PATH-logs.tar.gz"
+    # We use -C /data because the archive contains a 'logs/' directory
+    tar -xzf "$BACKUP_PATH-logs.tar.gz" -C /data
     echo "✓ Logs restored"
 else
     echo "✓ No logs to restore"

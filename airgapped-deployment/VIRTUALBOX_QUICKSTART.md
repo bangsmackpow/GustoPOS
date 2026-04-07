@@ -16,20 +16,20 @@
 # 5. Wait for login prompt (~30 sec)
 ```
 
-## First-Time Setup (5 minutes)
+## First-Time Setup (1 minute)
 
 ```bash
 # At the login prompt (no password, just press Enter or type 'root'):
 gustopos-init
 
-# This creates SSL certificates, .env, and downloads images
-# Takes 3-5 minutes depending on internet speed
+# This creates SSL certificates and .env. 
+# Images are already pre-pulled in the build!
 ```
 
 ## Start Using It
 
 ```bash
-# 1. Start GustoPOS
+# 1. Start GustoPOS (usually auto-starts after init)
 gustopos-start
 
 # 2. Wait 10-15 seconds
@@ -40,7 +40,7 @@ ip addr show eth1 | grep "inet " | awk '{print $2}' | cut -d/ -f1
 
 # 4. Open browser to: https://192.168.56.X
 # 5. Accept SSL warning (normal)
-# 6. Login with admin credentials from .env
+# 6. Login with admin credentials (admin@gustopos.local / 5080)
 ```
 
 ## Daily Commands
@@ -81,21 +81,21 @@ gustopos-restore 20260406_160000
 ```
 /etc/gustopos/.env           Configuration
 /etc/gustopos/ssl/           SSL certificates
-/data/db/                    Database
+/data/db/gusto.db            Database file
 /data/logs/                  Application logs
 /data/backups/               Backups
 ```
 
-## Advanced (Database)
+## Advanced (SQLite)
 
 ```bash
-# Connect to PostgreSQL
-docker exec -it gustopos-postgres psql -U gustopos -d gustopos
+# Connect to SQLite
+docker exec -it gustopos-api sqlite3 /app/data/gusto.db
 
 # Common queries
-\dt                  # List tables
+.tables                  # List tables
 SELECT COUNT(*) FROM drinks;
-\q                   # Exit
+.quit                    # Exit
 ```
 
 ## Get Help
@@ -109,8 +109,8 @@ SELECT COUNT(*) FROM drinks;
 ## ⚠️ Important Notes
 
 1. **Self-signed SSL is normal** - You'll get browser warnings, that's expected
-2. **Default IP is 192.168.56.X** - Not accessible outside your computer without port forwarding
-3. **Data is persistent** - Survives VM restart
+2. **Default IP is 192.168.56.X** - Only accessible from your computer by default
+3. **Data is persistent** - All your drinks, tabs, and settings stay in /data/db/
 4. **Always backup before major changes** - `gustopos-backup`
 5. **Check disk space monthly** - `df -h`
 

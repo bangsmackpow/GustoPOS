@@ -1,5 +1,5 @@
-#!/bin/sh
-# gustopos-init - First-time setup for GustoPOS VirtualBox appliance
+#!/bin/bash
+# gustopos-init - First-time setup for GustoPOS Debian appliance
 
 set -e
 
@@ -11,13 +11,14 @@ echo ""
 # Generate SSL certificates if they don't exist
 if [ ! -f /etc/gustopos/ssl/cert.pem ]; then
     echo "[1/4] Generating self-signed SSL certificates..."
-    mkdir -p /etc/gustopos/ssl
-    openssl req -x509 -newkey rsa:4096 \
+    sudo mkdir -p /etc/gustopos/ssl
+    sudo openssl req -x509 -newkey rsa:4096 \
         -keyout /etc/gustopos/ssl/key.pem \
         -out /etc/gustopos/ssl/cert.pem \
         -days 365 -nodes \
         -subj "/C=US/ST=State/L=City/O=GustoPOS/CN=gustopos.local" \
         2>/dev/null
+    sudo chown -R gustopos:gustopos /etc/gustopos/ssl/
     echo "✓ SSL certificates generated"
 else
     echo "[1/4] SSL certificates already exist (skipping)"
@@ -26,24 +27,24 @@ fi
 # Create .env file from template if it doesn't exist
 if [ ! -f /etc/gustopos/.env ]; then
     echo "[2/4] Creating .env configuration file..."
-    cp /etc/gustopos/.env.template /etc/gustopos/.env
-    echo "✓ .env file created at /etc/gustopos/.env"
-    echo "  IMPORTANT: Review and customize as needed before starting containers"
+    sudo cp /etc/gustopos/.env.template /etc/gustopos/.env
+    sudo chown gustopos:gustopos /etc/gustopos/.env
+    echo "✓ .env file created"
 else
     echo "[2/4] .env file already exists (skipping)"
 fi
 
-# Start Docker daemon if not running
-echo "[3/4] Starting Docker daemon..."
-if ! rc-service docker status > /dev/null 2>&1; then
-    rc-service docker start || echo "Docker may already be running"
+# Ensure Docker is running
+echo "[3/4] Checking Docker service..."
+if ! systemctl is-active --quiet docker; then
+    sudo systemctl start docker
 fi
-echo "✓ Docker service started"
+echo "✓ Docker service ready"
 
-# Pull Docker images
-echo "[4/4] Pulling Docker images (this may take a few minutes)..."
-cd /opt/gustopos
-docker-compose -f /etc/gustopos/docker-compose.yml pull --quiet 2>/dev/null || echo "Some images may need to be built"
+# Ensure images are ready (pre-pulled during build)
+echo "[4/4] Ensuring Docker images are ready..."
+cd /etc/gustopos
+sudo docker-compose pull --quiet 2>/dev/null || echo "✓ Using pre-cached images"
 echo "✓ Docker images ready"
 
 echo ""
@@ -52,9 +53,8 @@ echo "Setup Complete!"
 echo "=========================================="
 echo ""
 echo "Next steps:"
-echo "1. Edit /etc/gustopos/.env if needed"
-echo "2. Run: gustopos-start"
-echo "3. Access the app at: https://192.168.56.X"
+echo "1. Run: gustopos-start"
+echo "2. Access the app at: https://192.168.56.X"
 echo ""
 echo "Find your VM IP address:"
 echo "  ip addr show eth1"

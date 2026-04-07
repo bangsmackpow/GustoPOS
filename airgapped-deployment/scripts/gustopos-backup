@@ -1,7 +1,8 @@
 #!/bin/sh
-# gustopos-backup - Backup GustoPOS data and database
+# gustopos-backup - Backup GustoPOS SQLite data
 
 BACKUP_DIR="/data/backups"
+DB_PATH="/data/db/gusto.db"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_PATH="$BACKUP_DIR/gustopos_backup_$TIMESTAMP"
 
@@ -11,9 +12,13 @@ echo "Starting GustoPOS backup ($TIMESTAMP)..."
 echo ""
 
 # Backup database
-echo "[1/3] Backing up PostgreSQL database..."
-docker exec gustopos-postgres pg_dump -U gustopos gustopos > "$BACKUP_PATH.sql" 2>/dev/null
-echo "✓ Database backed up to: $BACKUP_PATH.sql"
+echo "[1/3] Backing up SQLite database..."
+if [ -f "$DB_PATH" ]; then
+    cp "$DB_PATH" "$BACKUP_PATH.db"
+    echo "✓ Database backed up to: $BACKUP_PATH.db"
+else
+    echo "⚠ Database not found at $DB_PATH - check if app has started"
+fi
 
 # Backup logs
 echo "[2/3] Backing up logs..."
@@ -27,10 +32,10 @@ Backup Timestamp: $TIMESTAMP
 Hostname: $(hostname)
 System Time: $(date)
 GustoPOS Version: v1.0
-Database: PostgreSQL
+Database: SQLite (LibSQL)
 
 Files:
-  - $BACKUP_PATH.sql (database dump)
+  - $BACKUP_PATH.db (database file)
   - $BACKUP_PATH-logs.tar.gz (logs archive)
 
 Restore with: gustopos-restore $TIMESTAMP

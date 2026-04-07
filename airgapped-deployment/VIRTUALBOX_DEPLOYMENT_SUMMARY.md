@@ -32,7 +32,7 @@ The `.ova` file contains:
 Alpine Linux 3.19 (base OS)
 ├── Docker daemon
 ├── Docker Compose
-├── PostgreSQL (containerized)
+├── SQLite / LibSQL (persistent data file)
 ├── GustoPOS API Server (containerized)
 ├── GustoPOS POS Frontend (containerized)
 ├── Nginx Proxy (containerized)
@@ -64,6 +64,7 @@ Alpine Linux 3.19 (base OS)
   - Automates VM creation
   - Installs Alpine Linux, Docker
   - Copies scripts and configuration
+  - Pre-pulls Docker images for offline use
   - Can be customized and re-run
 
 ## How Users Will Use It
@@ -73,23 +74,27 @@ Alpine Linux 3.19 (base OS)
 # 1. Download gustopos-appliance-v1.0.ova (500 MB)
 # 2. Open VirtualBox → Import
 # 3. Start VM
-# 4. Run: gustopos-init (creates SSL, config, downloads images)
+# 4. First boot will auto-pull images if internet is available
+#    OR run: gustopos-init (creates SSL, config)
 # 5. Run: gustopos-start
 # 6. Open browser to: https://192.168.56.X
 # 7. Done! ✅
 ```
 
-Time: ~15 minutes (mostly waiting for image pulls)
+Time: ~5 minutes (images are already pre-pulled in the build)
 
 ### Daily Use
 ```bash
 # Start of day
+# The stack auto-starts on boot!
+# If stopped manually:
 gustopos-start
 
 # Work normally
 # https://192.168.56.X
 
 # End of day
+# Just power off VM or:
 gustopos-stop
 ```
 
@@ -124,10 +129,10 @@ Users access: `https://192.168.56.X` from their browser
 VM Filesystem
 ├── /etc/gustopos/          ← Configuration (.env, SSL certs)
 ├── /data/
-│   ├── db/                 ← PostgreSQL data
+│   ├── db/                 ← SQLite database file (gusto.db)
 │   ├── logs/               ← Container logs
 │   └── backups/            ← Backups
-└── Docker Volumes          ← Managed by Docker
+└── Docker Volumes          ← Persistent storage mapping
 ```
 
 Data persists across restarts and is accessible from VM.
@@ -137,8 +142,8 @@ Data persists across restarts and is accessible from VM.
 ### What's Included
 - ✅ Self-signed SSL certificates (auto-generated)
 - ✅ httpOnly cookies
-- ✅ CORS configured for localhost
-- ✅ PostgreSQL isolated (no public access by default)
+- ✅ CORS configured for local IP ranges
+- ✅ Database is a local file (no network exposure)
 - ✅ Firewall can be enabled in Alpine
 
 ### Limitations (Documented)
@@ -151,7 +156,7 @@ Data persists across restarts and is accessible from VM.
 - Enable Windows Firewall / macOS Firewall
 - Only enable port forwarding if needed
 - Regularly backup data (`gustopos-backup`)
-- Use strong ADMIN_PASSWORD in .env
+- Use strong ADMIN_PIN in .env
 - Don't expose to internet without proper security layer
 
 ## Building the Image
@@ -161,7 +166,9 @@ Data persists across restarts and is accessible from VM.
 # Install Packer
 # https://www.packer.io/downloads
 
-# Run (takes 15-20 minutes, requires internet for Alpine ISO)
+# Run (takes 10-15 minutes, requires internet for Alpine ISO and initial pull)
+cd airgapped-deployment
+packer init packer-virtualbox.pkr.hcl
 packer build packer-virtualbox.pkr.hcl
 
 # Output: gustopos-appliance-v1.0.ova (~500 MB)
@@ -185,12 +192,11 @@ Modify `packer-virtualbox.pkr.hcl` to:
 | Isolation | Complete | None | Good |
 | Backups | Manual | Manual | Automatic |
 | Snapshots | No | No | Yes |
-| Offline Use | Yes | No* | Yes** |
+| Offline Use | Yes | No* | Yes |
 | File Size | 2-3 GB | N/A | 500 MB |
 | Deployment | USB stick | Host OS | VM import |
 
 *Docker needs initial internet for images
-**After first-run setup
 
 ## Deployment Process
 
@@ -290,4 +296,3 @@ It's the **ideal solution for laptop-based deployment, testing, and offline use*
 **Status**: Ready for implementation
 **Next Step**: Run Packer to build the .ova image
 **Timeline**: ~30 minutes to build + test
-

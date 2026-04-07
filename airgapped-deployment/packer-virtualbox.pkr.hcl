@@ -14,12 +14,12 @@ variable "vm_name" {
 
 variable "iso_url" {
   type    = string
-  default = "https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/x86_64/alpine-standard-3.19.1-x86_64.iso"
+  default = "https://cdimage.debian.org/cdimage/archive/12.13.0/amd64/iso-cd/debian-12.13.0-amd64-netinst.iso"
 }
 
 variable "iso_checksum" {
   type    = string
-  default = "sha256:aeda66b69f026d0e4c1c15e4b85eca6c02c3c0a59370b90667b40f0a5e6a09de"
+  default = "sha256:2b880ffabe36dbe04a662a3125e5ecae4db69d0acce257dd74615bbf165ad76e"
 }
 
 variable "memory" {
@@ -43,38 +43,33 @@ source "virtualbox-iso" "gustopos" {
   iso_checksum = var.iso_checksum
 
   http_directory = "${path.root}/http"
-  boot_wait      = "30s"
+  boot_wait      = "5s"
   boot_command = [
-    "root<enter><wait>",
-    "ifconfig eth0 up && udhcpc -i eth0<enter><wait>",
-    "wget http://{{ .HTTPIP }}:{{ .HTTPPort }}/answers<enter><wait>",
-    "setup-alpine -f answers<enter><wait5>",
-    "reboot<enter>"
+    "<esc><wait>",
+    "install auto=true priority=critical vga=788 netcfg/get_hostname=gustopos netcfg/get_domain=local url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg locale=en_US.UTF-8 keymap=us console-setup/ask_detect=false fb=false hw-detect/start_pcmcia=false<enter>"
   ]
 
-  shutdown_command = "poweroff"
+  shutdown_command = "echo 'gustopos' | sudo -S poweroff"
   headless         = true
 
-  ssh_username = "root"
+  ssh_username = "gustopos"
   ssh_password = "gustopos"
-  ssh_timeout  = "20m"
+  ssh_timeout  = "60m"
+  ssh_handshake_attempts = 1000
 
   memory              = var.memory
   cpus                = var.cpus
   disk_size           = var.disk_size
-  guest_os_type       = "Linux_64"
+  guest_os_type       = "Debian_64"
   hard_drive_interface = "sata"
 
-  # Network configuration
+  # Standard VirtualBox settings for Debian
   vboxmanage = [
     ["modifyvm", "{{ .Name }}", "--nic1", "nat"],
-    ["modifyvm", "{{ .Name }}", "--nic2", "hostonly"],
-    ["modifyvm", "{{ .Name }}", "--hostonlyadapter2", "vboxnet0"]
-  ]
-
-  vboxmanage_post = [
-    ["modifyvm", "{{ .Name }}", "--memory", var.memory],
-    ["modifyvm", "{{ .Name }}", "--cpus", var.cpus]
+    ["modifyvm", "{{ .Name }}", "--nictype1", "82540EM"],
+    ["modifyvm", "{{ .Name }}", "--audio", "none"],
+    ["modifyvm", "{{ .Name }}", "--usb", "off"],
+    ["modifyvm", "{{ .Name }}", "--graphicscontroller", "vmsvga"]
   ]
 }
 
@@ -85,118 +80,93 @@ build {
     "source.virtualbox-iso.gustopos"
   ]
 
-  # Wait for system to boot
+  # Pre-pull and setup logic for Debian (Systemd)
   provisioner "shell" {
     inline = [
-      "echo 'Waiting for system to stabilize...'",
-      "sleep 10"
+      "echo 'Waiting for apt lock...'",
+      "while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done",
+      "sudo apt-get update",
+      "sudo apt-get install -y docker.io docker-compose sqlite3 openssl",
+      "sudo systemctl enable docker",
+      "sudo systemctl start docker"
     ]
   }
 
-  # Update Alpine Linux
   provisioner "shell" {
     inline = [
-      "apk update",
-      "apk upgrade",
-      "apk add docker docker-compose openssh ca-certificates curl wget tzdata"
+      "sudo mkdir -p /data/db /data/logs /data/backups",
+      "sudo mkdir -p /etc/gustopos/ssl",
+      "sudo mkdir -p /opt/gustopos/scripts",
+      "sudo chown -R gustopos:gustopos /data /etc/gustopos /opt/gustopos"
     ]
   }
 
-  # Enable Docker service
-  provisioner "shell" {
-    inline = [
-      "rc-service docker start",
-      "rc-update add docker default"
-    ]
-  }
-
-  # Create data directories
-  provisioner "shell" {
-    inline = [
-      "mkdir -p /data/{db,logs,backups}",
-      "mkdir -p /etc/gustopos",
-      "mkdir -p /opt/gustopos/scripts"
-    ]
-  }
-
-  # Copy docker-compose configuration
   provisioner "file" {
     source      = "${path.root}/../docker-compose.yml"
     destination = "/etc/gustopos/docker-compose.yml"
   }
 
-  # Copy helper scripts
   provisioner "file" {
     source      = "${path.root}/scripts/"
-    destination = "/opt/gustopos/scripts"
+    destination = "/opt/gustopos/scripts/"
   }
 
-  # Copy environment template
   provisioner "file" {
     source      = "${path.root}/env.template"
     destination = "/etc/gustopos/.env.template"
   }
 
-  # Create init service
+  # Pre-pull Docker images
   provisioner "shell" {
     inline = [
-      "cat > /etc/init.d/gustopos << 'EOF'",
-      "#!/sbin/openrc-run",
+      "cd /etc/gustopos",
+      "sudo cp .env.template stack.env",
+      "sudo docker-compose pull"
+    ]
+  }
+
+  # Link scripts
+  provisioner "shell" {
+    inline = [
+      "sudo chmod +x /opt/gustopos/scripts/*",
+      "for script in init start stop logs backup restore help update; do",
+      "  sudo ln -sf /opt/gustopos/scripts/gustopos-$script /usr/local/bin/gustopos-$script",
+      "done"
+    ]
+  }
+
+  # Create Systemd unit instead of OpenRC
+  provisioner "shell" {
+    inline = [
+      "cat << 'EOF' | sudo tee /etc/systemd/system/gustopos.service",
+      "[Unit]",
+      "Description=GustoPOS Application Stack",
+      "After=docker.service",
+      "Requires=docker.service",
       "",
-      "description=\"GustoPOS Application Stack\"",
-      "supervisor=\"supervise-daemon\"",
+      "[Service]",
+      "Type=oneshot",
+      "RemainAfterExit=yes",
+      "WorkingDirectory=/etc/gustopos",
+      "ExecStartPre=/bin/bash -c 'if [ ! -f /etc/gustopos/.env ]; then /usr/local/bin/gustopos-init; fi'",
+      "ExecStart=/usr/bin/docker-compose up -d",
+      "ExecStop=/usr/bin/docker-compose down",
       "",
-      "depend() {",
-      "    need docker",
-      "    after docker",
-      "}",
-      "",
-      "start() {",
-      "    cd /opt/gustopos",
-      "    docker-compose -f /etc/gustopos/docker-compose.yml up -d",
-      "}",
-      "",
-      "stop() {",
-      "    cd /opt/gustopos",
-      "    docker-compose -f /etc/gustopos/docker-compose.yml down",
-      "}",
+      "[Install]",
+      "WantedBy=multi-user.target",
       "EOF",
-      "chmod +x /etc/init.d/gustopos",
-      "rc-update add gustopos default"
+      "sudo systemctl enable gustopos"
     ]
   }
 
-  # Create first-boot setup script
+  # Final cleanup
   provisioner "shell" {
     inline = [
-      "cat > /usr/local/bin/gustopos-init << 'INIT'",
-      "#!/bin/sh",
-      "set -e",
-      "echo 'GustoPOS First-Time Setup'",
-      "echo 'Generating SSL certificates...'",
-      "mkdir -p /etc/gustopos/ssl",
-      "openssl req -x509 -newkey rsa:4096 -keyout /etc/gustopos/ssl/key.pem -out /etc/gustopos/ssl/cert.pem -days 365 -nodes -subj '/CN=gustopos.local' 2>/dev/null || true",
-      "echo 'Creating .env file from template...'",
-      "if [ ! -f /etc/gustopos/.env ]; then",
-      "  cp /etc/gustopos/.env.template /etc/gustopos/.env",
-      "  echo 'Environment file created. Edit /etc/gustopos/.env before starting containers.'",
-      "fi",
-      "echo 'Setup complete!'",
-      "INIT",
-      "chmod +x /usr/local/bin/gustopos-init"
+      "sudo apt-get clean",
+      "sudo rm -rf /var/lib/apt/lists/*"
     ]
   }
 
-  # Cleanup
-  provisioner "shell" {
-    inline = [
-      "apk cache clean",
-      "rm -rf /tmp/*",
-      "echo 'Image build complete!'"
-    ]
-  }
-
-  # Generate OVA file
   post-processor "manifest" {
     output     = "manifest.json"
     strip_path = true

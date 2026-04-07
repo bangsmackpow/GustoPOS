@@ -23,7 +23,7 @@ The GustoPOS VirtualBox appliance is a pre-built Alpine Linux image that runs th
 - **CPU**: 4+ cores available
 - **RAM**: 8 GB total available (4 GB for VM)
 - **Disk**: 30 GB free SSD space
-- **Internet**: 500 MB for initial Docker image pull (one-time)
+- **Internet**: 500 MB for initial OVA download (one-time)
 
 ### Before You Start
 
@@ -70,7 +70,7 @@ The appliance comes pre-configured with:
 
 ### Step 5: First-Time Setup
 
-Once the VM is running, SSH into it or use VirtualBox console:
+The VM is designed to be "auto-running", but on the very first boot, it needs to generate its local SSL certificates and configuration.
 
 ```bash
 # From the VirtualBox console, login as root (no password required)
@@ -80,14 +80,15 @@ gustopos-init
 ```
 
 This will:
-- Generate SSL certificates
-- Create configuration files
-- Download Docker images
-- Prepare the system
+- Generate unique SSL certificates
+- Create the initial `.env` file
+- Prepare the data directories
 
-Setup takes **3-5 minutes** depending on internet speed.
+Setup takes **less than 1 minute** since images are pre-pulled in the build.
 
 ### Step 6: Start GustoPOS
+
+The stack should start automatically after `gustopos-init`. To start it manually or restart:
 
 ```bash
 gustopos-start
@@ -101,9 +102,8 @@ gustopos-logs
 
 You should see:
 ```
-[AdminLogin] Starting authentication service
+[Initialize] Admin user created: admin@gustopos.local
 [API] Server listening on port 3000
-[POS] Frontend ready
 ```
 
 ### Step 7: Find Your VM's IP and Access the App
@@ -131,108 +131,36 @@ Use the credentials configured in `/etc/gustopos/.env`:
 
 Default:
 - **Email**: `admin@gustopos.local`
-- **Password**: Check the .env file
+- **PIN**: `5080` (Check the .env file for ADMIN_PIN)
 
-## Accessing via Port Forwarding (Optional)
-
-If you want to access the appliance from your network (not just localhost):
-
-### Windows/Mac Host:
-
-1. **VirtualBox Settings** → **Network**
-2. **NAT** adapter → **Port Forwarding**
-3. **Add Rule:**
-   - Name: `GustoPOS HTTPS`
-   - Protocol: TCP
-   - Host Port: `8443`
-   - Guest Port: `443`
-   - Guest IP: Leave blank (auto)
-4. **OK** → **Apply**
-
-Then access from any computer on your network:
-```
-https://localhost:8443  (from host computer)
-https://<host-ip>:8443  (from another computer on network)
-```
-
-**Note:** You'll need to add the host computer's IP to CORS settings if accessing from other machines.
+---
 
 ## Troubleshooting
 
 ### VM Won't Start
-
 **Problem**: VirtualBox gives an error about "virtualization"
-
-**Solution**:
-1. Restart your computer
-2. Enter BIOS/UEFI (usually F2, F10, or DEL on startup)
-3. Find "Virtualization", "VT-x", or "AMD-V" setting
-4. Enable it
-5. Save and restart
+**Solution**: Enable VT-x/AMD-V in your computer's BIOS settings.
 
 ### Can't Access the App
-
 **Problem**: Browser says `https://192.168.56.X` won't connect
-
-**Solution**:
-1. Verify VM is running: `ip addr show eth1` (should show an IP)
-2. Check if containers are running: `docker ps`
-3. View logs for errors: `gustopos-logs | grep error`
-4. Try a different IP: Run `ip addr show` to see all interfaces
-
-### SSL Certificate Warning
-
-**This is normal!** The appliance uses a self-signed certificate for security.
-
-1. Click **Advanced**
-2. Click **Proceed to 192.168.56.X** (or similar)
-
-The warning won't reappear once you've accessed the site.
-
-### Out of Disk Space
-
-**Problem**: `No space left on device` error
-
-**Solution**:
-1. From host: Right-click VM → Settings → Storage
-2. Select the disk
-3. Resize it to a larger size (VirtualBox can grow VMDK files)
-4. Inside VM, the filesystem will auto-expand
+**Solution**: 
+1. Run `ip addr show eth1` to confirm the IP hasn't changed.
+2. Run `docker ps` to ensure `gustopos-api` and `gustopos-frontend` are running.
+3. Run `gustopos-logs` to check for application errors.
 
 ### Database Connection Error
-
 **Problem**: App says "Cannot connect to database"
-
-**Solution**:
-1. Check if containers are running: `docker ps`
-2. If PostgreSQL is down: `docker restart gustopos-postgres`
-3. View database logs: `docker logs gustopos-postgres`
-4. Verify data directory has space: `df -h /data/`
+**Solution**: 
+1. Check if the disk is full: `df -h`
+2. Ensure `/data/db/gusto.db` exists and is writable.
+3. Restart the stack: `gustopos-stop && gustopos-start`
 
 ### Performance is Slow
-
 **Problem**: VM feels sluggish
-
-**Solution**:
-1. Allocate more RAM: Shutdown VM → Settings → Increase to 4GB
-2. Use SSD storage: VMDK on SSD is much faster than HDD
-3. Reduce background apps on host computer
-4. Check disk space: `df -h` (aim for >10GB free in VM)
+**Solution**: Allocate more RAM (Settings → System → Motherboard → Base Memory).
 
 ## Next Steps
 
 - Read **VIRTUALBOX_USAGE.md** for day-to-day operations
 - Read **VIRTUALBOX_MAINTENANCE.md** for backups and updates
 - Check **gustopos-help** for available commands
-
-## Getting Help
-
-Inside the VM:
-```bash
-gustopos-help      # Show all available commands
-gustopos-logs      # View real-time logs
-```
-
-Online:
-- GitHub Issues: [GustoPOS Issues](https://github.com/bangsmackpow/GustoPOS/issues)
-- Documentation: [Full Guide](VIRTUALBOX_USAGE.md)

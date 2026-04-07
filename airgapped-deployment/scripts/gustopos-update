@@ -1,0 +1,63 @@
+#!/bin/bash
+# gustopos-update - Update GustoPOS from a USB update bundle
+
+UPDATE_DIR="/mnt/usb/gustopos-update"
+BACKUP_DIR="/data/backups"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+echo "=========================================="
+echo "GustoPOS Airgapped Update"
+echo "=========================================="
+echo ""
+
+# 1. Check for update bundle
+if [ ! -d "$UPDATE_DIR" ]; then
+    echo "ERROR: Update bundle not found at $UPDATE_DIR"
+    echo "Please mount your USB drive to /mnt/usb"
+    exit 1
+fi
+
+# 2. Mandatory Backup before update
+echo "[1/5] Creating safety backup..."
+/usr/local/bin/gustopos-backup
+echo "✓ Safety backup created."
+
+# 3. Load new Docker images
+echo "[2/5] Loading new Docker images (this may take a few minutes)..."
+if [ -f "$UPDATE_DIR/images.tar.gz" ]; then
+    sudo docker load -i "$UPDATE_DIR/images.tar.gz"
+    echo "✓ Images loaded successfully."
+else
+    echo "ERROR: images.tar.gz not found in update bundle."
+    exit 1
+fi
+
+# 4. Update configuration and scripts
+echo "[3/5] Updating configuration and scripts..."
+if [ -f "$UPDATE_DIR/docker-compose.yml" ]; then
+    sudo cp "$UPDATE_DIR/docker-compose.yml" /etc/gustopos/docker-compose.yml
+fi
+
+if [ -d "$UPDATE_DIR/scripts" ]; then
+    sudo cp "$UPDATE_DIR/scripts/"* /opt/gustopos/scripts/
+    sudo chmod +x /opt/gustopos/scripts/*
+fi
+echo "✓ Files updated."
+
+# 5. Restart the stack
+echo "[4/5] Restarting GustoPOS with new version..."
+/usr/local/bin/gustopos-stop
+/usr/local/bin/gustopos-start
+echo "✓ Stack restarted."
+
+# 6. Final Cleanup
+echo "[5/5] Cleaning up old Docker images..."
+sudo docker image prune -f
+echo "✓ Cleanup complete."
+
+echo ""
+echo "=========================================="
+echo "Update Successful!"
+echo "=========================================="
+echo "Current Version: $(sudo docker inspect --format='{{.Config.Image}}' gustopos-api)"
+echo ""

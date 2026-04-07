@@ -70,6 +70,24 @@ gusto-deployment/
 /lint_output.txt
 /lint_result.txt
 
+# Build artifacts
+dist/
+build/
+output-*/
+manifest.json
+packer_cache/
+*.ova
+
+# GustoPOS specific
+data/
+logs/
+stack.env
+.env
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
 # Session/IDE artifacts
 *.swp
 *.swo

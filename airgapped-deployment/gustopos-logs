@@ -1,5 +1,0 @@
-#!/bin/sh
-# gustopos-logs - View container logs in real-time
-
-cd /opt/gustopos
-docker-compose -f /etc/gustopos/docker-compose.yml logs -f "$@"

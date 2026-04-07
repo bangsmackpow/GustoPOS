@@ -1,7 +1,0 @@
-#!/bin/sh
-# gustopos-stop - Stop the GustoPOS container stack
-
-cd /opt/gustopos
-docker-compose -f /etc/gustopos/docker-compose.yml down
-
-echo "GustoPOS containers stopped."

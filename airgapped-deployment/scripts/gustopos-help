@@ -1,5 +1,5 @@
 #!/bin/sh
-# gustopos-help - Show help and useful commands
+# gustopos-help - Show help and useful commands for GustoPOS SQLite Appliance
 
 cat << 'EOF'
 ════════════════════════════════════════════════════════════════════════════════
@@ -46,9 +46,6 @@ BACKUPS
     
   Restore from backup:
     gustopos-restore <timestamp>
-    
-  Example:
-    gustopos-restore 20260406_160000
 
 
 TROUBLESHOOTING
@@ -66,13 +63,13 @@ TROUBLESHOOTING
     df -h
 
 
-ADVANCED MANAGEMENT
+ADVANCED MANAGEMENT (SQLite)
 ───────────────────────────────────────────────────────────────────────────────
-  Connect directly to PostgreSQL:
-    docker exec -it gustopos-postgres psql -U gustopos -d gustopos
+  Connect directly to SQLite (inside API container):
+    docker exec -it gustopos-api sqlite3 /app/data/gusto.db
     
-  Export all data:
-    docker exec gustopos-postgres pg_dump -U gustopos gustopos > backup.sql
+  Copy database file to current directory:
+    cp /data/db/gusto.db ./gusto_copy.db
     
   View container details:
     docker ps -a
@@ -83,8 +80,8 @@ ADVANCED MANAGEMENT
 USEFUL PATHS
 ───────────────────────────────────────────────────────────────────────────────
   Configuration:     /etc/gustopos/
-  Data:              /data/
-  Database:          /data/db/
+  Data (Container):  /data/
+  Database file:     /data/db/gusto.db
   Logs:              /data/logs/
   Backups:           /data/backups/
   SSL Certificates:  /etc/gustopos/ssl/
