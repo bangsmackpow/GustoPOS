@@ -8,9 +8,12 @@ ENV CI=true
 # Install pnpm
 RUN npm install -g pnpm
 
-# Copy workspace metadata and all package.json files
+# Copy workspace metadata and all package.json files for proper pnpm workspace resolution
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY artifacts/api-server/package.json ./artifacts/api-server/
+COPY artifacts/gusto-pos/package.json ./artifacts/gusto-pos/
+COPY artifacts/desktop-app/package.json ./artifacts/desktop-app/
+COPY artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/
 COPY lib/db/package.json ./lib/db/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
 COPY lib/api-spec/package.json ./lib/api-spec/
@@ -34,6 +37,9 @@ WORKDIR /app
 RUN npm install -g pnpm
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
 COPY artifacts/api-server/package.json ./artifacts/api-server/
+COPY artifacts/gusto-pos/package.json ./artifacts/gusto-pos/
+COPY artifacts/desktop-app/package.json ./artifacts/desktop-app/
+COPY artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/
 COPY lib/db/package.json ./lib/db/
 COPY lib/api-client-react/package.json ./lib/api-client-react/
 COPY lib/api-spec/package.json ./lib/api-spec/
