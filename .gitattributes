@@ -1,0 +1,4 @@
+# Force shell scripts to use LF line endings
+airgapped-deployment/scripts/* text eol=lf
+airgapped-deployment/http/preseed.cfg text eol=lf
+*.sh text eol=lf
