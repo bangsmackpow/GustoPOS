@@ -4,7 +4,7 @@ WORKDIR /app
 ENV CI=true
 
 # Install pnpm and configure for non-interactive CI
-RUN npm install -g pnpm && pnpm config set confirmModulesPurge false
+RUN apk add --no-cache wget && npm install -g pnpm && pnpm config set confirmModulesPurge false
 
 # Copy ALL files first for robust monorepo resolution
 COPY . .
