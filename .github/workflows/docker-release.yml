@@ -35,18 +35,6 @@ jobs:
           pnpm run typecheck
           pnpm run lint
 
-      - name: Build Frontend dist
-        env:
-          PORT: 5173
-          BASE_PATH: /
-          CI: true
-        run: |
-          pnpm run build --filter @workspace/gusto-pos
-
-      - name: Verify Frontend build
-        run: |
-          ls -la artifacts/gusto-pos/dist/public/ || (echo "Build output not found" && exit 1)
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
