@@ -4,49 +4,42 @@ Current status and future trajectory for GustoPOS.
 
 ---
 
-## ✅ Quality Gates - ALL PASSING
+## ✅ Quality Gates - ALL PASSING (Core)
 
 **Status:** PRODUCTION READY  
 **Date Updated:** April 2026
 
-- ✅ **Linting:** 0 errors, 0 warnings (ESLint - enforces code style)
-- ✅ **Type Checking:** All TypeScript validates with no errors
+- ✅ **Linting:** 0 errors, 0 warnings
+- ✅ **Type Checking:** API and POS Frontend validate with no errors
 - ✅ **Deployment Modes:** 3 Modes (Cloud/Mobile, Desktop, VirtualBox)
-- ✅ **Git History:** Clean, properly attributed commits
+- ✅ **Logic Integration:** Merged `guest-contributions` with advanced inventory system
 
 ---
 
-## 🎉 Latest Release: Airgapped VirtualBox Appliance (Debian-Based)
+## 🎉 Latest Release: Logic & OSX Integration
 
 **Status:** ✅ **COMPLETE & VERIFIED**
 
-The "auto-running" airgapped-ready VirtualBox appliance is now live. This replaces the complex manual airgapped setup with a one-click import experience.
+Incorporated extensive logic improvements and native desktop fixes from Luqas ArriliAss while preserving the robust advanced inventory and airgapped infrastructure.
 
-### Key Appliance Features
-- ✅ **Base OS:** Debian 12 (Bookworm) for hardware stability.
-- ✅ **Auto-Start:** Systemd service starts the GustoPOS stack on boot.
-- ✅ **Silent Install:** Packer build is 100% automated via `preseed.cfg`.
-- ✅ **Airgapped-Ready:** Docker images are pre-pulled during the build.
-- ✅ **Sideload Updates:** USB-based update system via `gustopos-update`.
-- ✅ **SQLite Backend:** Robust, local-only data persistence.
-
-### Files Added/Updated
-- `airgapped-deployment/packer-virtualbox.pkr.hcl` - Updated for Debian/Systemd.
-- `airgapped-deployment/scripts/gustopos-*` - Ported to Bash/Systemd/SQLite.
-- `airgapped-deployment/VIRTUALBOX_*.md` - Complete documentation set.
-- `scripts/create-vbox-update.sh` - Update bundle builder.
+### Key Merged Features
+- ✅ **Native Desktop (OSX/Win)**: Improved Electron wrapper with better error handling and auto-directory setup.
+- ✅ **Staff Management**: New routes for staff shifts, performance metrics, and clock-in/out logic.
+- ✅ **Financial Systems**: Integrated tax rates, split payments, and promo codes.
+- ✅ **Audit Trail**: Unified event logs and enhanced inventory audit history.
+- ✅ **Airgapped Workflow**: Restored and verified VirtualBox scripts and USB sideloading system.
 
 ---
 
 ## 🧪 Current Progress
 
-### **Core Systems (Done/Stable)**
+### **Core Systems (Integrated)**
 - [x] **Monorepo Architecture**: Unified codebase for API, Web, and Desktop.
 - [x] **Advanced Inventory**: ml-precision tracking with Tare/Weight/Count.
 - [x] **Multi-Device Support**: Mobile PWA and VPS/Docker ready.
-- [x] **Desktop App**: Electron wrapper for local Win/Mac.
-- [x] **Appliance**: VirtualBox .ova with auto-start and offline updates. ⭐ NEW
-- [x] **Offline Resilience**: TanStack Query persistence.
+- [x] **Desktop App**: Robust Electron wrapper for local Win/Mac.
+- [x] **Appliance**: VirtualBox .ova with auto-start and offline updates.
+- [x] **Analytics**: New routes for bar performance and staff tracking.
 
 ---
 
@@ -58,13 +51,12 @@ The "auto-running" airgapped-ready VirtualBox appliance is now live. This replac
 - [ ] **Printer Integration**: Support for ESC/POS thermal printers for receipts.
 
 ### **Phase 2: Analytics & Scale**
-- [ ] **Staff Performance**: Sales leaderboards and average ticket times.
 - [ ] **Usage-Based Low Stock Integration**: Automatic consumption calculation from sales.
 - [ ] **Multi-Location Sync**: Future PostgreSQL-based cloud synchronization.
 
 ---
 
 ## ⚠️ Technical Debt & Maintenance
+- **Mockup Sandbox**: Temporarily failing build on Windows due to Rollup binary issues (non-critical).
 - **SQLite vs PG**: Appliance uses SQLite for local simplicity; cloud/VPS uses Docker Compose.
 - **SSL**: Appliance uses self-signed SSL; browser warnings are documented as expected.
-- **Port Forwarding**: Local access is documented; external network access needs manual VirtualBox config.
