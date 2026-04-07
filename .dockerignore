@@ -1,19 +1,48 @@
+# Node.js
 node_modules
 **/node_modules
-.git
-.github
 dist
 build
+.npm
+.pnpm-store
+
+# Version Control
+.git
+.github
+.agents
+.skills
+
+# Packer / VirtualBox (Crucial to exclude these huge files)
+airgapped-deployment/packer_cache/
+airgapped-deployment/output-gustopos/
+packer_cache/
 output-*/
 *.ova
+*.vmdk
+*.zip
+*.iso
+packer.exe
+**/packer.exe
+
+# Database & Environment
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
 .env
 stack.env
-.agents
-.skills
-airgapped-deployment/packer_cache
-airgapped-deployment/output-gustopos
+*.env.*
+!*.env.example
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+*.swp
+*.swo
+
+# Temp
+tmp/
+temp/
 C:\Users\curtis\AppData\Local\Temp

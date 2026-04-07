@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # Stage 1: builder - install dependencies and build the API server
 FROM node:20-alpine AS builder
 WORKDIR /app
