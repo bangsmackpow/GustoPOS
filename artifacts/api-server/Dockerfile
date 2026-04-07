@@ -8,24 +8,12 @@ ENV CI=true
 # Install pnpm
 RUN npm install -g pnpm
 
-# Copy workspace metadata and all package.json files for proper pnpm workspace resolution
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY artifacts/api-server/package.json ./artifacts/api-server/
-COPY artifacts/gusto-pos/package.json ./artifacts/gusto-pos/
-COPY artifacts/desktop-app/package.json ./artifacts/desktop-app/
-COPY artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/
-COPY lib/db/package.json ./lib/db/
-COPY lib/api-client-react/package.json ./lib/api-client-react/
-COPY lib/api-spec/package.json ./lib/api-spec/
-COPY lib/api-zod/package.json ./lib/api-zod/
-COPY scripts/package.json ./scripts/
+# Copy ALL files first for robust monorepo resolution
+COPY . .
 
 # Install all dependencies for build
 RUN pnpm install --no-frozen-lockfile
     
-# Copy the rest of the repo
-COPY . .
-
 # Build the API server
 WORKDIR /app/artifacts/api-server
 RUN pnpm run build
@@ -35,16 +23,7 @@ RUN pnpm run build
 FROM node:20-alpine AS prod-deps
 WORKDIR /app
 RUN npm install -g pnpm
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
-COPY artifacts/api-server/package.json ./artifacts/api-server/
-COPY artifacts/gusto-pos/package.json ./artifacts/gusto-pos/
-COPY artifacts/desktop-app/package.json ./artifacts/desktop-app/
-COPY artifacts/mockup-sandbox/package.json ./artifacts/mockup-sandbox/
-COPY lib/db/package.json ./lib/db/
-COPY lib/api-client-react/package.json ./lib/api-client-react/
-COPY lib/api-spec/package.json ./lib/api-spec/
-COPY lib/api-zod/package.json ./lib/api-zod/
-COPY scripts/package.json ./scripts/
+COPY . .
 
 # Install ONLY production dependencies (includes native @libsql binaries)
 RUN pnpm install --prod --no-frozen-lockfile
