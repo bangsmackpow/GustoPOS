@@ -5,50 +5,55 @@ GustoPOS is a professional bar management system designed for both high-connecti
 
 ---
 
-## 🚀 Choose Your Scenario
+## 🚀 Choose Your Deployment Mode
 
-### **Scenario A: Standalone Bar (Best for your friend)**
-*   **Hardware:** An offline or poorly-connected laptop (Mac/Windows) at the bar.
-*   **Solution:** **The Desktop App.**
-*   **Why:** Runs entirely locally. No Docker, no Wi-Fi, and no setup required for the staff.
-*   **Guide:** See [DEPLOY_LOCAL.md](./DEPLOY_LOCAL.md)
+### **Mode 1: Airgapped VirtualBox Appliance (Recommended for Standalone)**
+*   **Best for:** Standalone bars with NO internet or very poor connectivity.
+*   **Hardware:** Any laptop (Mac/Windows/Linux) running VirtualBox.
+*   **Features:** Auto-starts on boot, robust Debian base, automated USB updates.
+*   **Guide:** [VirtualBox Quick Start](./airgapped-deployment/VIRTUALBOX_QUICKSTART.md)
 
-### **Scenario B: Multi-Bar / Cloud (Best for new customers)**
-*   **Hardware:** A central server (VPS) and staff using mobile phones/tablets.
-*   **Solution:** **Docker + PWA.**
-*   **Why:** Easy to update, staff can use their own devices, and data is synced to the cloud.
-*   **Guide:** Standard Docker-compose workflow.
+### **Mode 2: macOS / Windows Native Desktop App**
+*   **Best for:** Bars wanting a native "app" experience on a single computer.
+*   **Hardware:** Mac (Monterey+) or Windows PC.
+*   **Features:** Lightweight Electron wrapper, local SQLite persistence.
+*   **Guide:** [Desktop App Guide](./artifacts/desktop-app/README.md)
 
----
-
-## 🛠 Developer Guide
-
-### **1. Building the Desktop App**
-To generate a standalone installer (`.dmg` for Mac or `.exe` for Windows):
-```bash
-# Build core + package for desktop
-pnpm run build:desktop
-```
-The installer will be generated in `artifacts/desktop-app/dist/build`.
-
-### **2. Running Web Dev Mode**
-To work on the code with live-reloading:
-```bash
-pnpm run dev
-```
-
-### **3. Quality Control**
-```bash
-pnpm run typecheck  # Architect check (Logic)
-pnpm run lint       # Editor check (Style)
-pnpm run test:e2e   # Playwright check (Automation)
-```
+### **Mode 3: Cloud / VPS Docker (Multi-Device & Mobile)**
+*   **Best for:** Bars with stable internet and staff using phones/tablets.
+*   **Hardware:** A central Linux server or stable local machine with Docker.
+*   **Features:** Multi-device sync, PWA mobile support, real-time reports.
+*   **Guide:** [Docker Deployment Guide](./DEPLOY_DOCKER.md)
 
 ---
 
-## 💎 Key Features
-- **Stateless Auth:** Blazing fast logins with zero database overhead.
-- **Offline PWA:** Install on phones; keeps working during Wi-Fi blips.
-- **Quick Search (⌘K):** Find drinks and tabs in milliseconds.
-- **Profitability Reports:** Real-time leaderboards for money-makers.
-- **Disaster Recovery:** Built-in Litestream support for Cloudflare R2.
+## 📦 Core Systems
+
+### **Advanced Inventory Tracking**
+Production-grade tracking with ml-precision:
+- ✅ **Methods:** Tare (weight-based), Bulk (weight/volume), and Count (discrete units).
+- ✅ **Alerts:** Manual threshold, Percentage-based, and Usage-based low stock alerts.
+- ✅ **Audit Trail:** Complete history of audits, adjustments, and variances.
+
+### **Staff & Financials**
+- ✅ **Staff Management:** Clock-in/out logic, shift reports, and performance metrics.
+- ✅ **Financials:** Integrated tax rates, split payments, and promo code support.
+
+---
+
+## 🛠 Developer Quick Start
+
+```bash
+pnpm install
+pnpm run dev      # App available at http://localhost:5173
+```
+
+**Build for Appliance:**
+```bash
+cd airgapped-deployment
+packer build -force packer-virtualbox.pkr.hcl
+```
+
+---
+
+**Happy serving! 🍹**

@@ -1,11 +1,36 @@
-{\rtf1\ansi\ansicpg1252\cocoartf2821
-\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
-{\*\expandedcolortbl;;}
-\margl1440\margr1440\vieww11520\viewh8400\viewkind0
-\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+# GustoPOS AI Agent Guide
 
-\f0\fs24 \cf0 # GustoPOS Agent Instructions\
-\
-## Permissions\
-- Allow editing all files in the project}
+Welcome, Agent. This document outlines the architecture and standards for GustoPOS.
+
+## 🏗️ Architecture at a Glance
+
+GustoPOS is a **pnpm monorepo** using a "Thin Client, Smart API" model.
+
+-   **Frontend**: React (Vite) + TanStack Query + Tailwind CSS.
+-   **API Server**: Express.js + Drizzle ORM + Pino Logger.
+-   **Database**: SQLite (LibSQL) for high performance and local-first reliability.
+-   **Deployment**: 
+    -   **VirtualBox**: Debian-based appliance for airgapped bars.
+    -   **Desktop**: Electron wrapper for Mac/Windows.
+    -   **Docker**: Standard containers for cloud/VPS.
+
+## 📦 Key Systems to Protect
+
+When modifying the codebase, prioritize these core systems:
+
+1.  **Advanced Inventory (`lib/db/src/schema/inventory.ts`)**: 
+    -   Always maintain the three-mode tracking (Tare/Weight/Count).
+    -   Ensure `reported_total` vs `expected_total` logic is preserved in audits.
+2.  **Stateless Auth (`artifacts/api-server/src/lib/auth.ts`)**: 
+    -   Fast, JWT-based sessions without database lookups on every request.
+3.  **Deployment Scripts (`airgapped-deployment/scripts/`)**: 
+    -   These MUST remain Bash-compatible for Debian/Alpine environments.
+
+## 🛠 Quality Standards
+
+-   **Linting**: Run `pnpm run lint` before committing.
+-   **Types**: Ensure `pnpm run typecheck` passes across the whole monorepo.
+-   **Schema**: Database changes require a fresh migration in `lib/db/migrations/`.
+
+## 🍹 Final Objective
+GustoPOS is built for stability in "Real World" (low-connectivity) environments. Keep it simple, fast, and local-first.
