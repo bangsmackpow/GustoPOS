@@ -12,17 +12,16 @@ build
 .agents
 .skills
 
-# Packer / VirtualBox (Crucial to exclude these huge files)
-airgapped-deployment/packer_cache/
-airgapped-deployment/output-gustopos/
-packer_cache/
-output-*/
+# Packer / VirtualBox
+airgapped-deployment/packer_cache
+airgapped-deployment/output-gustopos
+packer_cache
+output-*
 *.ova
 *.vmdk
 *.zip
 *.iso
 packer.exe
-**/packer.exe
 
 # Database & Environment
 *.db
@@ -43,6 +42,5 @@ Thumbs.db
 *.swo
 
 # Temp
-tmp/
-temp/
-C:\Users\curtis\AppData\Local\Temp
+tmp
+temp
