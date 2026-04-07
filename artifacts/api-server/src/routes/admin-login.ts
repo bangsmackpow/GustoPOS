@@ -2,12 +2,14 @@ import express from "express";
 import type { Request, Response } from "express";
 import { db, usersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { createSession, SESSION_COOKIE, SESSION_TTL, type SessionData } from "../lib/auth";
+import { loginLimiter } from "../lib/rateLimiter";
 
 export default function adminLoginRouter(): express.Router {
   const router = express.Router();
   
-  router.post("/admin/login", async (req: Request, res: Response) => {
+  router.post("/admin/login", loginLimiter, async (req: Request, res: Response) => {
     const enabled = (process.env.ADMIN_LOGIN_ENABLED || "true").toLowerCase() === "true";
     if (!enabled) {
       return res.status(403).json({ ok: false, error: "admin login disabled" });
@@ -22,25 +24,35 @@ export default function adminLoginRouter(): express.Router {
 
     try {
       console.log(`[AdminLogin] Login attempt for: ${email}`);
-      console.log(`[AdminLogin] Request headers:`, {
-        host: req.get("host"),
-        xForwardedProto: req.get("x-forwarded-proto"),
-        xForwardedFor: req.get("x-forwarded-for"),
-        xRealIp: req.get("x-real-ip"),
-        secure: req.secure,
-      });
       
-      // Query database for user (unifies Env Admin and DB Managers)
+      // Query database for user
       const [dbUser] = await db.select().from(usersTable).where(
         and(
           eq(usersTable.email, email),
-          eq(usersTable.password, password),
           eq(usersTable.isActive, true)
         )
       );
 
-      if (!dbUser) {
+      if (!dbUser || !dbUser.password) {
         console.warn(`[AdminLogin] No matching active user found for: ${email}`);
+        return res.status(401).json({ ok: false, error: "Invalid credentials" });
+      }
+
+      // Compare password using bcrypt (supports both hashed and plaintext for migration)
+      let passwordMatches = false;
+      let passwordNeedsUpgrade = false;
+
+      if (dbUser.password.startsWith("$2")) {
+        // Password is already hashed (bcrypt format)
+        passwordMatches = await bcrypt.compare(password, dbUser.password);
+      } else {
+        // Password is plaintext - compare directly and mark for upgrade
+        passwordMatches = password === dbUser.password;
+        if (passwordMatches) passwordNeedsUpgrade = true;
+      }
+
+      if (!passwordMatches) {
+        console.warn(`[AdminLogin] Invalid password for: ${email}`);
         return res.status(401).json({ ok: false, error: "Invalid credentials" });
       }
 
@@ -49,6 +61,24 @@ export default function adminLoginRouter(): express.Router {
       if (!hasAccess) {
         console.warn(`[AdminLogin] User ${email} has insufficient role: ${dbUser.role}`);
         return res.status(403).json({ ok: false, error: "Insufficient permissions" });
+      }
+
+      // Auto-migrate plaintext passwords to bcrypt on first successful login
+      if (passwordNeedsUpgrade) {
+        try {
+          const hashedPassword = await bcrypt.hash(password, 10);
+          await db
+            .update(usersTable)
+            .set({ password: hashedPassword })
+            .where(eq(usersTable.id, dbUser.id));
+          console.log(`[AdminLogin] Auto-migrated plaintext password to bcrypt for user: ${email}`);
+        } catch (upgradeErr: any) {
+          console.warn(
+            `[AdminLogin] Failed to upgrade password hash for ${email}:`,
+            upgradeErr.message,
+          );
+          // Continue with login even if upgrade fails
+        }
       }
 
       const sessionData: SessionData = {
@@ -66,21 +96,18 @@ export default function adminLoginRouter(): express.Router {
 
       const sid = await createSession(sessionData);
       
-      // NOTE: Nginx Proxy Manager may not forward x-forwarded-proto correctly
-      // in all setups. Use domain-based detection as a safety net for production.
-      // This is secure because: only production domain gets secure=true.
-      const isProduction = req.get("host")?.includes("bangsmackpow.qzz.io");
-      const isSecure = isProduction || req.secure || req.headers["x-forwarded-proto"] === "https";
+      // Smart Secure flag: only use secure cookies if we are on HTTPS
+      const isSecure = req.secure || req.headers["x-forwarded-proto"] === "https";
       
       res.cookie(SESSION_COOKIE, sid, {
         httpOnly: true,
         secure: isSecure,
-        sameSite: "none",  // Required for cross-domain/reverse proxy scenarios
+        sameSite: "lax", // Most compatible for local networks
         path: "/",
         maxAge: SESSION_TTL,
       });
 
-      console.log(`[AdminLogin] Success! Token issued for: ${email} (secure=${isSecure})`);
+      console.log(`[AdminLogin] Success! Token issued for: ${email}`);
       return res.status(200).json({ ok: true, user: sessionData.user });
 
     } catch (err: any) {

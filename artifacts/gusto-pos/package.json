@@ -77,6 +77,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@sentry/react": "^10.47.0",
     "zustand": "^5.0.12"
   }
 }

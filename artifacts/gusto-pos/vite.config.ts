@@ -11,63 +11,59 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'images/*.png'],
+      registerType: "autoUpdate",
+      includeAssets: ["favicon.svg", "images/*.png"],
       manifest: {
-        name: 'GustoPOS - Bar Management',
-        short_name: 'GustoPOS',
-        description: 'Professional Bar POS for Puerto Vallarta',
-        theme_color: '#f59e0b',
-        background_color: '#09090b',
-        display: 'standalone',
+        name: "GustoPOS - Bar Management",
+        short_name: "GustoPOS",
+        description: "Professional Bar POS for Puerto Vallarta",
+        theme_color: "#f59e0b",
+        background_color: "#09090b",
+        display: "standalone",
         icons: [
           {
-            src: 'favicon.svg',
-            sizes: '192x192',
-            type: 'image/svg+xml'
+            src: "favicon.svg",
+            sizes: "192x192",
+            type: "image/svg+xml",
           },
           {
-            src: 'favicon.svg',
-            sizes: '512x512',
-            type: 'image/svg+xml'
-          }
-        ]
+            src: "favicon.svg",
+            sizes: "512x512",
+            type: "image/svg+xml",
+          },
+        ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
-            handler: 'CacheFirst',
+            handler: "CacheFirst",
             options: {
-              cacheName: 'google-fonts-cache',
+              cacheName: "google-fonts-cache",
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // <== 365 days
+                maxAgeSeconds: 60 * 60 * 24 * 365, // <== 365 days
               },
               cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
+                statuses: [0, 200],
+              },
+            },
           },
           {
             urlPattern: /\/api\/auth\/user/i,
-            handler: 'NetworkOnly', // IMPORTANT: Never cache auth status
+            handler: "NetworkOnly",
           },
           {
             urlPattern: /\/api\/.*/i,
-            handler: 'NetworkFirst', // Default for API: Try network, then cache
-            options: {
-              cacheName: 'api-data-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              }
-            }
-          }
-        ]
-      }
-    })
+            handler: "NetworkOnly",
+          },
+        ],
+      },
+    }),
   ],
   resolve: {
     alias: {

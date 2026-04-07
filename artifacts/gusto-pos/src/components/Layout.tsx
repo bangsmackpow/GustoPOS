@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  ReceiptText, 
-  Wine, 
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Link, useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  LayoutDashboard,
+  ReceiptText,
+  Wine,
   Beer,
   Coffee,
   GlassWater,
@@ -14,82 +14,235 @@ import {
   ChefHat,
   Utensils,
   Pizza,
-  PackageSearch, 
-  BarChart3, 
+  PackageSearch,
+  BarChart3,
   Settings,
   LogOut,
   User,
   Globe,
-  Search
-} from 'lucide-react';
-import { usePosStore } from '@/store';
-import { getTranslation } from '@/lib/utils';
-import { useQueryClient } from '@tanstack/react-query';
-import { useGetCurrentAuthUser, useGetActiveShift, useGetSettings } from '@workspace/api-client-react';
-import { PinPad } from './PinPad';
-import { QuickSearch } from './QuickSearch';
+  Search,
+  Lock,
+} from "lucide-react";
+import { usePosStore } from "@/store";
+import { getTranslation } from "@/lib/utils";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useGetCurrentAuthUser,
+  useGetActiveShift,
+  useGetSettings,
+} from "@workspace/api-client-react";
+import { PinPad } from "./PinPad";
+import { QuickSearch } from "./QuickSearch";
 
 const NAV_ITEMS = [
-  { path: '/', icon: LayoutDashboard, labelEn: 'Dashboard', labelEs: 'Panel' },
-  { path: '/tabs', icon: ReceiptText, labelEn: 'Tabs', labelEs: 'Cuentas' },
-  { path: '/drinks', icon: Wine, labelEn: 'Menu', labelEs: 'Menú' },
-  { path: '/inventory', icon: PackageSearch, labelEn: 'Inventory', labelEs: 'Inventario' },
-  { path: '/reports', icon: BarChart3, labelEn: 'Reports', labelEs: 'Reportes' },
-  { path: '/settings', icon: Settings, labelEn: 'Settings', labelEs: 'Ajustes' },
+  { path: "/", icon: LayoutDashboard, labelEn: "Dashboard", labelEs: "Panel" },
+  { path: "/tabs", icon: ReceiptText, labelEn: "Tabs", labelEs: "Cuentas" },
+  { path: "/drinks", icon: Wine, labelEn: "Menu", labelEs: "Menú" },
+  {
+    path: "/inventory",
+    icon: PackageSearch,
+    labelEn: "Inventory",
+    labelEs: "Inventario",
+  },
+  {
+    path: "/reports",
+    icon: BarChart3,
+    labelEn: "Reports",
+    labelEs: "Reportes",
+  },
+  {
+    path: "/settings",
+    icon: Settings,
+    labelEn: "Settings",
+    labelEs: "Ajustes",
+  },
 ];
 
 const ICON_MAP: Record<string, any> = {
-  Wine, Beer, Coffee, GlassWater, Martini, Microwave, IceCream, ChefHat, Utensils, Pizza
+  Wine,
+  Beer,
+  Coffee,
+  GlassWater,
+  Martini,
+  Microwave,
+  IceCream,
+  ChefHat,
+  Utensils,
+  Pizza,
 };
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
-  const { language, setLanguage, activeStaff, setActiveStaff } = usePosStore();
-  const { data: auth, isLoading } = useGetCurrentAuthUser();
+  const {
+    language,
+    setLanguage,
+    activeStaff,
+    setActiveStaff,
+    isLocked,
+    setIsLocked,
+  } = usePosStore();
+  const {
+    data: auth,
+    isLoading,
+    isFetching,
+    isSuccess,
+    isError,
+  } = useGetCurrentAuthUser({
+    query: {
+      staleTime: 0,
+      refetchOnMount: "always",
+      queryKey: ["/api/auth/user"],
+    },
+  });
   const { data: shiftData } = useGetActiveShift();
   const { data: settings } = useGetSettings();
   const [showPin, setShowPin] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [lockScreenMode, setLockScreenMode] = useState(false);
   const queryClient = useQueryClient();
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const resetIdleTimer = useCallback(() => {
+    if (isLocked) return;
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    const timeoutMin = settings?.pinLockTimeoutMin ?? 5;
+    idleTimerRef.current = setTimeout(
+      () => {
+        setIsLocked(true);
+        setLockScreenMode(true);
+        setShowPin(true);
+      },
+      timeoutMin * 60 * 1000,
+    );
+  }, [isLocked, settings?.pinLockTimeoutMin, setIsLocked]);
+
+  useEffect(() => {
+    if (location === "/login") return;
+    if (!isSuccess) return;
+
+    const events: (keyof WindowEventMap)[] = [
+      "mousedown",
+      "mousemove",
+      "keydown",
+      "touchstart",
+      "scroll",
+      "click",
+    ];
+    const handler = () => resetIdleTimer();
+    events.forEach((e) =>
+      window.addEventListener(e, handler, { passive: true }),
+    );
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      } else if (document.visibilityState === "visible" && !isLocked) {
+        resetIdleTimer();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    resetIdleTimer();
+
+    return () => {
+      events.forEach((e) => window.removeEventListener(e, handler));
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [location, isSuccess, resetIdleTimer, isLocked]);
+
+  const handlePinUnlock = () => {
+    setIsLocked(false);
+    setLockScreenMode(false);
+    setShowPin(false);
+    resetIdleTimer();
+  };
+
+  const handlePinClose = () => {
+    if (lockScreenMode) return;
+    setShowPin(false);
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
-        setShowSearch(prev => !prev);
+        setShowSearch((prev) => !prev);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout');
-      queryClient.setQueryData(['/api/auth/user'], { isAuthenticated: false });
-      setActiveStaff(null);
-      setLocation('/login');
+      await fetch("/api/auth/logout", { credentials: "include" });
     } catch (err) {
-      console.error('Logout failed', err);
-      window.location.href = '/login';
+      console.error("Logout failed", err);
     }
+    queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+    setActiveStaff(null);
+    setLocation("/login");
   };
 
+  // Auth guard: consolidated into single effect to prevent race conditions
+  // Only redirect after we have a definitive answer from the server
   useEffect(() => {
-    if (!isLoading && auth && !auth.isAuthenticated && location !== '/login') {
-      setLocation('/login');
-    }
-  }, [auth, isLoading, location, setLocation]);
+    if (location === "/login") return;
 
-  if (isLoading && location !== '/login') {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background">Loading...</div>;
+    if (isError) {
+      setLocation("/login");
+      return;
+    }
+
+    if (isSuccess && !auth?.isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [isError, isSuccess, auth?.isAuthenticated, location, setLocation]);
+
+  // Only show loading on initial load, NOT on background refetches
+  // isFetching triggers on every staleTime:0 refetch which would block UI perpetually
+  if (isLoading && location !== "/login") {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
+        Loading...
+      </div>
+    );
   }
 
-  if (location === '/login') {
+  // On login page, always render children
+  if (location === "/login") {
     return <>{children}</>;
   }
 
-  const BarIcon = ICON_MAP[settings?.barIcon || 'Wine'] || Wine;
+  // If auth query failed (API unreachable), redirect to login
+  if (isError) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
+        Redirecting to login...
+      </div>
+    );
+  }
+
+  // Safety net: if server confirmed user is not authenticated, don't render protected content
+  if (isSuccess && !auth?.isAuthenticated) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
+        Redirecting...
+      </div>
+    );
+  }
+
+  // If we have no definitive answer yet (still loading first fetch), show loading
+  if (!isSuccess && !isError) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
+        Loading...
+      </div>
+    );
+  }
+
+  const BarIcon = ICON_MAP[settings?.barIcon || "Wine"] || Wine;
   const activeShift = shiftData?.shift;
 
   return (
@@ -101,7 +254,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <BarIcon className="text-primary-foreground w-7 h-7" />
           </div>
           <span className="ml-4 font-display font-bold text-xl hidden lg:block tracking-tight">
-            {settings?.barName || 'Gusto'}<span className="text-primary">POS</span>
+            {settings?.barName || "Gusto"}
+            <span className="text-primary">POS</span>
           </span>
         </div>
 
@@ -111,16 +265,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
             const Icon = item.icon;
             return (
               <Link key={item.path} href={item.path}>
-                <button className={`w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 rounded-xl transition-all duration-200 group relative ${
-                  isActive 
-                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' 
-                    : 'text-muted-foreground hover:bg-white/5 hover:text-foreground'
-                }`}>
-                  <Icon size={20} className={isActive ? 'scale-110' : 'group-hover:scale-110 transition-transform'} />
+                <button
+                  className={`w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 rounded-xl transition-all duration-200 group relative ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  }`}
+                >
+                  <Icon
+                    size={20}
+                    className={
+                      isActive
+                        ? "scale-110"
+                        : "group-hover:scale-110 transition-transform"
+                    }
+                  />
                   <span className="ml-3 font-medium hidden lg:block">
-                    {language === 'en' ? item.labelEn : item.labelEs}
+                    {language === "en" ? item.labelEn : item.labelEs}
                   </span>
-                  {isActive && <motion.div layoutId="activeNav" className="absolute left-0 w-1 h-6 bg-white rounded-full hidden lg:block" />}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeNav"
+                      className="absolute left-0 w-1 h-6 bg-white rounded-full hidden lg:block"
+                    />
+                  )}
                 </button>
               </Link>
             );
@@ -128,20 +296,24 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="p-4 border-t border-white/5 space-y-2">
-          <button 
-            onClick={() => setLanguage(language === 'en' ? 'es' : 'en')}
+          <button
+            onClick={() => setLanguage(language === "en" ? "es" : "en")}
             className="w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
           >
             <Globe size={20} />
-            <span className="ml-3 font-medium hidden lg:block uppercase">{language}</span>
+            <span className="ml-3 font-medium hidden lg:block uppercase">
+              {language}
+            </span>
           </button>
-          
+
           <button
             onClick={handleLogout}
             className="w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
           >
             <LogOut size={20} />
-            <span className="ml-3 font-medium hidden lg:block">{getTranslation('logout', language)}</span>
+            <span className="ml-3 font-medium hidden lg:block">
+              {getTranslation("logout", language)}
+            </span>
           </button>
         </div>
       </aside>
@@ -153,31 +325,44 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-4">
             <div className="hidden md:block">
               <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-widest">
-                {activeShift ? getTranslation('active_shift', language) : getTranslation('no_active_shift', language)}
+                {activeShift
+                  ? getTranslation("active_shift", language)
+                  : getTranslation("no_active_shift", language)}
               </h2>
               <p className="text-lg font-display font-bold">
-                {activeShift ? activeShift.name : '—'}
+                {activeShift ? activeShift.name : "—"}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <button 
-              onClick={() => setShowSearch(true)}
-              className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all border border-white/5 group"
-              title="Search (⌘K)"
-            >
-              <Search size={20} className="group-hover:scale-110 transition-transform" />
-            </button>
+            {location !== "/" && (
+              <button
+                onClick={() => setShowSearch(true)}
+                className="w-12 h-12 rounded-2xl bg-secondary/50 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-all border border-white/5 group"
+                title="Search (⌘K)"
+              >
+                <Search
+                  size={20}
+                  className="group-hover:scale-110 transition-transform"
+                />
+              </button>
+            )}
 
-            <button 
+            <button
               onClick={() => setShowPin(true)}
               className="flex items-center gap-3 glass px-4 py-2 rounded-2xl hover:bg-white/10 transition-all border border-white/5 active:scale-95"
             >
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold leading-none">{activeStaff ? `${activeStaff.firstName} ${activeStaff.lastName}` : 'Switch Staff'}</p>
+                <p className="text-sm font-bold leading-none">
+                  {activeStaff
+                    ? `${activeStaff.firstName} ${activeStaff.lastName}`
+                    : "Switch Staff"}
+                </p>
                 <p className="text-[10px] text-muted-foreground uppercase mt-1 tracking-tighter">
-                  {activeStaff ? getTranslation(activeStaff.role as any, language) : 'Tap to Login'}
+                  {activeStaff
+                    ? getTranslation(activeStaff.role as any, language)
+                    : "Tap to Login"}
                 </p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
@@ -203,7 +388,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {showPin && <PinPad onClose={() => setShowPin(false)} />}
+      {showPin && (
+        <PinPad
+          onClose={handlePinClose}
+          onLogin={lockScreenMode ? handlePinUnlock : undefined}
+          lockScreen={lockScreenMode}
+        />
+      )}
       <QuickSearch isOpen={showSearch} onClose={() => setShowSearch(false)} />
     </div>
   );

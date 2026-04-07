@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Api
-  version: 0.1.0
+  version: 0.2.0
   description: GustoPOS API specification
 servers:
   - url: /api
@@ -810,19 +810,32 @@ components:
           type: string
         nameEs:
           type: ["string", "null"]
-        unit:
+        type:
           type: string
-        unitSize:
+          enum: [spirit, beer, mixer, unit]
+        subtype:
+          type: ["string", "null"]
+        baseUnit:
+          type: string
+          enum: [ml, g, unit]
+        baseUnitAmount:
           type: number
-        costPerUnit:
+        servingSize:
           type: number
+        tareWeightG:
+          type: ["number", "null"]
+        fullBottleWeightG:
+          type: ["number", "null"]
         currentStock:
           type: number
-        minimumStock:
+        orderCost:
           type: number
-        category:
-          type: string
-          enum: [spirits, wine, beer, mixer, garnish, other]
+        lowStockThreshold:
+          type: number
+        unitsPerCase:
+          type: integer
+        isOnMenu:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -832,12 +845,15 @@ components:
       required:
         - id
         - name
-        - unit
-        - unitSize
-        - costPerUnit
+        - type
+        - baseUnit
+        - baseUnitAmount
+        - servingSize
         - currentStock
-        - minimumStock
-        - category
+        - orderCost
+        - lowStockThreshold
+        - unitsPerCase
+        - isOnMenu
         - createdAt
         - updatedAt
 
@@ -848,27 +864,38 @@ components:
           type: string
         nameEs:
           type: ["string", "null"]
-        unit:
+        type:
           type: string
-        unitSize:
+          enum: [spirit, beer, mixer, unit]
+        subtype:
+          type: ["string", "null"]
+        baseUnit:
+          type: string
+          enum: [ml, g, unit]
+        baseUnitAmount:
           type: number
-        costPerUnit:
+        servingSize:
           type: number
+        tareWeightG:
+          type: ["number", "null"]
+        fullBottleWeightG:
+          type: ["number", "null"]
         currentStock:
           type: number
-        minimumStock:
+        orderCost:
           type: number
-        category:
-          type: string
-          enum: [spirits, wine, beer, mixer, garnish, other]
+        lowStockThreshold:
+          type: number
+        unitsPerCase:
+          type: integer
+        isOnMenu:
+          type: boolean
       required:
         - name
-        - unit
-        - unitSize
-        - costPerUnit
+        - baseUnit
+        - baseUnitAmount
+        - servingSize
         - currentStock
-        - minimumStock
-        - category
 
     UpdateIngredientBody:
       type: object
@@ -877,36 +904,47 @@ components:
           type: ["string", "null"]
         nameEs:
           type: ["string", "null"]
-        unit:
+        type:
           type: ["string", "null"]
-        unitSize:
+        subtype:
+          type: ["string", "null"]
+        baseUnit:
+          type: ["string", "null"]
+        baseUnitAmount:
           type: ["number", "null"]
-        costPerUnit:
+        servingSize:
+          type: ["number", "null"]
+        tareWeightG:
+          type: ["number", "null"]
+        fullBottleWeightG:
           type: ["number", "null"]
         currentStock:
           type: ["number", "null"]
-        minimumStock:
+        orderCost:
           type: ["number", "null"]
-        category:
-          type: ["string", "null"]
+        lowStockThreshold:
+          type: ["number", "null"]
+        unitsPerCase:
+          type: ["integer", "null"]
+        isOnMenu:
+          type: ["boolean", "null"]
 
     RecipeIngredient:
       type: object
       properties:
         ingredientId:
-          type: string
+          type: ["string", "null"]
         ingredientName:
           type: string
         ingredientNameEs:
           type: ["string", "null"]
-        amountInMl:
+        amountInBaseUnit:
           type: number
         costContribution:
           type: number
       required:
-        - ingredientId
         - ingredientName
-        - amountInMl
+        - amountInBaseUnit
         - costContribution
 
     Drink:
@@ -924,7 +962,6 @@ components:
           type: ["string", "null"]
         category:
           type: string
-          enum: [cocktail, beer, wine, shot, non_alcoholic, other]
         costPerDrink:
           type: number
         suggestedPrice:
@@ -933,13 +970,13 @@ components:
           type: ["number", "null"]
         markupFactor:
           type: number
-        upcharge:
-          type: number
         recipe:
           type: array
           items:
             $ref: "#/components/schemas/RecipeIngredient"
         isAvailable:
+          type: boolean
+        isOnMenu:
           type: boolean
         createdAt:
           type: string
@@ -955,9 +992,9 @@ components:
         - suggestedPrice
         - actualPrice
         - markupFactor
-        - upcharge
         - recipe
         - isAvailable
+        - isOnMenu
         - createdAt
         - updatedAt
 
@@ -974,10 +1011,7 @@ components:
           type: ["string", "null"]
         category:
           type: string
-          enum: [cocktail, beer, wine, shot, non_alcoholic, other]
         markupFactor:
-          type: number
-        upcharge:
           type: number
         actualPrice:
           type: ["number", "null"]
@@ -990,21 +1024,17 @@ components:
       required:
         - name
         - category
-        - markupFactor
-        - upcharge
-        - isAvailable
-        - recipe
 
     CreateRecipeIngredientBody:
       type: object
       properties:
         ingredientId:
           type: string
-        amountInMl:
+        amountInBaseUnit:
           type: number
       required:
         - ingredientId
-        - amountInMl
+        - amountInBaseUnit
 
     UpdateDrinkBody:
       type: object
@@ -1020,8 +1050,6 @@ components:
         category:
           type: ["string", "null"]
         markupFactor:
-          type: ["number", "null"]
-        upcharge:
           type: ["number", "null"]
         actualPrice:
           type: ["number", "null"]
@@ -1385,8 +1413,6 @@ components:
           type: string
         ingredientName:
           type: string
-        ingredientNameEs:
-          type: ["string", "null"]
         amountUsed:
           type: number
         unit:
@@ -1407,8 +1433,6 @@ components:
           type: string
         ingredientName:
           type: string
-        ingredientNameEs:
-          type: ["string", "null"]
         currentStock:
           type: number
         minimumStock:

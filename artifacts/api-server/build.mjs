@@ -3,134 +3,130 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, cp, mkdir, writeFile, access, readdir } from "node:fs/promises";
+import { execSync } from "node:child_process";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(artifactDir, "../../");
-
-// Plugin to handle path aliases (e.g., @/lib/db -> ../../lib/db)
-const aliasPlugin = {
-  name: "alias",
-  setup(build) {
-    build.onResolve({ filter: /^@\// }, (args) => {
-      const aliasPath = path.resolve(projectRoot, args.path.slice(2));
-      return { path: aliasPath };
-    });
-  },
-};
+const rootDir = path.resolve(artifactDir, "../..");
 
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
-  await rm(distDir, { recursive: true, force: true });
+  const distNmPath = path.join(distDir, "node_modules");
 
+  // Step 1: Ensure dist directory exists
+  try {
+    await access(distDir);
+  } catch {
+    await mkdir(distDir, { recursive: true });
+  }
+
+  // Step 2: Clean old build files (but preserve node_modules)
+  try {
+    const files = await readdir(distDir);
+    for (const file of files) {
+      if (file === "node_modules") continue;
+      await rm(path.join(distDir, file), { recursive: true, force: true });
+    }
+  } catch {
+    // dist directory might not exist yet, that's ok
+  }
+
+  // Step 3: Build with esbuild
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
     platform: "node",
     bundle: true,
-    format: "esm",
+    format: "cjs",
     outdir: distDir,
-    outExtension: { ".js": ".mjs" },
+    outExtension: { ".js": ".cjs" },
     logLevel: "info",
-    // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
-    // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
-    // Examples of unbundleable packages:
-    // - uses native modules and loads them dynamically (e.g. sharp)
-    // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
       "*.node",
-      "sharp",
-      "better-sqlite3",
-      "sqlite3",
-      "canvas",
-      "bcrypt",
-      "argon2",
-      "fsevents",
-      "re2",
-      "farmhash",
-      "xxhash-addon",
-      "bufferutil",
-      "utf-8-validate",
-      "ssh2",
-      "cpu-features",
-      "dtrace-provider",
-      "isolated-vm",
-      "lightningcss",
-      "@libsql/client",
-      "pg-native",
-      "oracledb",
-      "mongodb-client-encryption",
-      "handlebars",
-      "knex",
-      "typeorm",
-      "protobufjs",
-      "onnxruntime-node",
-      "@tensorflow/*",
-      "@prisma/client",
-      "@mikro-orm/*",
-      "@grpc/*",
-      "@swc/*",
-      "@aws-sdk/*",
-      "@azure/*",
-      "@opentelemetry/*",
-      "@google-cloud/*",
-      "@google/*",
-      "googleapis",
-      "firebase-admin",
-      "@parcel/watcher",
-      "@sentry/profiling-node",
-      "@tree-sitter/*",
-      "aws-sdk",
-      "classic-level",
-      "dd-trace",
-      "ffi-napi",
-      "grpc",
-      "hiredis",
-      "kerberos",
-      "leveldown",
-      "miniflare",
-      "mysql2",
-      "newrelic",
-      "odbc",
-      "piscina",
-      "realm",
-      "ref-napi",
-      "rocksdb",
-      "sass-embedded",
-      "sequelize",
-      "serialport",
-      "snappy",
-      "tinypool",
-      "usb",
-      "workerd",
-      "wrangler",
-      "zeromq",
-      "zeromq-prebuilt",
-      "playwright",
-      "puppeteer",
-      "puppeteer-core",
+      "libsql",
       "electron",
+      "@mapbox/node-pre-gyp",
+      "@sentry/profiling-node",
+      "@sentry-internal/node-cpu-profiler",
     ],
     sourcemap: "linked",
-    plugins: [
-      aliasPlugin,
-      // pino relies on workers to handle logging, instead of externalizing it we use a plugin to handle it
-      esbuildPluginPino({ transports: ["pino-pretty"] }),
-    ],
-    // Make sure packages that are cjs only (e.g. express) but are bundled continue to work in our esm output file
+    plugins: [esbuildPluginPino({ transports: ["pino-pretty"] })],
     banner: {
-      js: `import { createRequire as __bannerCrReq } from 'node:module';
-import __bannerPath from 'node:path';
-import __bannerUrl from 'node:url';
+      js: `const __bannerCrReq = require('node:module').createRequire(__filename);
+const __bannerPath = require('node:path');
+const __bannerUrl = require('node:url');
 
-globalThis.require = __bannerCrReq(import.meta.url);
-globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
+globalThis.require = __bannerCrReq;
+globalThis.__filename = __bannerUrl.fileURLToPath('file://' + __filename);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
   });
+
+  // Step 4: Install external dependencies
+  // Check for ALL expected packages, not just directory non-empty
+  const expectedPackages = [
+    "@libsql",
+    "libsql",
+    "@neon-rs",
+    "detect-libc",
+    "bcryptjs",
+  ];
+
+  const hasAllExternalDeps = await (async () => {
+    try {
+      const entries = await readdir(distNmPath);
+      return expectedPackages.every((pkg) => entries.includes(pkg));
+    } catch {
+      return false;
+    }
+  })();
+
+  if (!hasAllExternalDeps) {
+    console.log("Installing external dependencies...");
+    // pnpm hoists packages to .pnpm/node_modules/, not the root node_modules/
+    const pnpmNm = path.resolve(rootDir, "node_modules/.pnpm/node_modules");
+    const workspaceNm = path.resolve(rootDir, "node_modules");
+
+    await mkdir(distNmPath, { recursive: true });
+
+    for (const pkg of expectedPackages) {
+      // Try pnpm hoisted location first, then root node_modules
+      const srcPnpm = path.join(pnpmNm, pkg);
+      const srcRoot = path.join(workspaceNm, pkg);
+      const dest = path.join(distNmPath, pkg);
+
+      let src = null;
+      try {
+        await access(srcPnpm);
+        src = srcPnpm;
+      } catch {
+        try {
+          await access(srcRoot);
+          src = srcRoot;
+        } catch {
+          console.warn(
+            `Warning: Could not find ${pkg} in pnpm or workspace node_modules`,
+          );
+        }
+      }
+
+      if (src) {
+        try {
+          await cp(src, dest, { recursive: true, dereference: true });
+          console.log(`  Copied ${pkg}`);
+        } catch (err) {
+          console.warn(`  Failed to copy ${pkg}: ${err.message}`);
+        }
+      }
+    }
+  } else {
+    console.log("External dependencies already installed, skipping...");
+  }
+
+  console.log("API server build complete");
 }
 
 buildAll().catch((err) => {

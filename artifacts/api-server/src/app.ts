@@ -1,7 +1,13 @@
-import express, { type Express } from "express";
+import express, {
+  type Express,
+  type Request,
+  type Response,
+  type NextFunction,
+} from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
+import * as Sentry from "@sentry/node";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { authMiddleware } from "./middlewares/authMiddleware";
@@ -29,31 +35,7 @@ app.use(
     },
   }),
 );
-
-// CORS configuration for credentials (httpOnly cookies)
-const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-    // Allow requests with no origin (mobile apps, desktop, curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Allow localhost variants for development/Docker
-    if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      return callback(null, true);
-    }
-    
-    // Allow production domains from environment variable
-    const allowedDomains = (process.env.CORS_ALLOWED_ORIGINS || 'bangsmackpow.qzz.io').split(',').map(d => d.trim()).filter(Boolean);
-    if (allowedDomains.some(domain => origin.includes(domain))) {
-      return callback(null, true);
-    }
-    
-    console.warn(`[CORS] Rejected origin: ${origin}`);
-    callback(null, false);
-  },
-  credentials: true,
-};
-
-app.use(cors(corsOptions));
+app.use(cors({ credentials: true, origin: true }));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -65,12 +47,75 @@ app.use("/api", router);
 const staticPath = process.env.STATIC_PATH;
 if (staticPath) {
   console.log(`[API] Serving static assets from: ${staticPath}`);
+
+  // Disable service worker registration for Electron (prevents stale cache issues)
+  app.get("/registerSW.js", (req, res) => {
+    if (req.headers["user-agent"]?.includes("Electron")) {
+      res.setHeader("Content-Type", "application/javascript");
+      res.send("// Service worker disabled in Electron");
+      return;
+    }
+    res.sendFile("registerSW.js", { root: staticPath });
+  });
+
+  // Intercept sw.js for Electron to force unregistration
+  app.get("/sw.js", (req, res) => {
+    if (req.headers["user-agent"]?.includes("Electron")) {
+      res.setHeader("Content-Type", "application/javascript");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Expires", "0");
+      res.send(`
+        self.addEventListener('install', (e) => { self.skipWaiting(); });
+        self.addEventListener('activate', (e) => {
+          e.waitUntil(
+            caches.keys().then(names => Promise.all(names.map(n => caches.delete(n))))
+              .then(() => self.clients.claim())
+          );
+        });
+        self.addEventListener('fetch', (e) => {});
+      `);
+      return;
+    }
+    res.sendFile("sw.js", { root: staticPath });
+  });
+
+  // Serve index.html for Electron without service worker registration
+  app.get("/", (req, res) => {
+    if (req.headers["user-agent"]?.includes("Electron")) {
+      const fs = require("fs");
+      const path = require("path");
+      const indexPath = path.join(staticPath, "index.html");
+      let html = fs.readFileSync(indexPath, "utf8");
+      // Remove service worker registration script tag
+      html = html.replace(
+        /<script[^>]*src="\/registerSW\.js"[^>]*><\/script>/g,
+        "",
+      );
+      // Remove manifest link to prevent PWA prompts
+      html = html.replace(/<link[^>]*rel="manifest"[^>]*>/g, "");
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.setHeader("Pragma", "no-cache");
+      res.setHeader("Expires", "0");
+      res.send(html);
+      return;
+    }
+    res.sendFile("index.html", { root: staticPath });
+  });
+
   app.use(express.static(staticPath));
   // Handle SPA routing
-  app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api")) return next();
+  app.get(/^(?!\/api).+/, (req, res) => {
     res.sendFile("index.html", { root: staticPath });
   });
 }
+
+// Global error handler
+app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  Sentry.captureException(err, { extra: { url: req.url, method: req.method } });
+  console.error("Unhandled error:", err);
+  res
+    .status(500)
+    .json({ error: "Internal server error", message: err.message });
+});
 
 export default app;

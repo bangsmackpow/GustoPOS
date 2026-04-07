@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useGetShifts, useGetEndOfNightReport } from '@workspace/api-client-react';
 import { useStartShiftMutation, useCloseShiftMutation } from '@/hooks/use-pos-mutations';
 import { usePosStore } from '@/store';
-import { getTranslation } from '@/lib/utils';
+import { formatMoney, getTranslation } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import { 
   BarChart3, 
   Play, 
@@ -14,14 +15,36 @@ import {
   DollarSign, 
   AlertTriangle,
   History,
-  Package
+  Package,
+  X,
+  Trash2,
+  Users,
+  Clock,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  Zap,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 
 export default function Reports() {
   const { language, activeStaff } = usePosStore();
+  const { toast } = useToast();
   const { data: shifts, isLoading: loadingShifts } = useGetShifts();
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
+  const [openTabsError, setOpenTabsError] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'shifts' | 'analytics' | 'forecast' | 'audits'>('shifts');
+  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
+  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [forecastDays, setForecastDays] = useState(14);
+  const [forecastData, setForecastData] = useState<any>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const [auditDays, setAuditDays] = useState(90);
+  const [auditHistory, setAuditHistory] = useState<any>(null);
+  const [varianceSummary, setVarianceSummary] = useState<any>(null);
+  const [auditLoading, setAuditLoading] = useState(false);
   
   // Find currently active shift
   const activeShift = shifts?.find(s => s.status === 'active');
@@ -41,35 +64,204 @@ export default function Reports() {
     startShift.mutate({ data: { name, openedByUserId: activeStaff.id } });
   };
 
-  const handleCloseShift = () => {
+  const handleCloseShift = async () => {
     if (!activeShift) return;
     if (!confirm(getTranslation('confirm_close_shift', language))) return;
-    closeShift.mutate({ id: activeShift.id });
+    
+    try {
+      const res = await fetch(`/api/shifts/${activeShift.id}/close`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        if (data.openTabs) {
+          setOpenTabsError(data);
+        } else {
+          throw new Error(data.error || "Failed to close shift");
+        }
+        return;
+      }
+      
+      // Success - invalidate queries
+      window.location.reload();
+    } catch (err: any) {
+      // Error already handled above if it's an open tabs error
+      if (!openTabsError) {
+        console.error("Error closing shift:", err);
+      }
+    }
+  };
+
+  const generateAnalyticsReport = async () => {
+    if (!startDate || !endDate) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: "Please select both dates",
+      });
+      return;
+    }
+
+    setAnalyticsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        startDate: `${startDate}T00:00:00Z`,
+        endDate: `${endDate}T23:59:59Z`,
+      });
+      const res = await fetch(`/api/analytics/sales?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch analytics");
+      const result = await res.json();
+      setAnalyticsData(result);
+      toast({
+        title: getTranslation("success", language),
+        description: "Report generated successfully",
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: err.message || "Failed to generate report",
+      });
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
+  const generateForecastReport = async () => {
+    setForecastLoading(true);
+    try {
+      const params = new URLSearchParams({
+        days: forecastDays.toString(),
+      });
+      const res = await fetch(`/api/analytics/inventory/forecast?${params.toString()}`);
+      if (!res.ok) throw new Error("Failed to fetch forecast");
+      const result = await res.json();
+      setForecastData(result);
+      toast({
+        title: getTranslation("success", language),
+        description: "Forecast generated successfully",
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: err.message || "Failed to generate forecast",
+      });
+    } finally {
+      setForecastLoading(false);
+    }
+  };
+
+  const generateAuditReport = async () => {
+    setAuditLoading(true);
+    try {
+      const params = new URLSearchParams({
+        days: auditDays.toString(),
+      });
+      // Fetch both history and variance summary
+      const historyRes = await fetch(`/api/inventory-audits/history?${params.toString()}`);
+      const varianceRes = await fetch(`/api/inventory-audits/variance-summary?${params.toString()}`);
+      
+      if (!historyRes.ok || !varianceRes.ok) throw new Error("Failed to fetch audit data");
+      
+      const history = await historyRes.json();
+      const variance = await varianceRes.json();
+      
+      setAuditHistory(history);
+      setVarianceSummary(variance);
+      toast({
+        title: getTranslation("success", language),
+        description: "Audit report generated successfully",
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: err.message || "Failed to generate audit report",
+      });
+    } finally {
+      setAuditLoading(false);
+    }
   };
 
   return (
     <div className="max-w-6xl mx-auto pb-20 space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center bg-secondary/30 p-8 rounded-[2.5rem] border border-white/5 backdrop-blur-md">
-        <div>
-          <h1 className="text-4xl font-display font-bold tracking-tight">{getTranslation('reports', language)}</h1>
-          <p className="text-muted-foreground mt-1">Operational Insights & Nightly Summaries</p>
+      {/* Header with Tabs */}
+      <div className="space-y-6">
+        <div className="flex justify-between items-center bg-secondary/30 p-8 rounded-[2.5rem] border border-white/5 backdrop-blur-md">
+          <div>
+            <h1 className="text-4xl font-display font-bold tracking-tight">{getTranslation('reports', language)}</h1>
+            <p className="text-muted-foreground mt-1">Operational Insights & Nightly Summaries</p>
+          </div>
+          
+          <div className="flex gap-3">
+            {activeShift ? (
+              <Button variant="destructive" className="h-14 px-8 rounded-2xl gap-2 shadow-lg shadow-destructive/20" onClick={handleCloseShift}>
+                <StopCircle size={20} /> {getTranslation('close_shift', language)}
+              </Button>
+            ) : (
+              <Button className="h-14 px-8 rounded-2xl gap-2 shadow-lg shadow-primary/20" onClick={handleStartShift}>
+                <Play size={20} /> {getTranslation('start_shift', language)}
+              </Button>
+            )}
+          </div>
         </div>
-        
-        <div className="flex gap-3">
-          {activeShift ? (
-            <Button variant="destructive" className="h-14 px-8 rounded-2xl gap-2 shadow-lg shadow-destructive/20" onClick={handleCloseShift}>
-              <StopCircle size={20} /> {getTranslation('close_shift', language)}
-            </Button>
-          ) : (
-            <Button className="h-14 px-8 rounded-2xl gap-2 shadow-lg shadow-primary/20" onClick={handleStartShift}>
-              <Play size={20} /> {getTranslation('start_shift', language)}
-            </Button>
-          )}
+
+        {/* Tab Navigation */}
+        <div className="flex gap-4 border-b border-white/10 overflow-x-auto">
+          <button
+            onClick={() => setActiveTab('shifts')}
+            className={`px-4 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'shifts'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ReceiptText size={18} className="inline mr-2" />
+            Shift Reports
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`px-4 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'analytics'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <TrendingUp size={18} className="inline mr-2" />
+            {getTranslation('sales_analytics', language)}
+          </button>
+          <button
+            onClick={() => setActiveTab('forecast')}
+            className={`px-4 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'forecast'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Zap size={18} className="inline mr-2" />
+            {getTranslation('inventory_forecast', language)}
+          </button>
+          <button
+            onClick={() => setActiveTab('audits')}
+            className={`px-4 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === 'audits'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Package size={18} className="inline mr-2" />
+            {getTranslation('inventory_audits', language)}
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      {activeTab === 'shifts' ? (
+        /* Shifts Tab */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: History */}
         <div className="lg:col-span-4 space-y-6">
           <section className="glass rounded-[2rem] p-6 border border-white/5">
@@ -237,6 +429,630 @@ export default function Reports() {
           )}
         </div>
       </div>
+      ) : (
+        /* Analytics Tab */
+        <div className="space-y-6">
+          {/* Date Range Selector */}
+          <div className="glass rounded-3xl p-6 space-y-4">
+            <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
+              <Clock size={18} /> {getTranslation("date_range", language)}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  {getTranslation("from_date", language)}
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  {getTranslation("to_date", language)}
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                />
+              </div>
+              <div className="flex items-end">
+                <Button
+                  onClick={generateAnalyticsReport}
+                  disabled={analyticsLoading}
+                  className="w-full"
+                >
+                  {analyticsLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    getTranslation("generate_report", language)
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {analyticsData ? (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">{getTranslation("revenue", language)}</p>
+                  <p className="text-3xl font-display font-bold text-primary">
+                    {formatMoney(analyticsData.summary.totalRevenue || 0)}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">{getTranslation("tip", language)}</p>
+                  <p className="text-3xl font-display font-bold text-emerald-400">
+                    {formatMoney(analyticsData.summary.totalTips || 0)}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">{getTranslation("discount", language)}</p>
+                  <p className="text-3xl font-display font-bold text-yellow-400">
+                    {formatMoney(analyticsData.summary.totalDiscount || 0)}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">{getTranslation("total_tabs", language)}</p>
+                  <p className="text-3xl font-display font-bold text-blue-400">
+                    {analyticsData.summary.tabsCount}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">Avg Ticket</p>
+                  <p className="text-3xl font-display font-bold text-purple-400">
+                    {formatMoney(
+                      (analyticsData.summary.totalRevenue || 0) / (analyticsData.summary.tabsCount || 1)
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              {/* Sales by Drink */}
+              <div className="glass rounded-3xl p-6 space-y-4">
+                <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
+                  <Wine size={18} /> {getTranslation("sales_by_drink", language)}
+                </h3>
+                {analyticsData.salesByDrink.length === 0 ? (
+                  <p className="text-muted-foreground py-8 text-center">No sales data available</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-white/5 text-muted-foreground text-xs">
+                          <th className="p-3 font-medium">{getTranslation("name", language)}</th>
+                          <th className="p-3 font-medium">{getTranslation("units_sold", language)}</th>
+                          <th className="p-3 font-medium">{getTranslation("avg_price", language)}</th>
+                          <th className="p-3 font-medium text-right">{getTranslation("revenue", language)}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {analyticsData.salesByDrink.map((drink: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-white/5 transition-colors">
+                            <td className="p-3 font-medium">
+                              {language === "es" && drink.drinkNameEs ? drink.drinkNameEs : drink.drinkName}
+                            </td>
+                            <td className="p-3 text-muted-foreground">{drink.unitsPriced}</td>
+                            <td className="p-3 text-emerald-400">{formatMoney(drink.averagePrice)}</td>
+                            <td className="p-3 text-right font-bold text-primary">{formatMoney(drink.totalRevenue)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Sales by Staff */}
+              <div className="glass rounded-3xl p-6 space-y-4">
+                <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
+                  <Users size={18} /> {getTranslation("sales_by_staff", language)}
+                </h3>
+                {analyticsData.salesByStaff.length === 0 ? (
+                  <p className="text-muted-foreground py-8 text-center">No staff data available</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-white/5 text-muted-foreground text-xs">
+                          <th className="p-3 font-medium">{getTranslation("name", language)}</th>
+                          <th className="p-3 font-medium">{getTranslation("total_tabs", language)}</th>
+                          <th className="p-3 font-medium">{getTranslation("avg_ticket", language)}</th>
+                          <th className="p-3 font-medium">{getTranslation("tips_earned", language)}</th>
+                          <th className="p-3 font-medium text-right">{getTranslation("revenue", language)}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {analyticsData.salesByStaff.map((staff: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-white/5 transition-colors">
+                            <td className="p-3 font-medium">{staff.userName}</td>
+                            <td className="p-3 text-muted-foreground">{staff.tabsCount}</td>
+                            <td className="p-3 text-blue-400">{formatMoney(staff.avgTicket)}</td>
+                            <td className="p-3 text-emerald-400">{formatMoney(staff.tipsTotal)}</td>
+                            <td className="p-3 text-right font-bold text-primary">{formatMoney(staff.totalRevenue)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Hourly Breakdown */}
+              <div className="glass rounded-3xl p-6 space-y-4">
+                <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
+                  <TrendingUp size={18} /> {getTranslation("hourly_breakdown", language)}
+                </h3>
+                {analyticsData.hourlySales.length === 0 ? (
+                  <p className="text-muted-foreground py-8 text-center">No hourly data available</p>
+                ) : (
+                  <div className="space-y-4">
+                    {analyticsData.hourlySales.map((hour: any, idx: number) => {
+                      const maxRevenue = Math.max(...analyticsData.hourlySales.map((h: any) => h.totalRevenue));
+                      const percentage = maxRevenue > 0 ? (hour.totalRevenue / maxRevenue) * 100 : 0;
+                      return (
+                        <div key={idx} className="space-y-2">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="font-medium">{String(hour.hour).padStart(2, "0")}:00</span>
+                            <div className="text-muted-foreground">
+                              <span>{hour.tabsCount} tabs • </span>
+                              <span className="text-primary font-bold">{formatMoney(hour.totalRevenue)}</span>
+                            </div>
+                          </div>
+                          <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all"
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="h-[400px] flex flex-col items-center justify-center text-center glass rounded-3xl border border-white/5">
+              <TrendingUp size={48} className="text-muted-foreground mb-4 opacity-20" />
+              <p className="text-muted-foreground font-medium">Select a date range and generate a report to view sales analytics.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Forecast Tab */}
+      {activeTab === 'forecast' && (
+        <div className="space-y-8">
+          {/* Controls */}
+          <div className="glass rounded-3xl p-6 border border-white/5 space-y-4">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <Zap size={20} className="text-yellow-400" />
+              {getTranslation('forecast_period', language)}
+            </h3>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="text-sm text-muted-foreground block mb-2">
+                  {getTranslation('analysis_period', language)}
+                </label>
+                <select
+                  value={forecastDays}
+                  onChange={(e) => setForecastDays(parseInt(e.target.value))}
+                  className="w-full bg-secondary/50 border border-white/10 rounded-xl p-3 text-foreground"
+                >
+                  <option value={7}>Last 7 days</option>
+                  <option value={14}>Last 14 days</option>
+                  <option value={30}>Last 30 days</option>
+                </select>
+              </div>
+              <Button
+                onClick={generateForecastReport}
+                disabled={forecastLoading}
+                className="px-8 h-11 rounded-xl"
+              >
+                {forecastLoading ? (
+                  <>
+                    <Loader2 size={18} className="mr-2 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  getTranslation('generate_report', language)
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {forecastData ? (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <AlertCircle size={16} className="text-red-500" />
+                    {getTranslation('critical_items', language)}
+                  </p>
+                  <p className="text-4xl font-display font-bold text-red-500">
+                    {forecastData.summary.critical}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-yellow-500" />
+                    {getTranslation('low_items', language)}
+                  </p>
+                  <p className="text-4xl font-display font-bold text-yellow-500">
+                    {forecastData.summary.low}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <CheckCircle size={16} className="text-emerald-500" />
+                    {getTranslation('ok_items', language)}
+                  </p>
+                  <p className="text-4xl font-display font-bold text-emerald-500">
+                    {forecastData.summary.ok}
+                  </p>
+                </div>
+              </div>
+
+              {/* Forecast Table */}
+              <div className="glass rounded-3xl p-6 space-y-4">
+                <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+                  <Package size={20} /> {getTranslation('inventory_forecast', language)}
+                </h3>
+                {forecastData.forecasts.length === 0 ? (
+                  <p className="text-muted-foreground py-8 text-center">No inventory data available</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-white/5 text-muted-foreground text-xs">
+                          <th className="p-3 font-medium">{getTranslation('name', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('stock_status', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('current_stock', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('usage_rate', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('days_remaining', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('suggested_reorder', language)}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {forecastData.forecasts.map((item: any, idx: number) => {
+                          const statusColor = item.alertLevel === 'critical' ? 'bg-red-500/20 text-red-400' :
+                                            item.alertLevel === 'low' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            'bg-emerald-500/20 text-emerald-400';
+                          const statusLabel = item.alertLevel === 'critical' ? getTranslation('alert_critical', language) :
+                                            item.alertLevel === 'low' ? getTranslation('alert_low', language) :
+                                            getTranslation('alert_ok', language);
+                          return (
+                            <tr key={idx} className="hover:bg-white/5 transition-colors">
+                              <td className="p-3 font-medium">
+                                {language === "es" && item.itemNameEs ? item.itemNameEs : item.itemName}
+                              </td>
+                              <td className="p-3">
+                                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-bold ${statusColor}`}>
+                                  {statusLabel}
+                                </span>
+                              </td>
+                              <td className="p-3 text-muted-foreground">
+                                {item.currentStock.toFixed(1)} {item.baseUnit}
+                              </td>
+                              <td className="p-3 text-blue-400">
+                                {item.dailyVelocity.toFixed(2)} {item.baseUnit}/day
+                              </td>
+                              <td className="p-3 font-bold">
+                                {item.daysUntilStockout === -1 ? (
+                                  <span className="text-muted-foreground">No usage</span>
+                                ) : (
+                                  <span className={item.daysUntilStockout <= 2 ? 'text-red-400' : item.daysUntilStockout <= 5 ? 'text-yellow-400' : 'text-emerald-400'}>
+                                    {item.daysUntilStockout.toFixed(1)} days
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 text-primary font-bold">
+                                {item.suggestedReorderPoint.toFixed(1)} {item.baseUnit}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="h-[400px] flex flex-col items-center justify-center text-center glass rounded-3xl border border-white/5">
+              <Zap size={48} className="text-muted-foreground mb-4 opacity-20" />
+              <p className="text-muted-foreground font-medium">Select an analysis period and generate a forecast to view inventory predictions.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Audits Tab */}
+      {activeTab === 'audits' && (
+        <div className="space-y-8">
+          {/* Controls */}
+          <div className="glass rounded-3xl p-6 border border-white/5 space-y-4">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <Package size={20} className="text-purple-400" />
+              {getTranslation('variance_analysis', language)}
+            </h3>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="text-sm text-muted-foreground block mb-2">
+                  {getTranslation('analysis_period', language)}
+                </label>
+                <select
+                  value={auditDays}
+                  onChange={(e) => setAuditDays(parseInt(e.target.value))}
+                  className="w-full bg-secondary/50 border border-white/10 rounded-xl p-3 text-foreground"
+                >
+                  <option value={30}>Last 30 days</option>
+                  <option value={60}>Last 60 days</option>
+                  <option value={90}>Last 90 days</option>
+                  <option value={180}>Last 180 days</option>
+                </select>
+              </div>
+              <Button
+                onClick={generateAuditReport}
+                disabled={auditLoading}
+                className="px-8 h-11 rounded-xl"
+              >
+                {auditLoading ? (
+                  <>
+                    <Loader2 size={18} className="mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  getTranslation('generate_report', language)
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {varianceSummary ? (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">{getTranslation('total_tabs', language)} {getTranslation('audits', language)}</p>
+                  <p className="text-4xl font-display font-bold text-blue-400">
+                    {varianceSummary.summary.totalAudits}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">Items Audited</p>
+                  <p className="text-4xl font-display font-bold text-purple-400">
+                    {varianceSummary.summary.itemsAudited}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">With Variance</p>
+                  <p className="text-4xl font-display font-bold text-yellow-400">
+                    {varianceSummary.summary.itemsWithVariance}
+                  </p>
+                </div>
+                <div className="glass rounded-3xl p-6">
+                  <p className="text-sm text-muted-foreground mb-2">Recommendations</p>
+                  <p className="text-4xl font-display font-bold text-orange-400">
+                    {varianceSummary.recommendations.length}
+                  </p>
+                </div>
+              </div>
+
+              {/* Recommendations */}
+              {varianceSummary.recommendations.length > 0 && (
+                <div className="glass rounded-3xl p-6 space-y-4">
+                  <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+                    <AlertTriangle size={20} /> {getTranslation('recommendations', language)}
+                  </h3>
+                  <div className="space-y-3">
+                    {varianceSummary.recommendations.map((rec: any, idx: number) => {
+                      const severityColor = rec.severity === 'critical' ? 'bg-red-500/10 border-red-500/20 text-red-400' :
+                                          rec.severity === 'high' ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' :
+                                          rec.severity === 'medium' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400' :
+                                          'bg-blue-500/10 border-blue-500/20 text-blue-400';
+                      return (
+                        <div key={idx} className={`p-4 border rounded-2xl ${severityColor}`}>
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <p className="font-bold">{rec.itemName}</p>
+                              <p className="text-xs opacity-75 capitalize">{rec.issue}</p>
+                            </div>
+                            <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${
+                              rec.severity === 'critical' ? 'bg-red-500/30' :
+                              rec.severity === 'high' ? 'bg-orange-500/30' :
+                              rec.severity === 'medium' ? 'bg-yellow-500/30' :
+                              'bg-blue-500/30'
+                            }`}>
+                              {rec.severity}
+                            </span>
+                          </div>
+                          <p className="text-sm">{rec.recommendation}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Variance by Item */}
+              <div className="glass rounded-3xl p-6 space-y-4">
+                <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+                  <BarChart3 size={20} /> Item Variance Summary
+                </h3>
+                {varianceSummary.itemVariances.length === 0 ? (
+                  <p className="text-muted-foreground py-8 text-center">No audit data available</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-white/5 text-muted-foreground text-xs">
+                          <th className="p-3 font-medium">{getTranslation('name', language)}</th>
+                          <th className="p-3 font-medium">Audits</th>
+                          <th className="p-3 font-medium">Avg Variance %</th>
+                          <th className="p-3 font-medium">Total Variance</th>
+                          <th className="p-3 font-medium">Trend</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {varianceSummary.itemVariances.map((item: any, idx: number) => {
+                          const isUnderage = item.avgVariancePercent < 0;
+                          const isOverage = item.avgVariancePercent > 0;
+                          const varianceColor = isUnderage ? 'text-red-400' : isOverage ? 'text-yellow-400' : 'text-muted-foreground';
+                          return (
+                            <tr key={idx} className="hover:bg-white/5 transition-colors">
+                              <td className="p-3 font-medium">
+                                {language === "es" && item.itemNameEs ? item.itemNameEs : item.itemName}
+                              </td>
+                              <td className="p-3 text-muted-foreground">{item.auditCount}</td>
+                              <td className={`p-3 font-bold ${varianceColor}`}>
+                                {item.avgVariancePercent.toFixed(1)}%
+                              </td>
+                              <td className="p-3 text-blue-400">
+                                {item.totalVariance.toFixed(1)}
+                              </td>
+                              <td className="p-3">
+                                <span className={`inline-block px-2 py-1 rounded text-[10px] font-bold ${
+                                  item.lastVariancePercent < -5 ? 'bg-red-500/20 text-red-400' :
+                                  item.lastVariancePercent > 5 ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-emerald-500/20 text-emerald-400'
+                                }`}>
+                                  {item.lastVariancePercent.toFixed(1)}%
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Audit History */}
+              {auditHistory && auditHistory.audits.length > 0 && (
+                <div className="glass rounded-3xl p-6 space-y-4">
+                  <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+                    <History size={20} /> {getTranslation('audit_history', language)}
+                  </h3>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-white/5 text-muted-foreground text-xs">
+                          <th className="p-3 font-medium">{getTranslation('name', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('system_stock', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('physical_count', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('audit_variance', language)}</th>
+                          <th className="p-3 font-medium">{getTranslation('audited_at', language)}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/5">
+                        {auditHistory.audits.slice(0, 20).map((audit: any, idx: number) => (
+                          <tr key={idx} className="hover:bg-white/5 transition-colors text-xs">
+                            <td className="p-3 font-medium">
+                              {language === "es" && audit.itemNameEs ? audit.itemNameEs : audit.itemName}
+                            </td>
+                            <td className="p-3 text-muted-foreground">
+                              {audit.systemStock.toFixed(1)} {audit.baseUnit}
+                            </td>
+                            <td className="p-3 text-blue-400">
+                              {audit.physicalCount.toFixed(1)} {audit.baseUnit}
+                            </td>
+                            <td className={`p-3 font-bold ${
+                              audit.variance < 0 ? 'text-red-400' :
+                              audit.variance > 0 ? 'text-yellow-400' :
+                              'text-muted-foreground'
+                            }`}>
+                              {audit.variance.toFixed(1)} ({audit.variancePercent.toFixed(1)}%)
+                            </td>
+                            <td className="p-3 text-muted-foreground">
+                              {format(new Date(audit.auditedAt), 'MMM d, h:mm a')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="h-[400px] flex flex-col items-center justify-center text-center glass rounded-3xl border border-white/5">
+              <Package size={48} className="text-muted-foreground mb-4 opacity-20" />
+              <p className="text-muted-foreground font-medium">Select an analysis period and generate a report to view inventory audit data.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Open Tabs Error Modal */}
+      {openTabsError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-md">
+          <div className="glass p-8 rounded-3xl w-full max-w-md relative border border-white/10 shadow-2xl">
+            <button
+              onClick={() => setOpenTabsError(null)}
+              className="absolute top-6 right-6 text-muted-foreground hover:text-foreground"
+            >
+              <X size={24} />
+            </button>
+            <div className="flex items-center gap-3 mb-6">
+              <AlertTriangle size={24} className="text-amber-500" />
+              <h2 className="text-2xl font-display font-bold text-amber-500">
+                Cannot Close Shift
+              </h2>
+            </div>
+
+            <p className="text-muted-foreground mb-6">
+              Shift cannot be closed with open tabs. Please close the following tabs first:
+            </p>
+
+            <div className="space-y-2 mb-6 max-h-60 overflow-y-auto">
+              {openTabsError.openTabs?.map((tab: any) => (
+                <div 
+                  key={tab.id} 
+                  className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex justify-between items-center"
+                >
+                  <div>
+                    <p className="font-semibold text-foreground">{tab.customerName}</p>
+                    <p className="text-xs text-muted-foreground">{tab.totalMxn} MXN</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setOpenTabsError(null)}
+              >
+                Close
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={() => {
+                  setOpenTabsError(null);
+                  // Navigate to dashboard to close tabs
+                  window.location.href = '/';
+                }}
+              >
+                Go to Dashboard
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

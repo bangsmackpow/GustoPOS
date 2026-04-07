@@ -1,7 +1,7 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient } from "@tanstack/react-query";
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister';
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/Layout";
@@ -15,15 +15,45 @@ import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
+// Clear stale persisted cache from before schema simplification (v0.0.3)
+// Old cached queries have fields like amountInMl, categoryId, sellPrice that no longer exist
+try {
+  const cacheVersion = localStorage.getItem("gustopos-cache-version");
+  if (cacheVersion !== "2") {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (
+        key &&
+        (key.startsWith("REACT_QUERY_OFFLINE_CACHE") ||
+          key === "gustopos-cache-version")
+      ) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    localStorage.setItem("gustopos-cache-version", "2");
+  }
+} catch {
+  // localStorage may be unavailable
+}
+
 // Initialize Query Client with aggressive stale times for offline resilience
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      gcTime: 1000 * 60 * 60 * 24, // Keep data for 24 hours
-      staleTime: 1000 * 60 * 5,    // Consider data fresh for 5 mins
+      gcTime: 1000 * 60 * 60 * 24,
+      staleTime: 1000 * 60 * 5,
       retry: 3,
     },
   },
+});
+
+// Auth queries should never use stale data — always refetch to get current session state
+queryClient.setQueryDefaults(["/api/auth/user"], {
+  staleTime: 0,
+  gcTime: 0,
+  retry: false,
 });
 
 // Configure Persister to save state to localStorage
@@ -49,18 +79,55 @@ function Router() {
   );
 }
 
+function AppContent({ ready }: { ready: boolean }) {
+  if (!ready) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background text-foreground">
+        Loading GustoPOS...
+      </div>
+    );
+  }
+
+  return (
+    <TooltipProvider>
+      <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+        <Router />
+      </WouterRouter>
+      <Toaster />
+    </TooltipProvider>
+  );
+}
+
 function App() {
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      persistOptions={{ persister }}
+      persistOptions={{
+        persister,
+        dehydrateOptions: {
+          shouldDehydrateQuery: (query: any) => {
+            if (query.queryKey.includes("/api/auth/user")) return false;
+            return true;
+          },
+        },
+      }}
+      onSuccess={() => {
+        queryClient.invalidateQueries();
+      }}
+      onError={() => {
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith("REACT_QUERY_OFFLINE_CACHE")) {
+              localStorage.removeItem(key);
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }}
     >
-      <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
-        <Toaster />
-      </TooltipProvider>
+      <AppContent ready />
     </PersistQueryClientProvider>
   );
 }

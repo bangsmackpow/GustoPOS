@@ -1,15 +1,47 @@
-import React, { useState } from 'react';
-import { useGetDrinks, useGetIngredients } from '@workspace/api-client-react';
-import { useSaveDrinkMutation } from '@/hooks/use-pos-mutations';
-import { usePosStore } from '@/store';
-import { formatMoney, getTranslation } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, X, Info, Upload, FileSpreadsheet, Package } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import Papa from 'papaparse';
+import React, { useState, useMemo } from "react";
+import { useSearchParams } from "wouter";
+import { useGetDrinks, useGetIngredients } from "@workspace/api-client-react";
+import { useSaveDrinkMutation } from "@/hooks/use-pos-mutations";
+import { usePosStore } from "@/store";
+import { formatMoney, getTranslation } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Plus,
+  Edit2,
+  X,
+  Package,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Trash2,
+  Search,
+  Filter,
+  ChevronRight,
+  Menu,
+  Copy as CopyIcon,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
-const ML_PER_OZ = 29.5735;
+const DRINK_CATEGORIES = [
+  { value: "all", label: "All", labelEs: "Todos" },
+  { value: "cocktail", label: "Cocktail", labelEs: "Cóctel" },
+  { value: "beer", label: "Beer", labelEs: "Cerveza" },
+  { value: "wine", label: "Wine", labelEs: "Vino" },
+  { value: "shot", label: "Shot", labelEs: "Shot" },
+  { value: "non_alcoholic", label: "Non-Alcoholic", labelEs: "Sin Alcohol" },
+  { value: "other", label: "Other", labelEs: "Otro" },
+];
+
+const SPIRIT_SUBTYPES = [
+  { value: "tequila", label: "Tequila" },
+  { value: "mezcal", label: "Mezcal" },
+  { value: "vodka", label: "Vodka" },
+  { value: "gin", label: "Gin" },
+  { value: "whiskey", label: "Whiskey" },
+  { value: "rum", label: "Rum/Ron" },
+  { value: "misc", label: "Misc" },
+];
 
 export default function Drinks() {
   const { language } = usePosStore();
@@ -18,319 +50,862 @@ export default function Drinks() {
   const saveDrink = useSaveDrinkMutation();
   const { toast } = useToast();
   const qc = useQueryClient();
-  
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [editingDrink, setEditingDrink] = useState<any>(null);
-  const [unitMode, setUnitMode] = useState<'ml' | 'oz'>('ml');
-  const [showImport, setShowImport] = useState(false);
-  const [importPreview, setImportPreview] = useState<any[]>([]);
-  const [search, setSearch] = useState('');
+  const [deleteDrinkId, setDeleteDrinkId] = useState<string | null>(null);
+  const [deleteDrinkName, setDeleteDrinkName] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const activeCategory = searchParams.get("category") || "all";
+  const onMenuOnly = searchParams.get("onMenu") === "true";
+  const search = searchParams.get("search") || "";
 
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results: Papa.ParseResult<any>) => {
-        // Expected headers: Name, Category, Price, Ingredients (comma separated: "Tequila:60, Lime:30")
-        const rows = results.data.map((row: any) => {
-          const recipeStr = row.Ingredients || row.ingredients || '';
-          const recipeParts = recipeStr.split(',').filter((p: string) => p.includes(':'));
-          const recipe = recipeParts.map((p: string) => {
-            const [name, amount] = p.split(':').map(s => s.trim());
-            return { ingredientName: name, amountInMl: parseFloat(amount) || 0 };
-          });
-
-          return {
-            name: row.Name || row.name || '',
-            category: row.Category || row.category || 'cocktail',
-            actualPrice: parseFloat(String(row.Price || row.price || '').replace(/[^0-9.]/g, '')) || null,
-            recipe
-          };
-        }).filter((r: any) => r.name);
-
-        setImportPreview(rows);
-        toast({ title: "File Parsed", description: `Found ${rows.length} drinks` });
-      },
-      error: () => {
-        toast({ variant: "destructive", title: "Error", description: "Could not parse CSV file" });
-      }
-    });
+  const setActiveCategory = (cat: string) => {
+    if (cat === "all") {
+      searchParams.delete("category");
+    } else {
+      searchParams.set("category", cat);
+    }
+    setSearchParams(searchParams);
   };
 
-  const handleBulkImport = async () => {
+  const toggleOnMenu = () => {
+    if (onMenuOnly) {
+      searchParams.delete("onMenu");
+    } else {
+      searchParams.set("onMenu", "true");
+    }
+    setSearchParams(searchParams);
+  };
+
+  const setSearch = (val: string) => {
+    if (!val) {
+      searchParams.delete("search");
+    } else {
+      searchParams.set("search", val);
+    }
+    setSearchParams(searchParams);
+  };
+
+  const drinkSortColumn = searchParams.get("sort") || "name";
+  const drinkSortDirection =
+    (searchParams.get("dir") as "asc" | "desc") || "asc";
+
+  const handleDrinkSort = (column: string) => {
+    const newDir =
+      drinkSortColumn === column && drinkSortDirection === "asc"
+        ? "desc"
+        : "asc";
+    searchParams.set("sort", column);
+    searchParams.set("dir", newDir);
+    setSearchParams(searchParams);
+  };
+
+  const DrinkSortIcon = ({ column }: { column: string }) => {
+    if (drinkSortColumn !== column)
+      return <ArrowUpDown size={14} className="ml-1 opacity-40" />;
+    return drinkSortDirection === "asc" ? (
+      <ArrowUp size={14} className="ml-1" />
+    ) : (
+      <ArrowDown size={14} className="ml-1" />
+    );
+  };
+
+  const getCategoryCount = (cat: string) => {
+    if (cat === "all") return drinks?.length || 0;
+    return drinks?.filter((d: any) => d.category === cat).length || 0;
+  };
+
+  const handleDeleteDrink = async () => {
+    if (!deleteDrinkId) return;
     try {
-      const res = await fetch('/api/admin/bulk-drinks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ drinks: importPreview })
+      const res = await fetch(`/api/drinks/${deleteDrinkId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
       });
-      const data = await res.json();
-      if (data.success) {
-        toast({ title: "Import Successful", description: `Added ${importPreview.length} drinks` });
-        setShowImport(false);
-        setImportPreview([]);
-        qc.invalidateQueries();
-      }
-    } catch {
-      toast({ variant: "destructive", title: "Import Failed" });
+      if (!res.ok) throw new Error("Failed to delete drink");
+      toast({
+        title: getTranslation("success", language),
+        description: `Drink "${deleteDrinkName}" deleted.`,
+      });
+      setDeleteDrinkId(null);
+      setDeleteDrinkName("");
+      qc.invalidateQueries();
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: error.message || "Failed to delete drink.",
+      });
     }
   };
 
-  const filteredDrinks = drinks?.filter(d => 
-    d.name.toLowerCase().includes(search.toLowerCase()) || 
-    (d.nameEs && d.nameEs.toLowerCase().includes(search.toLowerCase()))
+  const handleMenuToggle = async (drink: any) => {
+    const newVal = !drink.isOnMenu;
+    qc.setQueryData(["drinks"], (old: any) => {
+      if (!old) return old;
+      return old.map((d: any) =>
+        d.id === drink.id ? { ...d, isOnMenu: newVal } : d,
+      );
+    });
+    try {
+      const res = await fetch(`/api/drinks/${drink.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isOnMenu: newVal }),
+      });
+      if (!res.ok) throw new Error("Failed to update");
+    } catch (e: any) {
+      qc.setQueryData(["drinks"], (old: any) => {
+        if (!old) return old;
+        return old.map((d: any) =>
+          d.id === drink.id ? { ...d, isOnMenu: !newVal } : d,
+        );
+      });
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: e.message,
+      });
+    }
+  };
+
+  const filteredDrinks = drinks?.filter((d: any) => {
+    const matchesCategory =
+      activeCategory === "all" || d.category === activeCategory;
+    const matchesOnMenu = !onMenuOnly || d.isOnMenu;
+    const matchesSearch =
+      !search ||
+      d.name.toLowerCase().includes(search.toLowerCase()) ||
+      (d.nameEs && d.nameEs.toLowerCase().includes(search.toLowerCase()));
+    return matchesCategory && matchesOnMenu && matchesSearch;
+  });
+
+  const sortedDrinks = [...(filteredDrinks || [])].sort((a: any, b: any) => {
+    const aVal = a[drinkSortColumn];
+    const bVal = b[drinkSortColumn];
+    if (typeof aVal === "string") {
+      return drinkSortDirection === "asc"
+        ? aVal.localeCompare(bVal)
+        : bVal.localeCompare(aVal);
+    }
+    return drinkSortDirection === "asc"
+      ? Number(aVal) - Number(bVal)
+      : Number(bVal) - Number(aVal);
+  });
+
+  const sidebarContent = (
+    <div className="space-y-6">
+      {/* Search */}
+      <div className="relative">
+        <Search
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+        />
+        <input
+          className="w-full bg-secondary/50 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+          placeholder={getTranslation("search_drinks", language)}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Category Filters */}
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          {getTranslation("category", language)}
+        </h4>
+        <div className="space-y-1">
+          {DRINK_CATEGORIES.map((cat) => {
+            const isActive = activeCategory === cat.value;
+            const count = getCategoryCount(cat.value);
+            return (
+              <button
+                key={cat.value}
+                onClick={() => setActiveCategory(cat.value)}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? "bg-primary/20 text-primary font-medium"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <ChevronRight
+                    size={12}
+                    className={`transition-transform ${isActive ? "rotate-90" : ""}`}
+                  />
+                  {language === "es" ? cat.labelEs : cat.label}
+                </span>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded-md ${isActive ? "bg-primary/30" : "bg-white/5"}`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quick Filters */}
+      <div>
+        <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          {getTranslation("filter", language)}
+        </h4>
+        <button
+          onClick={toggleOnMenu}
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+            onMenuOnly
+              ? "bg-primary/20 text-primary font-medium"
+              : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+          }`}
+        >
+          <span>{getTranslation("on_menu_filter", language)}</span>
+          <div
+            className={`w-8 h-4 rounded-full transition-colors ${onMenuOnly ? "bg-primary" : "bg-white/10"}`}
+          >
+            <div
+              className={`w-3 h-3 rounded-full bg-white mt-0.5 transition-transform ${onMenuOnly ? "translate-x-4" : "translate-x-0.5"}`}
+            />
+          </div>
+        </button>
+      </div>
+    </div>
   );
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-        <div>
-          <h1 className="text-4xl font-display">{getTranslation('menu', language)}</h1>
-          <p className="text-muted-foreground mt-1">Manage drinks, recipes and pricing</p>
+    <div className="flex h-full">
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex w-70 flex-col border-r border-white/5 p-4 overflow-y-auto shrink-0">
+        {sidebarContent}
+      </aside>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        >
+          <div
+            className="w-70 h-full bg-background border-r border-white/5 p-4 overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-display font-bold">
+                {getTranslation("filter", language)}
+              </h3>
+              <button onClick={() => setSidebarOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            {sidebarContent}
+          </div>
         </div>
-        <div className="flex gap-3">
-          <div className="relative mr-4">
-            <input 
-              className="bg-secondary border border-white/10 rounded-xl px-4 py-2 text-sm w-64"
-              placeholder="Search drinks..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div className="flex items-center gap-3">
+              <button
+                className="md:hidden p-2 rounded-lg bg-secondary/50 border border-white/10"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu size={18} />
+              </button>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-4xl font-display">
+                    {getTranslation("menu", language)}
+                  </h1>
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-base font-semibold align-middle">
+                    {sortedDrinks.length}
+                  </span>
+                </div>
+                <p className="text-muted-foreground mt-1">
+                  {getTranslation("manage_drinks", language)}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() =>
+                setEditingDrink({
+                  name: "",
+                  nameEs: "",
+                  category: "cocktail",
+                  markupFactor: 3,
+                  actualPrice: null,
+                  recipe: [],
+                  isAvailable: true,
+                  isOnMenu: false,
+                })
+              }
+            >
+              <Plus className="mr-2" size={18} />{" "}
+              {getTranslation("new_drink", language)}
+            </Button>
+          </div>
+
+          <div className="glass rounded-3xl overflow-hidden">
+            <div className="overflow-x-auto">
+              {sortedDrinks && sortedDrinks.length > 0 ? (
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-white/5 text-muted-foreground text-sm">
+                      <th className="p-4 font-medium w-12">
+                        {getTranslation("on_menu", language)}
+                      </th>
+                      <th
+                        className="p-4 font-medium cursor-pointer select-none"
+                        onClick={() => handleDrinkSort("name")}
+                      >
+                        <span className="flex items-center">
+                          {getTranslation("name", language)}
+                          <DrinkSortIcon column="name" />
+                        </span>
+                      </th>
+                      <th
+                        className="p-4 font-medium cursor-pointer select-none"
+                        onClick={() => handleDrinkSort("category")}
+                      >
+                        <span className="flex items-center">
+                          {getTranslation("category", language)}
+                          <DrinkSortIcon column="category" />
+                        </span>
+                      </th>
+                      <th
+                        className="p-4 font-medium cursor-pointer select-none"
+                        onClick={() => handleDrinkSort("costPerDrink")}
+                      >
+                        <span className="flex items-center">
+                          {getTranslation("cost", language)}
+                          <DrinkSortIcon column="costPerDrink" />
+                        </span>
+                      </th>
+                      <th
+                        className="p-4 font-medium cursor-pointer select-none"
+                        onClick={() => handleDrinkSort("actualPrice")}
+                      >
+                        <span className="flex items-center">
+                          {getTranslation("price", language)}
+                          <DrinkSortIcon column="actualPrice" />
+                        </span>
+                      </th>
+                      <th className="p-4 font-medium">
+                        <div className="flex flex-col">
+                          <span>{getTranslation("margin", language)}</span>
+                          <span className="text-xs text-muted-foreground font-normal">$ / %</span>
+                        </div>
+                      </th>
+                      <th className="p-4 font-medium text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {sortedDrinks.map((drink) => {
+                      const finalPrice =
+                        drink.actualPrice || drink.suggestedPrice;
+                      const marginDollars = finalPrice - drink.costPerDrink;
+                      const marginPercent =
+                        ((finalPrice - drink.costPerDrink) /
+                          (finalPrice || 1)) *
+                        100;
+                      
+                      // Color code margin: green (>40%), yellow (20-40%), red (<20%)
+                      const marginColor = marginPercent >= 40 
+                        ? "text-emerald-400" 
+                        : marginPercent >= 20 
+                        ? "text-yellow-400" 
+                        : "text-red-400";
+                      
+                      return (
+                        <tr
+                          key={drink.id}
+                          className="hover:bg-white/5 transition-colors"
+                        >
+                          <td className="p-4 text-center">
+                            <button
+                              onClick={() => handleMenuToggle(drink)}
+                              className={`w-6 h-6 rounded-md flex items-center justify-center transition-all border-2 ${
+                                drink.isOnMenu
+                                  ? "bg-primary border-primary text-primary-foreground"
+                                  : "bg-transparent border-white/30 hover:border-primary/60"
+                              }`}
+                            >
+                              {drink.isOnMenu && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </button>
+                          </td>
+                          <td className="p-4 font-medium">
+                            <div>
+                              {language === "es" && drink.nameEs
+                                ? drink.nameEs
+                                : drink.name}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">
+                              {drink.recipe
+                                ?.map((r: any) => r.ingredientName)
+                                .join(", ")}
+                            </div>
+                          </td>
+                          <td className="p-4 text-muted-foreground capitalize">
+                            {drink.category}
+                          </td>
+                          <td className="p-4 text-destructive">
+                            {formatMoney(drink.costPerDrink)}
+                          </td>
+                          <td className="p-4 text-emerald-400 font-bold">
+                            {formatMoney(finalPrice)}
+                          </td>
+                          <td className={`p-4 font-medium ${marginColor}`}>
+                            <div className="flex flex-col">
+                              <span>{formatMoney(marginDollars)}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {marginPercent.toFixed(0)}%
+                              </span>
+                            </div>
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setDeleteDrinkId(drink.id);
+                                  setDeleteDrinkName(drink.name);
+                                }}
+                              >
+                                <Trash2
+                                  size={16}
+                                  className="text-destructive"
+                                />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setEditingDrink(drink)}
+                              >
+                                <Edit2 size={16} />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title={getTranslation("clone", language) || "Clone"}
+                                onClick={() => {
+                                  // Clone: open modal with copied drink (no id, name prefixed)
+                                  const { id, name, nameEs, ...rest } = drink;
+                                  setEditingDrink({
+                                    ...rest,
+                                    name: `Copy of ${name}`,
+                                    nameEs: nameEs ? `Copia de ${nameEs}` : `Copy of ${name}`,
+                                    id: undefined,
+                                  });
+                                }}
+                              >
+                                <CopyIcon size={16} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground italic bg-white/5 rounded-3xl border border-white/5">
+                  <Package size={48} className="mx-auto mb-4 opacity-20" />
+                  <p>
+                    {getTranslation("no_drinks_found", language).replace(
+                      "{search}",
+                      search || getTranslation("all", language),
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit / New Drink Modal */}
+      {editingDrink && (
+        <DrinkModal
+          drink={editingDrink}
+          ingredients={ingredients || []}
+          language={language}
+          onClose={() => setEditingDrink(null)}
+          isSaving={saveDrink.isPending}
+          onSave={(data) => {
+            const { costPerDrink: _c, suggestedPrice: _s, ...rest } = data;
+            const saveData = {
+              ...rest,
+              nameEs: rest.nameEs || rest.name,
+              recipe: (rest.recipe || []).map((r: any) => ({
+                ingredientId: r.ingredientId,
+                amountInBaseUnit: r.amountInBaseUnit || 0,
+              })),
+            };
+            saveDrink.mutate(
+              { id: editingDrink.id, data: saveData },
+              { onSuccess: () => setEditingDrink(null) },
+            );
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteDrinkId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="glass p-8 rounded-3xl w-full max-w-md relative border border-white/10">
+            <button
+              onClick={() => setDeleteDrinkId(null)}
+              className="absolute top-6 right-6 text-muted-foreground hover:text-foreground"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-display mb-4 flex items-center gap-2">
+              <Trash2 className="text-destructive" />{" "}
+              {getTranslation("delete_drink", language)}
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              {getTranslation("delete_drink_confirm", language).replace(
+                "{name}",
+                deleteDrinkName,
+              )}
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setDeleteDrinkId(null)}>
+                {getTranslation("cancel", language)}
+              </Button>
+              <Button variant="destructive" onClick={handleDeleteDrink}>
+                {getTranslation("delete", language)}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DrinkModal({
+  drink,
+  ingredients,
+  language,
+  onClose,
+  onSave,
+  isSaving,
+}: {
+  drink: any;
+  ingredients: any[];
+  language: "en" | "es";
+  onClose: () => void;
+  onSave: (data: any) => void;
+  isSaving: boolean;
+}) {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(drink);
+
+  const handleSave = () => {
+    if (!editing.name.trim()) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: "Name is required",
+      });
+      return;
+    }
+    if (editing.actualPrice != null && editing.actualPrice <= 0) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: getTranslation("price_greater_zero", language),
+      });
+      return;
+    }
+    onSave(editing);
+  };
+
+  const spiritIngredients = useMemo(() => {
+    return ingredients.filter(
+      (ing: any) => ing.type === "spirit" || ing.type === "ingredient",
+    );
+  }, [ingredients]);
+
+  const subtypes = useMemo(() => {
+    const subs = new Set<string>();
+    spiritIngredients.forEach((ing: any) => {
+      if (ing.subtype) subs.add(ing.subtype);
+    });
+    return Array.from(subs).sort();
+  }, [spiritIngredients]);
+
+  const getIngredientsBySubtype = (subtype: string) => {
+    return spiritIngredients.filter(
+      (ing: any) =>
+        ing.subtype === subtype || (!ing.subtype && subtype === "other"),
+    );
+  };
+
+  const updateRecipeItem = (idx: number, updates: any) => {
+    const newRecipe = [...(editing.recipe || [])];
+    newRecipe[idx] = { ...newRecipe[idx], ...updates };
+
+    if (updates.subtype) {
+      newRecipe[idx].ingredientId = "";
+      newRecipe[idx].ingredientName = "";
+    }
+    if (updates.ingredientId) {
+      const ing = ingredients.find((i: any) => i.id === updates.ingredientId);
+      if (ing) {
+        newRecipe[idx].ingredientName =
+          language === "es" && ing.nameEs ? ing.nameEs : ing.name;
+        newRecipe[idx].amountInBaseUnit = ing.pourSize || 1.5;
+      }
+    }
+
+    setEditing({ ...editing, recipe: newRecipe });
+  };
+
+  const addRecipeItem = () => {
+    setEditing({
+      ...editing,
+      recipe: [
+        ...(editing.recipe || []),
+        {
+          subtype: "",
+          ingredientId: "",
+          ingredientName: "",
+          amountInBaseUnit: 0,
+        },
+      ],
+    });
+  };
+
+  const removeRecipeItem = (idx: number) => {
+    setEditing({
+      ...editing,
+      recipe: editing.recipe.filter((_: any, i: number) => i !== idx),
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+      <div className="glass p-8 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative border border-white/10">
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 text-muted-foreground hover:text-foreground"
+        >
+          <X size={24} />
+        </button>
+        <h2 className="text-2xl font-display mb-6">
+          {editing.id
+            ? getTranslation("edit_drink", language)
+            : getTranslation("new_drink", language)}
+        </h2>
+
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {getTranslation("name_label", language)}
+            </label>
+            <input
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+              value={editing.name}
+              onChange={(e) => setEditing({ ...editing, name: e.target.value })}
             />
           </div>
-          <Button variant="outline" onClick={() => setShowImport(true)}>
-            <Upload className="mr-2" size={18} /> Bulk Import
-          </Button>
-          <Button onClick={() => setEditingDrink({ name: '', category: 'cocktail', markupFactor: 3, upcharge: 0, recipe: [], isAvailable: true })}>
-            <Plus className="mr-2" size={18} /> New Drink
-          </Button>
-        </div>
-      </div>
-
-      <div className="glass rounded-3xl overflow-hidden">
-        <div className="overflow-x-auto">
-          {filteredDrinks && filteredDrinks.length > 0 ? (
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-white/5 text-muted-foreground text-sm">
-                  <th className="p-4 font-medium">{getTranslation('name', language)}</th>
-                  <th className="p-4 font-medium">{getTranslation('category', language)}</th>
-                  <th className="p-4 font-medium">{getTranslation('cost', language)}</th>
-                  <th className="p-4 font-medium">{getTranslation('price', language)}</th>
-                  <th className="p-4 font-medium">Margin</th>
-                  <th className="p-4 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {filteredDrinks.map(drink => {
-                  const finalPrice = drink.actualPrice || drink.suggestedPrice;
-                  const margin = ((finalPrice - drink.costPerDrink) / (finalPrice || 1)) * 100;
-                  return (
-                    <tr key={drink.id} className="hover:bg-white/5 transition-colors">
-                      <td className="p-4 font-medium">
-                        <div>{language === 'es' && drink.nameEs ? drink.nameEs : drink.name}</div>
-                        <div className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">
-                          {drink.recipe.map((r: any) => r.ingredientName).join(', ')}
-                        </div>
-                      </td>
-                      <td className="p-4 text-muted-foreground capitalize">{drink.category.replace('_', ' ')}</td>
-                      <td className="p-4 text-destructive">{formatMoney(drink.costPerDrink)}</td>
-                      <td className="p-4 text-emerald-400 font-bold">{formatMoney(finalPrice)}</td>
-                      <td className="p-4 text-muted-foreground">{margin.toFixed(0)}%</td>
-                      <td className="p-4 text-right">
-                        <Button variant="ghost" size="icon" onClick={() => setEditingDrink(drink)}>
-                          <Edit2 size={16} />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground italic bg-white/5 rounded-3xl border border-white/5">
-              <Package size={48} className="mx-auto mb-4 opacity-20" />
-              <p>No drinks found for &quot;{search}&quot;</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {showImport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="glass p-8 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col relative border border-white/10">
-            <button onClick={() => setShowImport(false)} className="absolute top-6 right-6 text-muted-foreground hover:text-foreground">
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-display mb-2 flex items-center gap-2">
-              <FileSpreadsheet className="text-primary" /> Recipe Bulk Import
-            </h2>
-            <p className="text-muted-foreground mb-6 text-sm">Upload a CSV with headers: Name, Category, Price, Ingredients (Format: &quot;Ingredient:Amount, ...&quot;)</p>
-            
-            <div className="flex-1 overflow-hidden flex flex-col gap-6">
-              <div className="p-10 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors relative">
-                <input 
-                  type="file" 
-                  accept=".csv" 
-                  onChange={handleFileUpload}
-                  className="absolute inset-0 opacity-0_cursor-pointer"
-                />
-                <Upload size={48} className="text-primary mb-4" />
-                <p className="text-lg font-medium">Select your Recipes CSV</p>
-                <p className="text-sm text-muted-foreground mt-2">Example: Margarita, cocktail, 140, &quot;Tequila:60, Lime:30, Agave:15&quot;</p>
-              </div>
-
-              <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden flex flex-col flex-1">
-                <div className="p-4 border-b border-white/5 font-bold text-sm bg-white/5 flex justify-between items-center">
-                  <span>Preview ({importPreview.length} drinks)</span>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {importPreview.map((item, idx) => (
-                    <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs flex justify-between items-center">
-                      <div className="flex-1">
-                        <div className="font-bold text-foreground text-sm">{item.name}</div>
-                        <div className="text-muted-foreground">{item.category} • {item.recipe.length} ingredients</div>
-                      </div>
-                      <div className="flex-1 px-4 text-muted-foreground italic truncate">
-                        {item.recipe.map((r: any) => `${r.ingredientName} (${r.amountInMl}ml)`).join(', ')}
-                      </div>
-                      <div className="text-right font-bold text-emerald-400">
-                        {formatMoney(item.actualPrice || 0)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-white/10">
-              <Button variant="ghost" onClick={() => { setShowImport(false); setImportPreview([]); }}>Cancel</Button>
-              <Button 
-                onClick={handleBulkImport}
-                disabled={importPreview.length === 0}
-                className="px-12 bg-primary hover:bg-primary/90 text-primary-foreground h-12 shadow-lg shadow-primary/20"
-              >
-                Save Recipes to Menu
-              </Button>
-            </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {getTranslation("spanish_name", language)}
+            </label>
+            <input
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+              value={editing.nameEs || ""}
+              onChange={(e) =>
+                setEditing({ ...editing, nameEs: e.target.value })
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {getTranslation("drink_category", language)}
+            </label>
+            <select
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+              value={editing.category || "cocktail"}
+              onChange={(e) =>
+                setEditing({ ...editing, category: e.target.value })
+              }
+            >
+              <option value="cocktail">
+                {getTranslation("cocktail", language)}
+              </option>
+              <option value="beer">{getTranslation("beer", language)}</option>
+              <option value="wine">{getTranslation("wine", language)}</option>
+              <option value="shot">{getTranslation("shot", language)}</option>
+              <option value="non_alcoholic">
+                {getTranslation("non_alcoholic", language)}
+              </option>
+              <option value="other">{getTranslation("other", language)}</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              {getTranslation("actual_price_label", language)}
+            </label>
+            <input
+              type="number"
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+              value={editing.actualPrice ?? ""}
+              onChange={(e) =>
+                setEditing({
+                  ...editing,
+                  actualPrice: e.target.value
+                    ? parseFloat(e.target.value)
+                    : null,
+                })
+              }
+              placeholder={editing.suggestedPrice?.toFixed(2)}
+            />
           </div>
         </div>
-      )}
 
-      {editingDrink && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="glass p-8 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative border border-white/10">
-            <button onClick={() => setEditingDrink(null)} className="absolute top-6 right-6 text-muted-foreground hover:text-foreground">
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-display mb-6">{editingDrink.id ? 'Edit Drink' : 'New Drink'}</h2>
-            
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Name (EN)</label>
-                <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingDrink.name} onChange={e => setEditingDrink({...editingDrink, name: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Nombre (ES)</label>
-                <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingDrink.nameEs || ''} onChange={e => setEditingDrink({...editingDrink, nameEs: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Category</label>
-                <select className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingDrink.category} onChange={e => setEditingDrink({...editingDrink, category: e.target.value})}>
-                  <option value="cocktail">Cocktail</option>
-                  <option value="beer">Beer</option>
-                  <option value="wine">Wine</option>
-                  <option value="shot">Shot</option>
-                  <option value="non_alcoholic">Non Alcoholic</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Actual Selling Price (MXN)</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingDrink.actualPrice || ''} onChange={e => setEditingDrink({...editingDrink, actualPrice: e.target.value ? parseFloat(e.target.value) : null})} placeholder={editingDrink.suggestedPrice?.toFixed(2)} />
-              </div>
-            </div>
+        <div className="mb-6">
+          <h3 className="font-medium text-lg flex items-center gap-2 mb-4">
+            {getTranslation("recipe_ingredients", language)}
+          </h3>
 
-            <div className="mb-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-medium text-lg flex items-center gap-2">
-                  <Info size={18} className="text-primary" /> Recipe & Ingredients
-                </h3>
-                <div className="flex bg-secondary p-1 rounded-lg text-xs">
-                  <button onClick={() => setUnitMode('ml')} className={`px-3 py-1 rounded ${unitMode === 'ml' ? 'bg-primary text-primary-foreground' : ''}`}>ml</button>
-                  <button onClick={() => setUnitMode('oz')} className={`px-3 py-1 rounded ${unitMode === 'oz' ? 'bg-primary text-primary-foreground' : ''}`}>oz</button>
-                </div>
-              </div>
-              
-              <div className="space-y-3 mb-4">
-                {editingDrink.recipe?.map((item: any, idx: number) => (
-                  <div key={idx} className="flex gap-3 items-center animate-in fade-in slide-in-from-left-2">
-                    <select 
-                      className="flex-1 bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground text-sm"
-                      value={item.ingredientId}
-                      onChange={e => {
-                        const newRecipe = [...editingDrink.recipe];
-                        newRecipe[idx].ingredientId = e.target.value;
-                        setEditingDrink({...editingDrink, recipe: newRecipe});
-                      }}
-                    >
-                      <option value="">Select ingredient...</option>
-                      {ingredients?.map(ing => <option key={ing.id} value={ing.id}>{language === 'es' && ing.nameEs ? ing.nameEs : ing.name}</option>)}
-                    </select>
-                    
-                    <div className="relative w-32">
-                      <input 
-                        type="number" 
-                        step="0.1"
-                        className="w-full bg-secondary border border-white/10 rounded-xl pl-4 pr-10 py-3 text-foreground text-sm" 
-                        value={unitMode === 'ml' ? item.amountInMl : (item.amountInMl / ML_PER_OZ).toFixed(2)}
-                        onChange={e => {
-                          const val = parseFloat(e.target.value) || 0;
-                          const newRecipe = [...editingDrink.recipe];
-                          newRecipe[idx].amountInMl = unitMode === 'ml' ? val : val * ML_PER_OZ;
-                          setEditingDrink({...editingDrink, recipe: newRecipe});
-                        }}
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase font-bold">{unitMode}</span>
-                    </div>
+          <div className="space-y-3 mb-4">
+            {(editing.recipe || []).map((item: any, idx: number) => (
+              <div
+                key={idx}
+                className="flex flex-col gap-2 p-3 rounded-xl bg-white/5 border border-white/5 animate-in fade-in slide-in-from-left-2"
+              >
+                <div className="flex gap-2 items-center">
+                  <select
+                    className="flex-1 bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
+                    value={item.subtype || ""}
+                    onChange={(e) =>
+                      updateRecipeItem(idx, { subtype: e.target.value })
+                    }
+                  >
+                    <option value="">
+                      {getTranslation("select_subtype", language)}
+                    </option>
+                    {subtypes.map((sub) => (
+                      <option key={sub} value={sub}>
+                        {getTranslation(sub, language) || sub}
+                      </option>
+                    ))}
+                  </select>
 
-                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive" onClick={() => {
-                      const newRecipe = editingDrink.recipe.filter((_:any, i:number) => i !== idx);
-                      setEditingDrink({...editingDrink, recipe: newRecipe});
-                    }}><X size={18}/></Button>
+                  <select
+                    className="flex-1 bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
+                    value={item.ingredientId || ""}
+                    onChange={(e) =>
+                      updateRecipeItem(idx, { ingredientId: e.target.value })
+                    }
+                    disabled={!item.subtype}
+                  >
+                    <option value="">
+                      {getTranslation("select_ingredient", language)}
+                    </option>
+                    {getIngredientsBySubtype(item.subtype).map((ing: any) => (
+                      <option key={ing.id} value={ing.id}>
+                        {language === "es" && ing.nameEs
+                          ? ing.nameEs
+                          : ing.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className="relative w-28">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      className="w-full bg-secondary border border-white/10 rounded-xl pl-3 pr-8 py-2 text-foreground text-sm"
+                      value={item.amountInBaseUnit || 0}
+                      onChange={(e) =>
+                        updateRecipeItem(idx, {
+                          amountInBaseUnit: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase font-bold">
+                      oz
+                    </span>
                   </div>
-                ))}
-              </div>
-              
-              <Button variant="outline" className="w-full border-dashed border-white/20 hover:bg-white/5 h-12" onClick={() => setEditingDrink({...editingDrink, recipe: [...(editingDrink.recipe||[]), { ingredientId: '', amountInMl: 0 }]})}>
-                <Plus size={16} className="mr-2" /> Add Ingredient
-              </Button>
-            </div>
 
-            <div className="bg-primary/5 rounded-2xl p-4 mb-8 border border-primary/10">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted-foreground">Estimated Cost:</span>
-                <span className="font-bold text-primary">{formatMoney(editingDrink.costPerDrink || 0)}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-muted-foreground hover:text-destructive shrink-0"
+                    onClick={() => removeRecipeItem(idx)}
+                  >
+                    <X size={16} />
+                  </Button>
+                </div>
               </div>
-              <div className="flex justify-between items-center text-sm mt-1">
-                <span className="text-muted-foreground">Markup (x{editingDrink.markupFactor}):</span>
-                <span className="font-bold">{formatMoney((editingDrink.costPerDrink || 0) * editingDrink.markupFactor)}</span>
-              </div>
-            </div>
+            ))}
+          </div>
 
-            <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
-              <Button variant="ghost" onClick={() => setEditingDrink(null)}>{getTranslation('cancel', language)}</Button>
-              <Button 
-                onClick={() => saveDrink.mutate({ id: editingDrink.id, data: editingDrink }, { onSuccess: () => setEditingDrink(null) })}
-                disabled={saveDrink.isPending}
-                className="px-8"
-              >
-                {getTranslation('save', language)}
-              </Button>
-            </div>
+          <Button
+            variant="outline"
+            className="w-full border-dashed border-white/20 hover:bg-white/5 h-12"
+            onClick={addRecipeItem}
+          >
+            <Plus size={16} className="mr-2" />{" "}
+            {getTranslation("add_ingredient", language)}
+          </Button>
+        </div>
+
+        <div className="bg-primary/5 rounded-2xl p-4 mb-8 border border-primary/10">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">
+              {getTranslation("estimated_cost_label", language)}
+            </span>
+            <span className="font-bold text-primary">
+              {formatMoney(editing.costPerDrink || 0)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-sm mt-1">
+            <span className="text-muted-foreground">
+              {getTranslation("markup_label", language).replace(
+                "{factor}",
+                editing.markupFactor,
+              )}
+            </span>
+            <span className="font-bold">
+              {formatMoney((editing.costPerDrink || 0) * editing.markupFactor)}
+            </span>
           </div>
         </div>
-      )}
+
+        <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
+          <Button variant="ghost" onClick={onClose}>
+            {getTranslation("cancel", language)}
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving} className="px-8">
+            {getTranslation("save", language)}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

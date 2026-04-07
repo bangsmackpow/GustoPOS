@@ -1,6 +1,9 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { initializeDatabase } from "@workspace/db";
+import { initSentry } from "./lib/sentry";
+
+initSentry();
 
 const rawPort = process.env["PORT"];
 
@@ -20,7 +23,7 @@ async function startServer() {
   try {
     // Ensure database is ready before accepting requests
     await initializeDatabase();
-    
+
     app.listen(port, (err) => {
       if (err) {
         logger.error({ err }, "Error listening on port");

@@ -9,33 +9,76 @@ services:
     env_file:
       - stack.env
     volumes:
-      - ${GUSTO_DATA_PATH:-./data}:/app/data
+      - ./data:/app/data
     ports:
       - "3000:3000"
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    # Temporarily disabled read_only to debug connection issues
-    read_only: false
+    read_only: true
     tmpfs:
       - /tmp
       - /run
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/api/healthz",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
 
   frontend:
     image: ghcr.io/bangsmackpow/gusto-pos-frontend:latest
     container_name: gustopos-frontend
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "8080:80"
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    # Temporarily disabled read_only to debug connection issues
-    read_only: false
+    read_only: true
     tmpfs:
       - /tmp
       - /run
       - /var/cache/nginx
       - /var/log/nginx
       - /var/lib/nginx
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:80/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M

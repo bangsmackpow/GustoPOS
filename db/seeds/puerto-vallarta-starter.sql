@@ -1,66 +1,66 @@
 -- ==========================================
--- 1. PUERTO VALLARTA INGREDIENTS (Spirits, Beers, Mixers)
+-- 1. PUERTO VALLARTA INVENTORY ITEMS (Spirits, Beers, Mixers)
 -- ==========================================
-INSERT INTO ingredients (id, name, name_es, category, unit, unit_size, cost_per_unit, current_stock, minimum_stock)
+INSERT INTO inventory_items (id, name, name_es, type, base_unit, base_unit_amount, serving_size, current_stock, order_cost, low_stock_threshold)
 VALUES 
   -- Tequilas
-  ('teq-casamigos-blanco', 'Casamigos Blanco', 'Tequila Casamigos Blanco', 'spirits', 'ml', 750, 950.00, 1500, 750),
-  ('teq-don-julio-70', 'Don Julio 70', 'Tequila Don Julio 70', 'spirits', 'ml', 700, 1250.00, 1400, 700),
-  ('teq-herradura-repo', 'Herradura Reposado', 'Tequila Herradura Reposado', 'spirits', 'ml', 700, 850.00, 1400, 700),
-  ('teq-1800-anejo', '1800 Añejo', 'Tequila 1800 Añejo', 'spirits', 'ml', 750, 900.00, 750, 375),
-  ('teq-espolon-blanco', 'Espolòn Blanco', 'Tequila Espolòn Blanco', 'spirits', 'ml', 750, 550.00, 2250, 750),
-  ('teq-centenario-repo', 'Gran Centenario Reposado', 'Tequila Centenario Reposado', 'spirits', 'ml', 700, 600.00, 1400, 700),
-  ('teq-dj-1942', 'Don Julio 1942', 'Tequila Don Julio 1942', 'spirits', 'ml', 750, 3800.00, 750, 375),
+  ('teq-casamigos-blanco', 'Casamigos Blanco', 'Tequila Casamigos Blanco', 'spirit', 'ml', 750, 44.36, 1500, 950.00, 750),
+  ('teq-don-julio-70', 'Don Julio 70', 'Tequila Don Julio 70', 'spirit', 'ml', 700, 44.36, 1400, 1250.00, 700),
+  ('teq-herradura-repo', 'Herradura Reposado', 'Tequila Herradura Reposado', 'spirit', 'ml', 700, 44.36, 1400, 850.00, 700),
+  ('teq-1800-anejo', '1800 Añejo', 'Tequila 1800 Añejo', 'spirit', 'ml', 750, 44.36, 750, 900.00, 375),
+  ('teq-espolon-blanco', 'Espolòn Blanco', 'Tequila Espolòn Blanco', 'spirit', 'ml', 750, 44.36, 2250, 550.00, 750),
+  ('teq-centenario-repo', 'Gran Centenario Reposado', 'Tequila Centenario Reposado', 'spirit', 'ml', 700, 44.36, 1400, 600.00, 700),
+  ('teq-dj-1942', 'Don Julio 1942', 'Tequila Don Julio 1942', 'spirit', 'ml', 750, 44.36, 750, 3800.00, 375),
   
   -- Mezcal & Raicilla (Local Specialties)
-  ('mez-400-conejos', '400 Conejos Mezcal', 'Mezcal 400 Conejos', 'spirits', 'ml', 750, 650.00, 1500, 750),
-  ('mez-montelobos', 'Montelobos Espadín', 'Mezcal Montelobos', 'spirits', 'ml', 750, 850.00, 750, 375),
-  ('rai-divisadero', 'Raicilla Hacienda El Divisadero', 'Raicilla El Divisadero', 'spirits', 'ml', 750, 800.00, 750, 375),
-  ('rai-venenosa-sierra', 'La Venenosa Raicilla (Sierra)', 'Raicilla La Venenosa Sierra', 'spirits', 'ml', 750, 1100.00, 750, 375),
+  ('mez-400-conejos', '400 Conejos Mezcal', 'Mezcal 400 Conejos', 'spirit', 'ml', 750, 44.36, 1500, 650.00, 750),
+  ('mez-montelobos', 'Montelobos Espadín', 'Mezcal Montelobos', 'spirit', 'ml', 750, 44.36, 750, 850.00, 375),
+  ('rai-divisadero', 'Raicilla Hacienda El Divisadero', 'Raicilla El Divisadero', 'spirit', 'ml', 750, 44.36, 750, 800.00, 375),
+  ('rai-venenosa-sierra', 'La Venenosa Raicilla (Sierra)', 'Raicilla La Venenosa Sierra', 'spirit', 'ml', 750, 44.36, 750, 1100.00, 375),
   
   -- Other Spirits
-  ('vod-smirnoff', 'Smirnoff Vodka', 'Vodka Smirnoff', 'spirits', 'ml', 750, 300.00, 2250, 750),
-  ('vod-grey-goose', 'Grey Goose Vodka', 'Vodka Grey Goose', 'spirits', 'ml', 750, 950.00, 750, 375),
-  ('gin-tanqueray', 'Tanqueray Gin', 'Ginebra Tanqueray', 'spirits', 'ml', 750, 550.00, 1500, 750),
-  ('rum-bacardi-blanco', 'Bacardi White Rum', 'Ron Bacardi Blanco', 'spirits', 'ml', 750, 280.00, 2250, 750),
-  ('rum-captain-morgan', 'Captain Morgan Spiced', 'Ron Captain Morgan', 'spirits', 'ml', 750, 320.00, 1500, 750),
-  ('whi-jack-daniels', 'Jack Daniels', 'Whiskey Jack Daniels', 'spirits', 'ml', 700, 650.00, 1400, 700),
-  ('whi-jameson', 'Jameson Irish Whiskey', 'Whiskey Jameson', 'spirits', 'ml', 750, 700.00, 750, 375),
+  ('vod-smirnoff', 'Smirnoff Vodka', 'Vodka Smirnoff', 'spirit', 'ml', 750, 44.36, 2250, 300.00, 750),
+  ('vod-grey-goose', 'Grey Goose Vodka', 'Vodka Grey Goose', 'spirit', 'ml', 750, 44.36, 750, 950.00, 375),
+  ('gin-tanqueray', 'Tanqueray Gin', 'Ginebra Tanqueray', 'spirit', 'ml', 750, 44.36, 1500, 550.00, 750),
+  ('rum-bacardi-blanco', 'Bacardi White Rum', 'Ron Bacardi Blanco', 'spirit', 'ml', 750, 44.36, 2250, 280.00, 750),
+  ('rum-captain-morgan', 'Captain Morgan Spiced', 'Ron Captain Morgan', 'spirit', 'ml', 750, 44.36, 1500, 320.00, 750),
+  ('whi-jack-daniels', 'Jack Daniels', 'Whiskey Jack Daniels', 'spirit', 'ml', 700, 44.36, 1400, 650.00, 700),
+  ('whi-jameson', 'Jameson Irish Whiskey', 'Whiskey Jameson', 'spirit', 'ml', 750, 44.36, 750, 700.00, 375),
   
   -- Liqueurs
-  ('liq-triple-sec', 'Triple Sec', 'Triple Sec', 'spirits', 'ml', 750, 250.00, 1500, 750),
-  ('liq-kahlua', 'Kahlua Coffee Liqueur', 'Licor de Café Kahlúa', 'spirits', 'ml', 750, 350.00, 750, 375),
-  ('liq-damiana', 'Damiana Liqueur', 'Licor de Damiana', 'spirits', 'ml', 750, 450.00, 750, 375),
-  ('liq-ancho-reyes', 'Ancho Reyes Chile Liqueur', 'Licor de Chile Ancho Reyes', 'spirits', 'ml', 750, 650.00, 750, 375),
-  ('liq-controy', 'Controy Orange Liqueur', 'Licor de Naranja Controy', 'spirits', 'ml', 1000, 400.00, 1000, 500),
+  ('liq-triple-sec', 'Triple Sec', 'Triple Sec', 'spirit', 'ml', 750, 44.36, 1500, 250.00, 750),
+  ('liq-kahlua', 'Kahlua Coffee Liqueur', 'Licor de Café Kahlúa', 'spirit', 'ml', 750, 44.36, 750, 350.00, 375),
+  ('liq-damiana', 'Damiana Liqueur', 'Licor de Damiana', 'spirit', 'ml', 750, 44.36, 750, 450.00, 375),
+  ('liq-ancho-reyes', 'Ancho Reyes Chile Liqueur', 'Licor de Chile Ancho Reyes', 'spirit', 'ml', 750, 44.36, 750, 650.00, 375),
+  ('liq-controy', 'Controy Orange Liqueur', 'Licor de Naranja Controy', 'spirit', 'ml', 1000, 44.36, 1000, 400.00, 500),
 
   -- Beers
-  ('beer-pacifico', 'Pacifico Clara', 'Cerveza Pacífico Clara', 'beer', 'unit', 1, 22.00, 48, 24),
-  ('beer-corona', 'Corona Extra', 'Cerveza Corona Extra', 'beer', 'unit', 1, 20.00, 48, 24),
-  ('beer-modelo-esp', 'Modelo Especial', 'Cerveza Modelo Especial', 'beer', 'unit', 1, 24.00, 48, 24),
-  ('beer-modelo-negra', 'Negra Modelo', 'Cerveza Negra Modelo', 'beer', 'unit', 1, 26.00, 24, 12),
-  ('beer-victoria', 'Victoria', 'Cerveza Victoria', 'beer', 'unit', 1, 20.00, 48, 24),
+  ('beer-pacifico', 'Pacifico Clara', 'Cerveza Pacífico Clara', 'beer', 'unit', 1, 1, 48, 22.00, 24),
+  ('beer-corona', 'Corona Extra', 'Cerveza Corona Extra', 'beer', 'unit', 1, 1, 48, 20.00, 24),
+  ('beer-modelo-esp', 'Modelo Especial', 'Cerveza Modelo Especial', 'beer', 'unit', 1, 1, 48, 24.00, 24),
+  ('beer-modelo-negra', 'Negra Modelo', 'Cerveza Negra Modelo', 'beer', 'unit', 1, 1, 24, 26.00, 12),
+  ('beer-victoria', 'Victoria', 'Cerveza Victoria', 'beer', 'unit', 1, 1, 48, 20.00, 24),
   
   -- Mixers & Non-Alcoholic
-  ('mix-squirt', 'Squirt Grapefruit Soda', 'Refresco Squirt', 'mixer', 'ml', 2000, 28.00, 10000, 4000),
-  ('mix-coke', 'Coca-Cola', 'Coca-Cola', 'mixer', 'ml', 2000, 32.00, 10000, 4000),
-  ('mix-sprite', 'Sprite', 'Sprite', 'mixer', 'ml', 2000, 30.00, 6000, 2000),
-  ('mix-orange-juice', 'Orange Juice', 'Jugo de Naranja', 'mixer', 'ml', 1000, 25.00, 5000, 2000),
-  ('mix-lime-juice', 'Fresh Lime Juice', 'Jugo de Limón Fresco', 'mixer', 'ml', 1000, 40.00, 5000, 2000),
-  ('mix-agave-syrup', 'Agave Syrup', 'Jarabe de Agave', 'mixer', 'ml', 750, 120.00, 1500, 750),
-  ('mix-clamato', 'Clamato', 'Clamato', 'mixer', 'ml', 946, 45.00, 3784, 1892),
-  ('mix-ginger-beer', 'Ginger Beer', 'Cerveza de Jengibre', 'mixer', 'ml', 355, 35.00, 4260, 2130),
-  ('mix-tonic', 'Tonic Water', 'Agua Quina', 'mixer', 'ml', 355, 18.00, 4260, 2130),
-  ('mix-pineapple-juice', 'Pineapple Juice', 'Jugo de Piña', 'mixer', 'ml', 1000, 30.00, 3000, 1000),
-  ('mix-jamaica', 'Hibiscus Water', 'Agua de Jamaica', 'mixer', 'ml', 1000, 20.00, 5000, 2000),
-  ('mix-tamarindo', 'Tamarind Pulp', 'Pulpa de Tamarindo', 'mixer', 'ml', 1000, 45.00, 2000, 500),
-  ('mix-grenadine', 'Grenadine', 'Granadina', 'mixer', 'ml', 750, 80.00, 750, 250),
-  ('mix-maggi', 'Maggi Seasoning', 'Jugo Maggi', 'mixer', 'ml', 100, 45.00, 200, 100),
-  ('mix-valentina', 'Valentina Hot Sauce', 'Salsa Valentina', 'mixer', 'ml', 370, 25.00, 740, 370)
+  ('mix-squirt', 'Squirt Grapefruit Soda', 'Refresco Squirt', 'mixer', 'ml', 2000, 200, 10000, 28.00, 4000),
+  ('mix-coke', 'Coca-Cola', 'Coca-Cola', 'mixer', 'ml', 2000, 200, 10000, 32.00, 4000),
+  ('mix-sprite', 'Sprite', 'Sprite', 'mixer', 'ml', 2000, 200, 6000, 30.00, 2000),
+  ('mix-orange-juice', 'Orange Juice', 'Jugo de Naranja', 'mixer', 'ml', 1000, 100, 5000, 25.00, 2000),
+  ('mix-lime-juice', 'Fresh Lime Juice', 'Jugo de Limón Fresco', 'mixer', 'ml', 1000, 100, 5000, 40.00, 2000),
+  ('mix-agave-syrup', 'Agave Syrup', 'Jarabe de Agave', 'mixer', 'ml', 750, 30, 1500, 120.00, 750),
+  ('mix-clamato', 'Clamato', 'Clamato', 'mixer', 'ml', 946, 100, 3784, 45.00, 1892),
+  ('mix-ginger-beer', 'Ginger Beer', 'Cerveza de Jengibre', 'mixer', 'ml', 355, 150, 4260, 35.00, 2130),
+  ('mix-tonic', 'Tonic Water', 'Agua Quina', 'mixer', 'ml', 355, 200, 4260, 18.00, 2130),
+  ('mix-pineapple-juice', 'Pineapple Juice', 'Jugo de Piña', 'mixer', 'ml', 1000, 100, 3000, 30.00, 1000),
+  ('mix-jamaica', 'Hibiscus Water', 'Agua de Jamaica', 'mixer', 'ml', 1000, 200, 5000, 20.00, 2000),
+  ('mix-tamarindo', 'Tamarind Pulp', 'Pulpa de Tamarindo', 'mixer', 'ml', 1000, 30, 2000, 45.00, 500),
+  ('mix-grenadine', 'Grenadine', 'Granadina', 'mixer', 'ml', 750, 30, 750, 80.00, 250),
+  ('mix-maggi', 'Maggi Seasoning', 'Jugo Maggi', 'mixer', 'ml', 100, 10, 200, 45.00, 100),
+  ('mix-valentina', 'Valentina Hot Sauce', 'Salsa Valentina', 'mixer', 'ml', 370, 10, 740, 25.00, 370)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   name_es = EXCLUDED.name_es,
-  cost_per_unit = EXCLUDED.cost_per_unit;
+  order_cost = EXCLUDED.order_cost;
 
 -- ==========================================
 -- 2. DRINK MENU (50 Items)
@@ -140,7 +140,7 @@ ON CONFLICT (id) DO UPDATE SET
 -- ==========================================
 -- 3. RECIPES (Sample Logic)
 -- ==========================================
-INSERT INTO recipe_ingredients (drink_id, ingredient_id, amount_in_ml)
+INSERT INTO recipe_ingredients (drink_id, ingredient_id, amount_in_base_unit)
 VALUES
   -- Classic Margarita
   ('drk-marg-classic', 'teq-herradura-repo', 60),

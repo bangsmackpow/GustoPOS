@@ -1,317 +1,1305 @@
-import React, { useState } from 'react';
-import { useGetIngredients } from '@workspace/api-client-react';
-import { useSaveIngredientMutation } from '@/hooks/use-pos-mutations';
-import { usePosStore } from '@/store';
-import { formatMoney, getTranslation } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit2, X, AlertTriangle, Database, Upload, Check, FileSpreadsheet } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
-import Papa from 'papaparse';
+import React, { useState } from "react";
+import { useSearchParams } from "wouter";
+import { useGetInventoryItems } from "@/hooks/use-inventory";
+import { useSaveIngredientMutation } from "@/hooks/use-pos-mutations";
+import { useGetCurrentAuthUser } from "@workspace/api-client-react";
+import { usePosStore } from "@/store";
+import { formatMoney, getTranslation } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Plus,
+  Edit2,
+  X,
+  AlertTriangle,
+  Database,
+  Upload,
+  Check,
+  Trash2,
+  Search,
+  Menu,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+
+const SUBTYPES: Record<
+  string,
+  { value: string; label: string; labelEs: string }[]
+> = {
+  spirit: [
+    { value: "tequila", label: "Tequila", labelEs: "Tequila" },
+    { value: "mezcal", label: "Mezcal", labelEs: "Mezcal" },
+    { value: "whiskey", label: "Whiskey", labelEs: "Whiskey" },
+    { value: "gin", label: "Gin", labelEs: "Ginebra" },
+    { value: "rum", label: "Rum/Ron", labelEs: "Ron" },
+    { value: "vino", label: "Vino", labelEs: "Vino" },
+    { value: "vodka", label: "Vodka", labelEs: "Vodka" },
+    { value: "misc", label: "Misc", labelEs: "Misc" },
+  ],
+  beer: [
+    { value: "national", label: "National", labelEs: "Nacional" },
+    { value: "import", label: "Import", labelEs: "Importada" },
+    { value: "zero", label: "Zero Beer", labelEs: "Cero" },
+    { value: "cuagamos", label: "Cuagamos", labelEs: "Caguamas" },
+    { value: "seltzer", label: "Seltzer", labelEs: "Seltzer" },
+    { value: "cider", label: "Cider", labelEs: "Sidra" },
+  ],
+  mixer: [
+    { value: "bulk", label: "Bulk", labelEs: "A Granel" },
+    { value: "prepackaged", label: "Prepackaged", labelEs: "Preenvasado" },
+  ],
+  ingredient: [
+    { value: "liquid", label: "Liquid", labelEs: "Líquido" },
+    { value: "weighted", label: "Weighted", labelEs: "Pesado" },
+  ],
+  merch: [],
+  misc: [],
+};
+
+const TYPE_LABELS: Record<string, { en: string; es: string }> = {
+  spirit: { en: "Spirits", es: "Licores" },
+  beer: { en: "Beer", es: "Cerveza" },
+  mixer: { en: "Mixers", es: "Mezcladores" },
+  ingredient: { en: "Ingredients", es: "Ingredientes" },
+  merch: { en: "Merch", es: "Mercancía" },
+  misc: { en: "Misc", es: "Misceláneos" },
+};
 
 export default function Inventory() {
   const { language } = usePosStore();
-  const { data: ingredients } = useGetIngredients();
+  const { data: items } = useGetInventoryItems();
+  const { data: auth } = useGetCurrentAuthUser();
+  const isAdmin = (auth as any)?.role === "admin";
   const saveIngredient = useSaveIngredientMutation();
   const { toast } = useToast();
   const qc = useQueryClient();
-  
+  const [searchParams, setSearchParams] = useSearchParams();
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [isSeeding, setIsSeeding] = useState(false);
-  const [showImport, setShowImport] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [partialBottleWeight, setPartialBottleWeight] = useState<number | "">(
+    "",
+  );
+  const [_showWeightModal, _setShowWeightModal] = useState<any>(null);
+  const [_weightInput, _setWeightInput] = useState("");
+  const [showDeleteModal, setShowDeleteModal] = useState<any>(null);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
 
-  const handleSeedStarter = async () => {
-    if (!confirm("This will add 50+ Puerto Vallarta drinks and ingredients. Continue?")) return;
-    
-    setIsSeeding(true);
-    try {
-      const res = await fetch('/api/seed-starter', { method: 'POST' });
-      const data = await res.json();
-      if (data.ok) {
-        toast({ title: "Success", description: "Starter data seeded" });
-        qc.invalidateQueries();
+  const [search, setSearch] = useState("");
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [editingCell, setEditingCell] = useState<{
+    id: string;
+    field: string;
+  } | null>(null);
+
+  const activeType = searchParams.get("type") || "all";
+
+  const setActiveType = (type: string) => {
+    setSearchParams((prev) => {
+      if (type === "all") {
+        prev.delete("type");
+        prev.delete("subtype");
       } else {
-        toast({ variant: "destructive", title: "Error", description: data.error });
+        prev.set("type", type);
       }
-    } catch {
-      toast({ variant: "destructive", title: "Connection Error" });
-    } finally {
-      setIsSeeding(false);
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (results: Papa.ParseResult<any>) => {
-        const rows = results.data.map((row: any) => ({
-          name: row.Name || row.name || row.Producto,
-          category: row.Category || row.category || row.Categoría || 'spirits',
-          unit: row.Unit || row.unit || row.Unidad || 'ml',
-          unitSize: parseFloat(row.Size || row.size || row.Tamaño) || 750,
-          costPerUnit: parseFloat(String(row.Cost || row.cost || row.Costo).replace(/[^0-9.]/g, '')) || 0,
-          currentStock: parseFloat(row.Stock || row.stock || row.Inventario) || 0,
-          minimumStock: parseFloat(row.Min || row.min || row.Mínimo) || 0,
-        }));
-        setImportPreview(rows);
-        toast({ title: "File Parsed", description: `Found ${rows.length} items` });
-      },
-      error: () => {
-        toast({ variant: "destructive", title: "Error", description: "Could not parse CSV file" });
-      }
+      return prev;
     });
   };
 
-  const parseMarkdownTable = () => {
-    const lines = importText.trim().split('\n');
-    if (lines.length < 3) return;
-
-    const dataLines = lines.filter(line => line.includes('|') && !line.includes('---'));
-    if (dataLines.length < 2) return;
-
-    const headers = dataLines[0].split('|').map(h => h.trim().toLowerCase()).filter(h => h);
-    const rows = dataLines.slice(1).map(line => {
-      const cleanValues = line.trim().startsWith('|') ? line.trim().split('|').slice(1, -1).map(v => v.trim()) : line.trim().split('|').map(v => v.trim());
-      
-      const item: any = {};
-      headers.forEach((header, idx) => {
-        const val = cleanValues[idx];
-        if (header.includes('name')) item.name = val;
-        if (header.includes('category')) item.category = val;
-        if (header.includes('unit') && !header.includes('size')) item.unit = val;
-        if (header.includes('size')) item.unitSize = parseFloat(val) || 0;
-        if (header.includes('cost')) item.costPerUnit = parseFloat(val.replace(/[^0-9.]/g, '')) || 0;
-        if (header.includes('stock')) item.currentStock = parseFloat(val) || 0;
-        if (header.includes('min')) item.minimumStock = parseFloat(val) || 0;
-      });
-      return item;
-    });
-
-    setImportPreview(rows);
+  const getTypeCount = (type: string | null) => {
+    if (!type) return 0;
+    if (type === "all") return items?.length || 0;
+    return items?.filter((i: any) => i.type === type).length || 0;
   };
 
-  const handleBulkImport = async () => {
-    setIsSeeding(true);
+  const getItemCount = () => items?.length || 0;
+  const getLowStockCount = () =>
+    items?.filter((i: any) => i.currentStock <= (i.lowStockThreshold || 1))
+      .length || 0;
+
+  const filteredItems =
+    items?.filter((item: any) => {
+      const matchesType = activeType === "all" || item.type === activeType;
+      const matchesSubtype =
+        !searchParams.get("subtype") ||
+        item.subtype === searchParams.get("subtype");
+      const matchesSearch =
+        !search ||
+        (item.name && item.name.toLowerCase().includes(search.toLowerCase())) ||
+        (item.nameEs &&
+          item.nameEs.toLowerCase().includes(search.toLowerCase()));
+      return matchesType && matchesSubtype && matchesSearch;
+    }) || [];
+
+  const handleCellSave = async (id: string, field: string, value: any) => {
+    const item = items?.find((i: any) => i.id === id);
+    if (!item) return;
+
+    qc.setQueryData(["inventory-items"], (old: any) => {
+      if (!old) return old;
+      return old.map((i: any) => (i.id === id ? { ...i, [field]: value } : i));
+    });
+
     try {
-      const res = await fetch('/api/admin/bulk-ingredients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredients: importPreview })
+      const res = await fetch(`/api/inventory/items/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
       });
-      const data = await res.json();
-      if (data.success) {
-        toast({ title: "Import Successful", description: `Added ${importPreview.length} items` });
-        setShowImport(false);
-        setImportText('');
-        setImportPreview([]);
-        qc.invalidateQueries();
-      }
-    } catch {
-      toast({ variant: "destructive", title: "Import Failed" });
-    } finally {
-      setIsSeeding(false);
+      if (!res.ok) throw new Error("Failed to update");
+    } catch (e: any) {
+      qc.setQueryData(["inventory-items"], (old: any) => {
+        if (!old) return old;
+        return old.map((i: any) =>
+          i.id === id ? { ...i, [field]: item[field] } : i,
+        );
+      });
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: e.message,
+      });
     }
+    setEditingCell(null);
+  };
+
+  const handleMenuToggle = (item: any) => {
+    const newVal = !item.isOnMenu;
+    qc.setQueryData(["inventory-items"], (old: any) => {
+      if (!old) return old;
+      return old.map((i: any) =>
+        i.id === item.id ? { ...i, isOnMenu: newVal } : i,
+      );
+    });
+    fetch(`/api/inventory/items/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isOnMenu: newVal }),
+    }).catch(() => {
+      qc.setQueryData(["inventory-items"], (old: any) => {
+        if (!old) return old;
+        return old.map((i: any) =>
+          i.id === item.id ? { ...i, isOnMenu: !newVal } : i,
+        );
+      });
+    });
+  };
+
+  const handleDeleteItem = async () => {
+    if (!showDeleteModal) return;
+    try {
+      const res = await fetch(`/api/inventory/items/${showDeleteModal.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      qc.invalidateQueries({ queryKey: ["/api/inventory/items"] });
+      setShowDeleteModal(null);
+      setDeletePassword("");
+      toast({
+        title: getTranslation("success", language),
+        description: "Item deleted",
+      });
+    } catch (e: any) {
+      setDeleteError(e.message);
+    }
+  };
+
+  const getSubtypeLabel = (type: string, subtype: string | null) => {
+    if (!subtype) return "";
+    const subtypes = SUBTYPES[type] || [];
+    const s = subtypes.find((st) => st.value === subtype);
+    if (!s) return subtype;
+    return language === "es" ? s.labelEs : s.label;
+  };
+
+  const typeLabel = (type: string) => {
+    const t = TYPE_LABELS[type];
+    if (!t) return type;
+    return language === "es" ? t.es : t.en;
   };
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-        <div>
-          <h1 className="text-4xl font-display">{getTranslation('inventory', language)}</h1>
-          <p className="text-muted-foreground mt-1">Manage stock and ingredient costs</p>
+    <div className="flex h-full">
+      {/* Mobile Menu Toggle */}
+      <button
+        className="md:hidden fixed top-4 left-4 z-50 p-2 bg-secondary rounded-lg"
+        onClick={() => setShowMobileMenu(!showMobileMenu)}
+      >
+        <Menu size={24} />
+      </button>
+
+      {/* Sidebar */}
+      <div
+        className={`fixed md:static inset-y-0 left-0 z-40 w-[280px] bg-secondary/50 border-r border-white/10 flex flex-col transition-transform duration-300 ${showMobileMenu ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
+      >
+        <div className="p-6 border-b border-white/10">
+          <h1 className="text-2xl font-display">
+            {getTranslation("inventory", language)}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {getTranslation("items_count", language).replace(
+              "{count}",
+              String(getItemCount()),
+            )}{" "}
+            •{" "}
+            {getTranslation("low_stock_count", language).replace(
+              "{count}",
+              String(getLowStockCount()),
+            )}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" onClick={() => setShowImport(true)}>
-            <Upload className="mr-2" size={18} /> Bulk Import
-          </Button>
-          <Button variant="outline" onClick={handleSeedStarter} disabled={isSeeding}>
-            <Database className="mr-2" size={18} /> {isSeeding ? 'Seeding...' : 'Seed Starter Data'}
-          </Button>
-          <Button onClick={() => setEditingItem({ name: '', category: 'spirits', unit: 'ml', unitSize: 750, costPerUnit: 0, currentStock: 0, minimumStock: 0 })}>
-            <Plus className="mr-2" size={18} /> Add Item
-          </Button>
+
+        {/* Search */}
+        <div className="p-4 border-b border-white/10">
+          <div className="relative">
+            <Search
+              size={16}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              type="text"
+              placeholder={getTranslation("search_inventory", language)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-secondary border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-foreground placeholder:text-muted-foreground"
+            />
+          </div>
+        </div>
+
+        {/* Type Filters */}
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+            {getTranslation("types_label", language)}
+          </div>
+          <div className="space-y-1">
+            <button
+              onClick={() => {
+                setActiveType("all");
+                setShowMobileMenu(false);
+              }}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${activeType === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"}`}
+            >
+              <span>{getTranslation("all_items", language)}</span>
+              <span className="text-xs opacity-60">{getItemCount()}</span>
+            </button>
+            {(
+              [
+                "spirit",
+                "beer",
+                "mixer",
+                "ingredient",
+                "merch",
+                "misc",
+              ] as const
+            ).map((type) => (
+              <button
+                key={type}
+                onClick={() => {
+                  setActiveType(type);
+                  setShowMobileMenu(false);
+                }}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${activeType === type ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"}`}
+              >
+                <span>{typeLabel(type)}</span>
+                <span className="text-xs opacity-60">{getTypeCount(type)}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Subtype Filters */}
+          {activeType !== "all" &&
+            activeType !== "merch" &&
+            activeType !== "misc" &&
+            SUBTYPES[activeType] &&
+            SUBTYPES[activeType].length > 0 && (
+              <div className="mt-8">
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                  Subtypes
+                </div>
+                <div className="space-y-1">
+                  {SUBTYPES[activeType].map((subtype) => (
+                    <button
+                      key={subtype.value}
+                      onClick={() => {
+                        setSearchParams((prev: any) => {
+                          const newParams = new URLSearchParams(prev);
+                          newParams.set("subtype", subtype.value);
+                          return newParams;
+                        });
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${searchParams.get("subtype") === subtype.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"}`}
+                    >
+                      <span>
+                        {language === "es" ? subtype.labelEs : subtype.label}
+                      </span>
+                      <span className="text-xs opacity-60">
+                        {items?.filter(
+                          (i: any) =>
+                            i.type === activeType &&
+                            i.subtype === subtype.value,
+                        ).length || 0}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                {searchParams.get("subtype") && (
+                  <button
+                    onClick={() => {
+                      setSearchParams((prev: any) => {
+                        const newParams = new URLSearchParams(prev);
+                        newParams.delete("subtype");
+                        return newParams;
+                      });
+                    }}
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  >
+                    <span>Clear Subtype Filter</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+          {/* Quick Filters */}
+          <div className="mt-8">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+              Quick Filters
+            </div>
+            <label className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-white/5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="w-4 h-4 rounded border-white/30"
+              />
+              <AlertTriangle size={14} className="text-primary" />
+              Low Stock ({getLowStockCount()})
+            </label>
+          </div>
         </div>
       </div>
 
-      <div className="glass rounded-3xl overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-white/5 text-muted-foreground text-sm">
-              <th className="p-4 font-medium">{getTranslation('name', language)}</th>
-              <th className="p-4 font-medium">{getTranslation('category', language)}</th>
-              <th className="p-4 font-medium">Cost / Unit</th>
-              <th className="p-4 font-medium">Stock</th>
-              <th className="p-4 font-medium text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {ingredients?.map(item => {
-              const isLow = item.currentStock <= item.minimumStock;
-              return (
-                <tr key={item.id} className="hover:bg-white/5 transition-colors">
-                  <td className="p-4 font-medium">
-                    <div className="flex items-center gap-2">
-                      {isLow && <AlertTriangle size={14} className="text-primary" />}
-                      {language === 'es' && item.nameEs ? item.nameEs : item.name}
-                    </div>
-                  </td>
-                  <td className="p-4 text-muted-foreground capitalize">{item.category}</td>
-                  <td className="p-4">{formatMoney(item.costPerUnit)} / {item.unitSize}{item.unit}</td>
-                  <td className={`p-4 font-bold ${isLow ? 'text-primary' : 'text-emerald-400'}`}>
-                    {item.currentStock} {item.unit}
-                  </td>
-                  <td className="p-4 text-right">
-                    <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}>
-                      <Edit2 size={16} />
-                    </Button>
-                  </td>
+      {/* Mobile Overlay */}
+      {showMobileMenu && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={() => setShowMobileMenu(false)}
+        />
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <div className="p-4 md:p-6 flex justify-between items-center gap-4">
+          <div className="hidden md:block">
+            <h2 className="text-xl font-display">
+              {activeType === "all"
+                ? getTranslation("all_items_header", language)
+                : typeLabel(activeType)}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              {getTranslation("items_count_header", language).replace(
+                "{count}",
+                String(filteredItems.length),
+              )}
+            </p>
+          </div>
+          <Button
+            onClick={() =>
+              setEditingItem({
+                name: "",
+                nameEs: "",
+                type: "spirit",
+                subtype: "",
+                baseUnit: "ml",
+                baseUnitAmount: 750,
+                bottleSizeMl: 750,
+                servingSize: 44.36,
+                pourSize: 1.5,
+                currentStock: 0,
+                orderCost: 0,
+                lowStockThreshold: 1,
+                unitsPerCase: 24,
+                tareWeightG: null,
+                fullBottleWeightG: null,
+                glassWeightG: null,
+                density: 0.94,
+                isOnMenu: false,
+              })
+            }
+          >
+            <Plus size={18} className="mr-2" />
+            {getTranslation("add_item", language)}
+          </Button>
+        </div>
+
+        {/* Table */}
+        <div className="flex-1 overflow-auto px-4 md:px-6 pb-6">
+          <div className="glass rounded-2xl overflow-hidden min-w-[800px]">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-white/5 text-muted-foreground text-sm">
+                  <th className="p-3 font-medium w-10">Menu</th>
+                  <th className="p-3 font-medium w-32 min-w-[128px]">Name</th>
+                  <th className="p-3 font-medium w-24">Type</th>
+                  <th className="p-3 font-medium w-24">Stock</th>
+                  <th className="p-3 font-medium w-20">Servings</th>
+                  <th className="p-3 font-medium w-20">Cost/Srv</th>
+                  <th className="p-3 font-medium w-16 text-right">Actions</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {filteredItems.map((item: any) => {
+                  const isLayoutA =
+                    item.type === "spirit" ||
+                    (item.type === "mixer" && item.subtype === "bulk");
+                  const isLayoutB =
+                    item.type === "beer" ||
+                    (item.type === "mixer" && item.subtype === "prepackaged");
+
+                  let isLow = false;
+                  if (isLayoutA) {
+                    isLow =
+                      (item.currentStock || 0) <=
+                      (item.lowStockThreshold || 1) *
+                        (item.baseUnitAmount || 750);
+                  } else if (isLayoutB) {
+                    isLow =
+                      (item.currentStock || 0) <=
+                      (item.lowStockThreshold || 1) * (item.unitsPerCase || 24);
+                  } else {
+                    isLow =
+                      (item.currentStock || 0) <= (item.lowStockThreshold || 1);
+                  }
+
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-white/5 transition-colors"
+                    >
+                      <td className="p-3 text-center">
+                        <button
+                          onClick={() => handleMenuToggle(item)}
+                          className={`w-6 h-6 rounded-md flex items-center justify-center transition-all border-2 ${item.isOnMenu ? "bg-primary border-primary text-primary-foreground" : "bg-transparent border-white/30 hover:border-primary/60"}`}
+                        >
+                          {item.isOnMenu && <Check size={14} strokeWidth={3} />}
+                        </button>
+                      </td>
+                      <td className="p-3 w-32 min-w-[128px]">
+                        {editingCell?.id === item.id &&
+                        editingCell?.field === "name" ? (
+                          <input
+                            autoFocus
+                            defaultValue={item.name}
+                            className="w-full bg-secondary border border-white/10 rounded-lg px-3 py-1.5 text-sm"
+                            onBlur={(e) =>
+                              handleCellSave(item.id, "name", e.target.value)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter")
+                                handleCellSave(
+                                  item.id,
+                                  "name",
+                                  (e.target as HTMLInputElement).value,
+                                );
+                              if (e.key === "Escape") setEditingCell(null);
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="cursor-pointer hover:text-primary truncate"
+                            onClick={() =>
+                              setEditingCell({ id: item.id, field: "name" })
+                            }
+                            title={
+                              language === "es" && item.nameEs
+                                ? item.nameEs
+                                : item.name
+                            }
+                          >
+                            <div className="truncate">
+                              {language === "es" && item.nameEs
+                                ? item.nameEs
+                                : item.name}
+                            </div>
+                            {item.nameEs && item.nameEs !== item.name && (
+                              <div className="text-xs text-muted-foreground truncate">
+                                {item.name}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <div className="text-sm text-muted-foreground capitalize">
+                          {typeLabel(item.type)}
+                          {item.subtype && (
+                            <span className="text-xs block text-muted-foreground/60">
+                              {getSubtypeLabel(item.type, item.subtype)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        <div
+                          className={`cursor-pointer hover:text-primary font-medium ${isLow ? "text-primary" : "text-foreground"}`}
+                          onClick={() => setEditingItem(item)}
+                        >
+                          {isLow && (
+                            <AlertTriangle size={12} className="inline mr-1" />
+                          )}
+                          {(() => {
+                            if (isLayoutA) {
+                              const bottleSize = item.baseUnitAmount || 750;
+                              const fullBottles = Math.floor(
+                                item.currentStock / bottleSize,
+                              );
+                              const partialMl = item.currentStock % bottleSize;
+                              return (
+                                <span className="text-sm">
+                                  {fullBottles}{" "}
+                                  {getTranslation("bottles", language)}
+                                  {partialMl > 0 && (
+                                    <span className="text-xs text-muted-foreground ml-1">
+                                      ({partialMl.toFixed(0)}ml)
+                                    </span>
+                                  )}
+                                </span>
+                              );
+                            }
+                            if (isLayoutB) {
+                              const caseSize = item.unitsPerCase || 24;
+                              const fullCases = (
+                                item.currentStock / caseSize
+                              ).toFixed(1);
+                              return (
+                                <span className="text-sm">
+                                  {fullCases}{" "}
+                                  {getTranslation("cases", language)}
+                                </span>
+                              );
+                            }
+                            return (
+                              <span className="text-sm">
+                                {item.currentStock?.toFixed(1)}{" "}
+                                <span className="text-xs text-muted-foreground">
+                                  {item.baseUnit}
+                                </span>
+                              </span>
+                            );
+                          })()}
+                        </div>
+                      </td>
+                      <td className="p-3">
+                        {(() => {
+                          const servings =
+                            (item.currentStock || 0) / (item.servingSize || 1);
+                          return (
+                            <div className="text-sm font-bold text-foreground">
+                              {servings.toFixed(1)}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="p-3">
+                        {(() => {
+                          let costPerSrv = 0;
+                          if (isLayoutB) {
+                            costPerSrv =
+                              (item.orderCost || 0) / (item.unitsPerCase || 24);
+                          } else {
+                            const servingsPerContainer =
+                              (item.baseUnitAmount || 1) /
+                              (item.servingSize || 1);
+                            costPerSrv =
+                              (item.orderCost || 0) /
+                              (servingsPerContainer || 1);
+                          }
+                          return (
+                            <div className="text-sm text-primary">
+                              {formatMoney(costPerSrv)}
+                            </div>
+                          );
+                        })()}
+                      </td>
+                      <td className="p-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingItem(item)}
+                        >
+                          <Edit2 size={16} />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
-      {/* Bulk Import Modal */}
-      {showImport && (
+      {/* Edit Modal */}
+      {editingItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="glass p-8 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col relative border border-white/10">
-            <button onClick={() => setShowImport(false)} className="absolute top-6 right-6 text-muted-foreground hover:text-foreground">
+          <div className="glass p-6 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative border border-white/10">
+            <button
+              onClick={() => setEditingItem(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
               <X size={24} />
             </button>
-            <h2 className="text-2xl font-display mb-2 flex items-center gap-2">
-              <FileSpreadsheet className="text-primary" /> Bulk Import (CSV or Markdown)
+            <h2 className="text-2xl font-display mb-6">
+              {editingItem.id
+                ? getTranslation("edit_item", language)
+                : getTranslation("new_item", language)}
             </h2>
-            <p className="text-muted-foreground mb-6 text-sm">Upload a CSV file or paste a Markdown table below. Headers: Name, Category, Unit, Size, Cost, Stock, Min</p>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 overflow-hidden">
-              <div className="flex flex-col gap-4">
-                <div className="p-6 border-2 border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center bg-white/5 hover:bg-white/10 transition-colors relative">
-                  <input 
-                    type="file" 
-                    accept=".csv" 
-                    onChange={handleFileUpload}
-                    className="absolute inset-0 opacity-0 cursor-pointer"
-                  />
-                  <Upload size={32} className="text-primary mb-2" />
-                  <p className="font-medium">Click to upload CSV</p>
-                  <p className="text-xs text-muted-foreground mt-1">Exported from Excel or Sheets</p>
-                </div>
+            {(() => {
+              const isLayoutA =
+                editingItem.type === "spirit" ||
+                (editingItem.type === "mixer" &&
+                  editingItem.subtype === "bulk");
+              const isLayoutB =
+                editingItem.type === "beer" ||
+                (editingItem.type === "mixer" &&
+                  editingItem.subtype === "prepackaged");
 
-                <div className="relative flex-1 flex flex-col">
-                  <div className="absolute top-3 right-3 text-[10px] uppercase font-bold text-muted-foreground">Or paste Markdown</div>
-                  <textarea 
-                    className="flex-1 bg-secondary/50 border border-white/10 rounded-2xl p-4 text-sm font-mono focus:ring-2 focus:ring-primary/50 outline-none resize-none pt-8"
-                    placeholder="| Name | Category | Unit | Size | Cost | Stock | Min |"
-                    value={importText}
-                    onChange={e => setImportText(e.target.value)}
-                  />
-                </div>
-                
-                <Button onClick={parseMarkdownTable} variant="secondary" className="w-full h-12">
-                  <Check className="mr-2" size={18} /> Parse Markdown
-                </Button>
-              </div>
+              return (
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Common Fields */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      {getTranslation("type", language)}
+                    </label>
+                    <select
+                      className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                      value={editingItem.type || "spirit"}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          type: e.target.value,
+                          subtype: "",
+                        })
+                      }
+                    >
+                      <option value="spirit">
+                        {getTranslation("spirit", language)}
+                      </option>
+                      <option value="beer">
+                        {getTranslation("beer", language)}
+                      </option>
+                      <option value="mixer">
+                        {getTranslation("mixer", language)}
+                      </option>
+                      <option value="ingredient">
+                        {getTranslation("ingredient", language)}
+                      </option>
+                      <option value="merch">
+                        {getTranslation("merch", language)}
+                      </option>
+                      <option value="misc">
+                        {getTranslation("misc", language)}
+                      </option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      {getTranslation("subtype", language)}
+                    </label>
+                    <select
+                      className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                      value={editingItem.subtype || ""}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          subtype: e.target.value,
+                        })
+                      }
+                    >
+                      <option value="">—</option>
+                      {(SUBTYPES[editingItem.type] || []).map((st) => (
+                        <option key={st.value} value={st.value}>
+                          {language === "es" ? st.labelEs : st.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      {getTranslation("item_name", language)}
+                    </label>
+                    <input
+                      className="max-w-md bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                      value={editingItem.name || ""}
+                      onChange={(e) =>
+                        setEditingItem({ ...editingItem, name: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="col-span-2 space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      {getTranslation("spanish_name", language)}
+                    </label>
+                    <input
+                      className="max-w-md bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                      value={editingItem.nameEs || ""}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          nameEs: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
 
-              <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden flex flex-col">
-                <div className="p-4 border-b border-white/5 font-bold text-sm bg-white/5 flex justify-between items-center">
-                  <span>Preview ({importPreview.length} items)</span>
-                  {importPreview.length > 0 && <span className="text-emerald-400 text-[10px] uppercase tracking-widest">Ready to save</span>}
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                  {importPreview.map((item, idx) => (
-                    <div key={idx} className="p-3 bg-white/5 rounded-xl border border-white/5 text-xs flex justify-between">
-                      <div>
-                        <div className="font-bold text-foreground">{item.name}</div>
-                        <div className="text-muted-foreground capitalize">{item.category} • {item.unitSize}{item.unit}</div>
+                  {/* Layout A: Spirit / Bulk Mixer */}
+                  {isLayoutA && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("bottle_size_ml", language)}
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={
+                            editingItem.bottleSizeMl ||
+                            editingItem.baseUnitAmount ||
+                            750
+                          }
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              bottleSizeMl: parseFloat(e.target.value) || 750,
+                              baseUnitAmount: parseFloat(e.target.value) || 750,
+                              baseUnit: "ml",
+                            })
+                          }
+                        />
                       </div>
-                      <div className="text-right">
-                        <div className="text-primary font-bold">{formatMoney(item.costPerUnit)}</div>
-                        <div className="text-muted-foreground">Stock: {item.currentStock}</div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("full_bottle_weight_label", language)}
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.fullBottleWeightG || ""}
+                          onChange={(e) => {
+                            const fullWeight = parseFloat(e.target.value) || 0;
+                            const bottleSize =
+                              editingItem.bottleSizeMl ||
+                              editingItem.baseUnitAmount ||
+                              750;
+                            const density = editingItem.density || 0.94;
+                            const liquidWeight = bottleSize * density;
+                            const glassWeight = fullWeight - liquidWeight;
+                            setEditingItem({
+                              ...editingItem,
+                              fullBottleWeightG: fullWeight,
+                              glassWeightG:
+                                glassWeight > 0 ? glassWeight : null,
+                            });
+                          }}
+                        />
                       </div>
-                    </div>
-                  ))}
-                  {importPreview.length === 0 && (
-                    <div className="h-full flex items-center justify-center text-muted-foreground italic text-sm py-20">
-                      Upload CSV or paste table to preview
-                    </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("pour_size", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.pourSize || 1.5}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              pourSize: parseFloat(e.target.value) || 1.5,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("order_cost", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.orderCost || 0}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              orderCost: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+
+                      <div className="col-span-2 mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
+                        <h4 className="text-sm font-semibold mb-3 text-primary">
+                          {getTranslation("weigh_bottle", language)}
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">
+                              {getTranslation(
+                                "current_bottle_weight",
+                                language,
+                              )}
+                            </label>
+                            <input
+                              type="number"
+                              className="w-full bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
+                              value={partialBottleWeight}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                setPartialBottleWeight(isNaN(val) ? "" : val);
+                                if (
+                                  !isNaN(val) &&
+                                  editingItem.fullBottleWeightG
+                                ) {
+                                  const bottleSize =
+                                    editingItem.bottleSizeMl ||
+                                    editingItem.baseUnitAmount ||
+                                    750;
+                                  const density = editingItem.density || 0.94;
+                                  const glassWeight =
+                                    editingItem.glassWeightG ??
+                                    editingItem.fullBottleWeightG -
+                                      bottleSize * density;
+                                  const currentLiquidWeight = val - glassWeight;
+                                  const remainingMl = Math.max(
+                                    0,
+                                    currentLiquidWeight / density,
+                                  );
+                                  const fullBottles = Math.floor(
+                                    (editingItem.currentStock || 0) /
+                                      bottleSize,
+                                  );
+                                  setEditingItem({
+                                    ...editingItem,
+                                    currentStock:
+                                      fullBottles * bottleSize + remainingMl,
+                                  });
+                                }
+                              }}
+                            />
+                          </div>
+                          {partialBottleWeight !== "" &&
+                            editingItem.fullBottleWeightG && (
+                              <div className="space-y-2">
+                                <label className="text-xs font-medium text-muted-foreground">
+                                  {getTranslation("calculate", language)}
+                                </label>
+                                {(() => {
+                                  const bottleSize =
+                                    editingItem.bottleSizeMl ||
+                                    editingItem.baseUnitAmount ||
+                                    750;
+                                  const density = editingItem.density || 0.94;
+                                  const glassWeight =
+                                    editingItem.glassWeightG ??
+                                    editingItem.fullBottleWeightG -
+                                      bottleSize * density;
+                                  const currentLiquidWeight =
+                                    partialBottleWeight - glassWeight;
+                                  const remainingMl = Math.max(
+                                    0,
+                                    currentLiquidWeight / density,
+                                  );
+                                  const usedMl = bottleSize - remainingMl;
+                                  const pourMl =
+                                    (editingItem.pourSize || 1.5) * 29.5735;
+                                  const usedPours = usedMl / pourMl;
+                                  const remainingPours = remainingMl / pourMl;
+                                  return (
+                                    <div className="space-y-1 text-sm">
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">
+                                          {getTranslation(
+                                            "remaining_pours",
+                                            language,
+                                          )}
+                                        </span>
+                                        <span className="font-bold text-emerald-400">
+                                          {remainingPours.toFixed(1)}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-muted-foreground">
+                                          {getTranslation(
+                                            "used_pours",
+                                            language,
+                                          )}
+                                        </span>
+                                        <span className="font-bold text-destructive">
+                                          {usedPours.toFixed(1)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("low_stock_alert_label", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.lowStockThreshold || 1}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              lowStockThreshold:
+                                parseFloat(e.target.value) || 1,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2 flex items-center pt-8">
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 mr-3 rounded border-white/20 bg-secondary text-primary"
+                          checked={editingItem.isOnMenu || false}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              isOnMenu: e.target.checked,
+                            })
+                          }
+                        />
+                        <label className="text-sm font-medium text-muted-foreground cursor-pointer">
+                          {getTranslation("on_menu_label", language)}
+                        </label>
+                      </div>
+
+                      <div className="col-span-2 grid grid-cols-3 gap-4 p-4 rounded-xl bg-primary/10 border border-primary/20 mt-2">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-primary/70">
+                            {getTranslation("stock_ml", language)}
+                          </span>
+                          <span className="text-lg font-bold">
+                            {(editingItem.currentStock || 0).toFixed(0)} ml
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-primary/70">
+                            {getTranslation("servings_remaining", language)}
+                          </span>
+                          <span className="text-lg font-bold">
+                            {(
+                              (editingItem.currentStock || 0) /
+                              ((editingItem.pourSize || 1.5) * 29.5735)
+                            ).toFixed(1)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-primary/70">
+                            {getTranslation("cost_per_serving", language)}
+                          </span>
+                          <span className="text-lg font-bold">
+                            {formatMoney(
+                              (editingItem.orderCost || 0) /
+                                ((editingItem.bottleSizeMl ||
+                                  editingItem.baseUnitAmount ||
+                                  750) /
+                                  ((editingItem.pourSize || 1.5) * 29.5735) ||
+                                  1),
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Layout B: Beer / Packaged Mixer */}
+                  {isLayoutB && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("stock", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={
+                            (editingItem.currentStock || 0) /
+                            (editingItem.unitsPerCase || 24)
+                          }
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              currentStock:
+                                (parseFloat(e.target.value) || 0) *
+                                (editingItem.unitsPerCase || 24),
+                              baseUnit: "unit",
+                              servingSize: 1,
+                              baseUnitAmount: 1,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("units_per_case", language)}
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.unitsPerCase || 24}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              unitsPerCase: parseInt(e.target.value) || 24,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("order_cost", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.orderCost || 0}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              orderCost: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("low_stock_alert_label", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.lowStockThreshold || 1}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              lowStockThreshold:
+                                parseFloat(e.target.value) || 1,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2 flex items-center pt-8">
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 mr-3 rounded border-white/20 bg-secondary text-primary"
+                          checked={editingItem.isOnMenu || false}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              isOnMenu: e.target.checked,
+                            })
+                          }
+                        />
+                        <label
+                          className="text-sm font-medium text-muted-foreground cursor-pointer"
+                          onClick={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              isOnMenu: !editingItem.isOnMenu,
+                            })
+                          }
+                        >
+                          {getTranslation("on_menu_label", language)}
+                        </label>
+                      </div>
+
+                      <div className="col-span-2 grid grid-cols-2 gap-4 p-4 rounded-xl bg-primary/10 border border-primary/20 mt-2">
+                        <div className="flex flex-col">
+                          <span className="text-xs text-primary/70">
+                            {getTranslation("stock_units", language)}
+                          </span>
+                          <span className="text-lg font-bold">
+                            {(editingItem.currentStock || 0).toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-primary/70">
+                            {getTranslation("cost_per_unit", language)}
+                          </span>
+                          <span className="text-lg font-bold">
+                            {formatMoney(
+                              (editingItem.orderCost || 0) /
+                                (editingItem.unitsPerCase || 24),
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Fallback Layout C: Generic (Ingredient, Merch, Misc) */}
+                  {!isLayoutA && !isLayoutB && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("current_stock", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.currentStock || 0}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              currentStock: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("order_cost", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.orderCost || 0}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              orderCost: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {getTranslation("low_stock_alert_label", language)}
+                        </label>
+                        <input
+                          type="number"
+                          step="1"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.lowStockThreshold || 1}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              lowStockThreshold:
+                                parseFloat(e.target.value) || 1,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="space-y-2 flex items-center pt-8">
+                        <input
+                          type="checkbox"
+                          className="w-5 h-5 mr-3 rounded border-white/20 bg-secondary text-primary"
+                          checked={editingItem.isOnMenu || false}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              isOnMenu: e.target.checked,
+                            })
+                          }
+                        />
+                        <label
+                          className="text-sm font-medium text-muted-foreground cursor-pointer"
+                          onClick={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              isOnMenu: !editingItem.isOnMenu,
+                            })
+                          }
+                        >
+                          {getTranslation("on_menu_label", language)}
+                        </label>
+                      </div>
+                    </>
                   )}
                 </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-white/10">
-              <Button variant="ghost" onClick={() => { setShowImport(false); setImportPreview([]); }}>Cancel</Button>
-              <Button 
-                onClick={handleBulkImport}
-                disabled={importPreview.length === 0 || isSeeding}
-                className="px-12 bg-primary hover:bg-primary/90 text-primary-foreground h-12 shadow-lg shadow-primary/20"
+              );
+            })()}
+            <div className="flex justify-end gap-3 mt-6">
+              <Button variant="outline" onClick={() => setEditingItem(null)}>
+                {getTranslation("cancel", language)}
+              </Button>
+              <Button
+                onClick={() => {
+                  saveIngredient.mutate(
+                    { id: editingItem.id, data: editingItem },
+                    {
+                      onSuccess: () => {
+                        setEditingItem(null);
+                        qc.invalidateQueries({
+                          queryKey: ["/api/inventory/items"],
+                        });
+                      },
+                    },
+                  );
+                }}
+                disabled={saveIngredient.isPending}
               >
-                {isSeeding ? 'Importing...' : 'Save All to Inventory'}
+                {getTranslation("save", language)}
               </Button>
             </div>
           </div>
         </div>
       )}
 
-      {editingItem && (
+      {/* Delete Modal */}
+      {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="glass p-8 rounded-3xl w-full max-w-xl relative">
-            <button onClick={() => setEditingItem(null)} className="absolute top-6 right-6 text-muted-foreground hover:text-foreground">
+          <div className="glass p-6 rounded-3xl w-full max-w-md relative border border-white/10">
+            <button
+              onClick={() => setShowDeleteModal(null)}
+              className="absolute top-4 right-4 text-muted-foreground"
+            >
               <X size={24} />
             </button>
-            <h2 className="text-2xl font-display mb-6">{editingItem.id ? 'Edit Item' : 'New Item'}</h2>
-            
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="space-y-2 col-span-2">
-                <label className="text-sm font-medium text-muted-foreground">Name</label>
-                <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Category</label>
-                <select className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.category} onChange={e => setEditingItem({...editingItem, category: e.target.value})}>
-                  <option value="spirits">Spirits</option>
-                  <option value="wine">Wine</option>
-                  <option value="beer">Beer</option>
-                  <option value="mixer">Mixer</option>
-                  <option value="garnish">Garnish</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Cost per Unit (MXN)</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.costPerUnit} onChange={e => setEditingItem({...editingItem, costPerUnit: parseFloat(e.target.value)})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Unit (e.g. ml, oz)</label>
-                <input className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.unit} onChange={e => setEditingItem({...editingItem, unit: e.target.value})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Unit Size (e.g. 750)</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.unitSize} onChange={e => setEditingItem({...editingItem, unitSize: parseFloat(e.target.value)})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Current Stock</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.currentStock} onChange={e => setEditingItem({...editingItem, currentStock: parseFloat(e.target.value)})} />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Minimum Stock Alert</label>
-                <input type="number" className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground" value={editingItem.minimumStock} onChange={e => setEditingItem({...editingItem, minimumStock: parseFloat(e.target.value)})} />
-              </div>
+            <h2 className="text-2xl font-display mb-4 flex items-center gap-2">
+              <Trash2 className="text-destructive" /> Delete Item
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              Are you sure you want to delete &quot;{showDeleteModal.name}
+              &quot;? This cannot be undone.
+            </p>
+            <div className="space-y-2 mb-4">
+              <input
+                type="password"
+                placeholder="Enter password to confirm"
+                className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+              />
+              {deleteError && (
+                <p className="text-destructive text-sm">{deleteError}</p>
+              )}
             </div>
-
-            <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
-              <Button variant="ghost" onClick={() => setEditingItem(null)}>Cancel</Button>
-              <Button 
-                onClick={() => saveIngredient.mutate({ id: editingItem.id, data: editingItem }, { onSuccess: () => setEditingItem(null) })}
-                disabled={saveIngredient.isPending}
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteModal(null)}
               >
-                Save Item
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteItem}
+                disabled={!deletePassword}
+              >
+                Delete
               </Button>
             </div>
           </div>
