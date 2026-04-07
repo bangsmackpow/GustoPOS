@@ -5,8 +5,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 ENV CI=true
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and configure for non-interactive CI
+RUN npm install -g pnpm && pnpm config set confirmModulesPurge false
 
 # Copy ALL files first for robust monorepo resolution
 COPY . .
@@ -22,7 +22,8 @@ RUN pnpm run build
 # This ensures we have the NATIVE binaries for Alpine (musl)
 FROM node:20-alpine AS prod-deps
 WORKDIR /app
-RUN npm install -g pnpm
+ENV CI=true
+RUN npm install -g pnpm && pnpm config set confirmModulesPurge false
 COPY . .
 
 # Install ONLY production dependencies (includes native @libsql binaries)

@@ -5,8 +5,8 @@ FROM node:20-slim AS builder
 WORKDIR /app
 ENV CI=true
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm and configure for non-interactive CI
+RUN npm install -g pnpm && pnpm config set confirmModulesPurge false
 
 # Copy ALL files for robust pnpm workspace resolution
 COPY . .
