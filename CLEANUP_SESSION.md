@@ -42,7 +42,7 @@ This document tracks the refactoring and cleanup changes made during the spring 
 | `Settings.tsx` | Removed unused `Mail` icon |
 | `Layout.tsx` | Removed unused `Lock` icon, prefixed `isFetching` with `_` |
 
-**Result:** Lint warnings reduced from 37 to 6 (83% reduction)
+**Result:** Lint warnings reduced from 37 to 5 (87% reduction)
 
 ---
 
@@ -129,6 +129,7 @@ This document tracks the refactoring and cleanup changes made during the spring 
 ## Commits
 
 ```
+970a1ee fix: resolve scripts typecheck and remaining lint warnings
 5efc49e fix: update cache versioning and add translations
 f65b229 fix: resolve lint warnings and update AGENTS.md
 5163ec9 refactor: deprecate ingredientsTable and remove dev-login route
@@ -140,6 +141,5 @@ f65b229 fix: resolve lint warnings and update AGENTS.md
 ## Recommendations for Next Steps
 
 1. **Review untracked files** - Decide whether to commit or remove
-2. **Fix scripts typecheck** - Pre-existing issue with @types/node
-3. **Consider grouping files** - UI components and API routes could be organized into subdirectories (deferred to avoid breaking changes)
-4. **Create PR** - When ready, create pull request from `cleanup/refactor-2026` to `main`
+2. **Consider grouping files** - UI components and API routes could be organized into subdirectories (deferred to avoid breaking changes)
+3. **Create PR** - When ready, create pull request from `cleanup/refactor-2026` to `main`
