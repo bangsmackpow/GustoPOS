@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { db } from "@workspace/db";
-import { staffShiftsTable, usersTable, shiftsTable } from "@workspace/db";
+import { staffShiftsTable, usersTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import * as zod from "zod";
 import { customHeaders } from "../lib/headers";

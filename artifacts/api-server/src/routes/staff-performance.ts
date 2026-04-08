@@ -3,7 +3,6 @@ import { db } from "@workspace/db";
 import {
   staffPerformanceTable,
   usersTable,
-  shiftsTable,
   tabsTable,
   ordersTable,
 } from "@workspace/db";
