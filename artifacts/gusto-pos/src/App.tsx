@@ -15,11 +15,13 @@ import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
 
-// Clear stale persisted cache from before schema simplification (v0.0.3)
-// Old cached queries have fields like amountInMl, categoryId, sellPrice that no longer exist
+// Clear stale persisted cache and force fresh data on app start
+// This ensures compatibility with updated API schemas and prevents stale data issues
 try {
   const cacheVersion = localStorage.getItem("gustopos-cache-version");
-  if (cacheVersion !== "2") {
+  // Increment cache version to force clear all persisted queries
+  const newCacheVersion = "3";
+  if (cacheVersion !== newCacheVersion) {
     const keysToRemove = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -32,7 +34,7 @@ try {
       }
     }
     keysToRemove.forEach((key) => localStorage.removeItem(key));
-    localStorage.setItem("gustopos-cache-version", "2");
+    localStorage.setItem("gustopos-cache-version", newCacheVersion);
   }
 } catch {
   // localStorage may be unavailable

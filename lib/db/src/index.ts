@@ -7,7 +7,7 @@ import path from "path";
 import fs from "fs";
 import bcrypt from "bcryptjs";
 
-const databaseUrl = process.env["DATABASE_URL"];
+const databaseUrl = process.env["DATABASE_URL"] || "file:./gusto.db";
 
 if (!databaseUrl) {
   throw new Error("DATABASE_URL environment variable is required");
@@ -94,7 +94,32 @@ async function upsertAdmin() {
 export async function initializeDatabase() {
   console.log("Checking database schema...");
   console.log(`Database URL: ${databaseUrl}`);
+
+  // Print full path for debugging
+  if (databaseUrl?.startsWith("file:")) {
+    const dbPath = databaseUrl.replace(/^file:\/\//, "").replace(/%20/g, " ");
+    console.log(`Resolved database path: ${dbPath}`);
+  }
+
   console.log(`Using migrations from: ${migrationsPath}`);
+
+  // Ensure the database directory exists (for file: URLs)
+  if (databaseUrl?.startsWith("file:")) {
+    let dbPath = databaseUrl.replace(/^file:\/\//, "").replace(/%20/g, " ");
+    // Handle relative paths
+    if (!path.isAbsolute(dbPath)) {
+      dbPath = path.resolve(process.cwd(), dbPath);
+    }
+    const dbDir = path.dirname(dbPath);
+    console.log(`Database directory to ensure: ${dbDir}`);
+    if (!fs.existsSync(dbDir)) {
+      console.log(`Creating database directory: ${dbDir}`);
+      fs.mkdirSync(dbDir, { recursive: true });
+    } else {
+      console.log(`Database directory already exists: ${dbDir}`);
+    }
+    console.log(`Database full path: ${dbPath}`);
+  }
 
   // Verify migrations folder exists
   if (!fs.existsSync(migrationsPath)) {
@@ -102,16 +127,21 @@ export async function initializeDatabase() {
     throw new Error(`Migrations folder not found: ${migrationsPath}`);
   }
 
+  console.log("Running database migrations...");
+  let migrationFailed = false;
   try {
     // Rely on Drizzle's official migrator
     await migrate(db, { migrationsFolder: migrationsPath });
     console.log("✓ Migration check complete.");
   } catch (error: any) {
+    migrationFailed = true;
     console.error("Migration execution error:", error.message);
-    // Continue - the tables might already exist
+    // Don't throw - check if tables exist anyway
+    console.log("Continuing anyway to check if tables exist...");
   }
 
   // Verification Step: Ensure critical tables are present
+  console.log("Verifying database tables...");
   try {
     const tables = await db
       .select({ name: sql<string>`name` })
@@ -119,7 +149,18 @@ export async function initializeDatabase() {
       .where(sql`type = 'table' AND name = 'inventory_items'`);
 
     if (tables.length === 0) {
-      throw new Error("Critical table 'inventory_items' is missing after migration.");
+      // Tables don't exist - this is a fresh database that needs migrations
+      if (migrationFailed) {
+        console.error(
+          "Migrations failed AND tables don't exist. Cannot continue.",
+        );
+        throw new Error(
+          "Database initialization failed: migrations failed and no tables exist.",
+        );
+      }
+      throw new Error(
+        "Critical table 'inventory_items' is missing after migration.",
+      );
     }
     console.log("✓ Database schema verified successfully.");
   } catch (error: any) {
@@ -127,8 +168,27 @@ export async function initializeDatabase() {
     throw new Error(`Database initialization failed: ${error.message}`);
   }
 
+  // Verification Step: Ensure critical tables are present
+  console.log("Verifying database tables...");
   try {
-    console.log("[Initialize] Starting admin user initialization...");
+    const tables = await db
+      .select({ name: sql<string>`name` })
+      .from(sql`sqlite_master`)
+      .where(sql`type = 'table' AND name = 'inventory_items'`);
+
+    if (tables.length === 0) {
+      throw new Error(
+        "Critical table 'inventory_items' is missing after migration.",
+      );
+    }
+    console.log("✓ Database schema verified successfully.");
+  } catch (error: any) {
+    console.error("[Initialize] ✗ Table verification failed:", error.message);
+    throw new Error(`Database initialization failed: ${error.message}`);
+  }
+
+  console.log("[Initialize] Starting admin user initialization...");
+  try {
     await upsertAdmin();
     console.log(
       "[Initialize] ✓ Database initialization completed successfully",

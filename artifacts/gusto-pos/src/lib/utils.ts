@@ -355,6 +355,9 @@ const translations = {
     weigh_bottle: "Weigh Bottle",
     remaining_pours: "Remaining Pours",
     used_pours: "Used Pours",
+    full_bottle_count: "Full Bottle Count",
+    total_inventory: "Total Inventory",
+    full_bottles: "full bottles",
     variance: "Variance",
     // Drinks page
     search_drinks: "Search drinks...",
@@ -846,6 +849,9 @@ const translations = {
     weigh_bottle: "Pesar Botella",
     remaining_pours: "Vertidos Restantes",
     used_pours: "Vertidos Usados",
+    full_bottle_count: "Cantidad Botellas Llenas",
+    total_inventory: "Inventario Total",
+    full_bottles: "botellas llenas",
     variance: "Varianza",
     // Drinks page
     search_drinks: "Buscar bebidas...",

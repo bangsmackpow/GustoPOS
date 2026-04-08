@@ -29,6 +29,13 @@
       "when": 1775536560000,
       "tag": "0003_advanced_inventory",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1775536561000,
+      "tag": "0004_recipe_ingredients_fk",
+      "breakpoints": true
     }
   ]
 }
