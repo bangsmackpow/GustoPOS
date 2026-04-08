@@ -32,7 +32,7 @@ const DRINK_CATEGORIES = [
   { value: "other", label: "Other", labelEs: "Otro" },
 ];
 
-const SPIRIT_SUBTYPES = [
+const _SPIRIT_SUBTYPES = [
   { value: "tequila", label: "Tequila" },
   { value: "mezcal", label: "Mezcal" },
   { value: "vodka", label: "Vodka" },
@@ -511,7 +511,7 @@ export default function Drinks() {
                                 }
                                 onClick={() => {
                                   // Clone: open modal with copied drink (no id, name prefixed)
-                                  const { id, name, nameEs, ...rest } = drink;
+                                  const { name, nameEs, ...rest } = drink;
                                   setEditingDrink({
                                     ...rest,
                                     name: `Copy of ${name}`,

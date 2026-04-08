@@ -12,8 +12,6 @@ import {
   Edit2,
   X,
   AlertTriangle,
-  Database,
-  Upload,
   Check,
   Trash2,
   Search,
@@ -68,7 +66,7 @@ export default function Inventory() {
   const { language } = usePosStore();
   const { data: items } = useGetInventoryItems();
   const { data: auth } = useGetCurrentAuthUser();
-  const isAdmin = (auth as any)?.role === "admin";
+  const _isAdmin = (auth as any)?.role === "admin";
   const saveIngredient = useSaveIngredientMutation();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -77,6 +75,7 @@ export default function Inventory() {
   const [partialBottleWeight, setPartialBottleWeight] = useState<number | "">(
     "",
   );
+  const [fullBottleCount, setFullBottleCount] = useState<number>(0);
   const [_showWeightModal, _setShowWeightModal] = useState<any>(null);
   const [_weightInput, _setWeightInput] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState<any>(null);
@@ -734,21 +733,27 @@ export default function Inventory() {
                       }
                     />
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">
-                      {getTranslation("spanish_name", language)}
-                    </label>
-                    <input
-                      className="max-w-md bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                      value={editingItem.nameEs || ""}
-                      onChange={(e) =>
-                        setEditingItem({
-                          ...editingItem,
-                          nameEs: e.target.value,
-                        })
-                      }
-                    />
-                  </div>
+
+                  {/* Alcohol Density - only for spirits */}
+                  {isLayoutA && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Alcohol Density
+                      </label>
+                      <input
+                        type="number"
+                        step="0.001"
+                        className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                        value={editingItem.alcoholDensity ?? ""}
+                        onChange={(e) =>
+                          setEditingItem({
+                            ...editingItem,
+                            alcoholDensity: parseFloat(e.target.value) || 0.955,
+                          })
+                        }
+                      />
+                    </div>
+                  )}
 
                   {/* Layout A: Spirit / Bulk Mixer */}
                   {isLayoutA && (
@@ -841,6 +846,37 @@ export default function Inventory() {
                           {getTranslation("weigh_bottle", language)}
                         </h4>
                         <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-xs font-medium text-muted-foreground">
+                              {language === "es"
+                                ? "Botellas Completas"
+                                : "Full Bottles"}
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              className="w-full bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
+                              value={fullBottleCount}
+                              onChange={(e) => {
+                                const count = Math.max(
+                                  0,
+                                  parseInt(e.target.value) || 0,
+                                );
+                                setFullBottleCount(count);
+                                const bottleSize =
+                                  editingItem.bottleSizeMl ||
+                                  editingItem.baseUnitAmount ||
+                                  750;
+                                const partialMl = editingItem.currentStock
+                                  ? editingItem.currentStock % bottleSize
+                                  : 0;
+                                setEditingItem({
+                                  ...editingItem,
+                                  currentStock: count * bottleSize + partialMl,
+                                });
+                              }}
+                            />
+                          </div>
                           <div className="space-y-2">
                             <label className="text-xs font-medium text-muted-foreground">
                               {getTranslation(
@@ -1112,7 +1148,7 @@ export default function Inventory() {
                         />
                         <label
                           className="text-sm font-medium text-muted-foreground cursor-pointer"
-                          onClick={(e) =>
+                          onClick={() =>
                             setEditingItem({
                               ...editingItem,
                               isOnMenu: !editingItem.isOnMenu,
@@ -1216,7 +1252,7 @@ export default function Inventory() {
                         />
                         <label
                           className="text-sm font-medium text-muted-foreground cursor-pointer"
-                          onClick={(e) =>
+                          onClick={() =>
                             setEditingItem({
                               ...editingItem,
                               isOnMenu: !editingItem.isOnMenu,
@@ -1232,7 +1268,14 @@ export default function Inventory() {
               );
             })()}
             <div className="flex justify-end gap-3 mt-6">
-              <Button variant="outline" onClick={() => setEditingItem(null)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditingItem(null);
+                  setFullBottleCount(0);
+                  setPartialBottleWeight("");
+                }}
+              >
                 {getTranslation("cancel", language)}
               </Button>
               <Button
@@ -1242,6 +1285,8 @@ export default function Inventory() {
                     {
                       onSuccess: () => {
                         setEditingItem(null);
+                        setFullBottleCount(0);
+                        setPartialBottleWeight("");
                         qc.invalidateQueries({
                           queryKey: ["/api/inventory/items"],
                         });
