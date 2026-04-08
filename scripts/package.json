@@ -4,17 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "hello": "tsx ./src/hello.ts",
-    "hash-pins": "tsx ./src/hash-existing-pins.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "hello": "tsx ./src/hello.ts"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
     "tsx": "catalog:"
-  },
-  "dependencies": {
-    "@workspace/db": "workspace:*",
-    "bcryptjs": "^3.0.3",
-    "@types/bcryptjs": "^3.0.0"
   }
 }

@@ -164,7 +164,7 @@ async function startApi(): Promise<void> {
         message.includes("[Initialize] ✓ Admin user") ||
         message.includes("[Initialize] ✓ Database initialization completed")
       ) {
-        adminInitialized = true;
+        _adminInitialized = true;
         console.log("[Desktop] Admin user initialization confirmed!");
       }
       // Detect critical failures
@@ -196,7 +196,7 @@ async function startApi(): Promise<void> {
 }
 
 let apiStartupError: string | null = null;
-let adminInitialized = false;
+let _adminInitialized = false;
 const API_STARTUP_TIMEOUT = 30000; // 30 seconds max wait for API
 
 async function createWindow() {

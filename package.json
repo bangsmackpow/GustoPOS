@@ -7,7 +7,7 @@
     "preinstall": "node ./scripts/preinstall.mjs",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --if-present run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "build:desktop": "pnpm run build && pnpm --filter @workspace/desktop-app run build && pnpm --filter @workspace/desktop-app run package:mac"
