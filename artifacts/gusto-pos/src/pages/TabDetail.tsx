@@ -40,7 +40,7 @@ const CATEGORY_ICONS: Record<string, any> = {
 };
 
 export default function TabDetail() {
-  const updateOrder = useUpdateOrderMutation();
+  const _updateOrder = useUpdateOrderMutation();
   const [, params] = useRoute("/tabs/:id");
   const tabId = params?.id || "";
 
