@@ -21,7 +21,6 @@ import {
   User,
   Globe,
   Search,
-  Lock,
 } from "lucide-react";
 import { usePosStore } from "@/store";
 import { getTranslation } from "@/lib/utils";
@@ -84,7 +83,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const {
     data: auth,
     isLoading,
-    isFetching,
+    isFetching: _isFetching,
     isSuccess,
     isError,
   } = useGetCurrentAuthUser({

@@ -4,7 +4,6 @@ import {
   drinksTable,
   recipeIngredientsTable,
   inventoryItemsTable,
-  eventLogsTable,
 } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { CreateDrinkBody, UpdateDrinkBody } from "@workspace/api-zod";

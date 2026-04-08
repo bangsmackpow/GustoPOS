@@ -16,13 +16,14 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { es as esLocale } from "date-fns/locale/es";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function Tabs() {
-    const [sortBy, setSortBy] = useState<"name" | "openedAt" | "totalMxn">("openedAt");
-    const [sortAsc, setSortAsc] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "openedAt" | "totalMxn">(
+    "openedAt",
+  );
+  const [sortAsc, setSortAsc] = useState(false);
   const { language, activeStaff } = usePosStore();
   const { data: tabs, isLoading } = useGetTabs({ status: "open" });
   const createTab = useCreateTabMutation();
@@ -186,7 +187,7 @@ export default function Tabs() {
           <label className="text-xs text-muted-foreground">Sort by:</label>
           <select
             value={sortBy}
-            onChange={e => setSortBy(e.target.value as any)}
+            onChange={(e) => setSortBy(e.target.value as any)}
             className="bg-secondary border border-white/10 rounded-lg px-2 py-1 text-sm"
           >
             <option value="openedAt">Opened Time</option>
@@ -195,7 +196,7 @@ export default function Tabs() {
           </select>
           <button
             type="button"
-            onClick={() => setSortAsc(a => !a)}
+            onClick={() => setSortAsc((a) => !a)}
             className="ml-1 px-2 py-1 rounded border border-white/10 bg-secondary text-xs"
             title={sortAsc ? "Ascending" : "Descending"}
           >
@@ -231,7 +232,9 @@ export default function Tabs() {
               if (sortBy === "name") {
                 cmp = a.nickname.localeCompare(b.nickname);
               } else if (sortBy === "openedAt") {
-                cmp = new Date(a.openedAt).getTime() - new Date(b.openedAt).getTime();
+                cmp =
+                  new Date(a.openedAt).getTime() -
+                  new Date(b.openedAt).getTime();
               } else if (sortBy === "totalMxn") {
                 cmp = (a.totalMxn || 0) - (b.totalMxn || 0);
               }

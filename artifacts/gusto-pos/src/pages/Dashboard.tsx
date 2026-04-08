@@ -12,7 +12,6 @@ import {
 import { usePosStore } from "@/store";
 import { getTranslation, formatMoney } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import {
   Play,
   Square,
@@ -27,8 +26,6 @@ import {
   Music,
   MapPin,
   X,
-  Banknote,
-  CreditCard,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es as esLocale } from "date-fns/locale/es";
@@ -57,7 +54,6 @@ export default function Dashboard() {
   const startShift = useStartShiftMutation();
   const closeShift = useCloseShiftMutation();
   const [closeError, setCloseError] = useState<string | null>(null);
-  const { toast } = useToast();
   const [showCloseSummary, setShowCloseSummary] = useState(false);
   const [forceClose, setForceClose] = useState(false);
 

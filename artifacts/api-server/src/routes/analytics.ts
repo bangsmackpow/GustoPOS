@@ -3,7 +3,6 @@ import {
   db,
   tabsTable,
   ordersTable,
-  drinksTable,
   usersTable,
   inventoryItemsTable,
   recipeIngredientsTable,
@@ -18,8 +17,12 @@ const router: IRouter = Router();
  */
 router.get("/analytics/sales", async (req: Request, res: Response) => {
   try {
-    const startDate = req.query.startDate ? new Date(req.query.startDate as string) : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const endDate = req.query.endDate ? new Date(req.query.endDate as string) : new Date();
+    const startDate = req.query.startDate
+      ? new Date(req.query.startDate as string)
+      : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const endDate = req.query.endDate
+      ? new Date(req.query.endDate as string)
+      : new Date();
 
     // 1. Total sales by drink
     const salesByDrink = await db
@@ -32,19 +35,24 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
         averagePrice: sql<number>`AVG(${ordersTable.unitPriceMxn})`,
       })
       .from(ordersTable)
-      .innerJoin(
-        tabsTable,
-        eq(ordersTable.tabId, tabsTable.id)
-      )
+      .innerJoin(tabsTable, eq(ordersTable.tabId, tabsTable.id))
       .where(
         and(
           gte(tabsTable.closedAt, startDate),
           lte(tabsTable.closedAt, endDate),
-          eq(tabsTable.status, "closed")
-        )
+          eq(tabsTable.status, "closed"),
+        ),
       )
-      .groupBy(ordersTable.drinkId, ordersTable.drinkName, ordersTable.drinkNameEs)
-      .orderBy(desc(sql<number>`SUM(${ordersTable.quantity} * ${ordersTable.unitPriceMxn})`));
+      .groupBy(
+        ordersTable.drinkId,
+        ordersTable.drinkName,
+        ordersTable.drinkNameEs,
+      )
+      .orderBy(
+        desc(
+          sql<number>`SUM(${ordersTable.quantity} * ${ordersTable.unitPriceMxn})`,
+        ),
+      );
 
     // 2. Total sales by staff
     const salesByStaff = await db
@@ -60,8 +68,8 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
         and(
           gte(tabsTable.closedAt, startDate),
           lte(tabsTable.closedAt, endDate),
-          eq(tabsTable.status, "closed")
-        )
+          eq(tabsTable.status, "closed"),
+        ),
       )
       .groupBy(tabsTable.staffUserId)
       .orderBy(desc(sql<number>`SUM(${tabsTable.totalMxn})`));
@@ -77,17 +85,19 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
               lastName: usersTable.lastName,
             })
             .from(usersTable)
-            .where(sql`${usersTable.id} IN (${sql.join(
-              userIds.map((id) => sql`${id}`),
-              sql`, `,
-            )})`)
+            .where(
+              sql`${usersTable.id} IN (${sql.join(
+                userIds.map((id) => sql`${id}`),
+                sql`, `,
+              )})`,
+            )
         : [];
 
     const userMap = new Map(
       users.map((u) => [
         u.id,
         `${u.firstName || ""} ${u.lastName || ""}`.trim(),
-      ])
+      ]),
     );
 
     // 3. Hourly sales breakdown
@@ -102,11 +112,15 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
         and(
           gte(tabsTable.closedAt, startDate),
           lte(tabsTable.closedAt, endDate),
-          eq(tabsTable.status, "closed")
-        )
+          eq(tabsTable.status, "closed"),
+        ),
       )
-      .groupBy(sql`CAST(strftime('%H', datetime(${tabsTable.closedAt}, 'unixepoch')) AS INTEGER)`)
-      .orderBy(sql`CAST(strftime('%H', datetime(${tabsTable.closedAt}, 'unixepoch')) AS INTEGER)`);
+      .groupBy(
+        sql`CAST(strftime('%H', datetime(${tabsTable.closedAt}, 'unixepoch')) AS INTEGER)`,
+      )
+      .orderBy(
+        sql`CAST(strftime('%H', datetime(${tabsTable.closedAt}, 'unixepoch')) AS INTEGER)`,
+      );
 
     // 4. Summary totals
     const summary = await db
@@ -122,12 +136,18 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
         and(
           gte(tabsTable.closedAt, startDate),
           lte(tabsTable.closedAt, endDate),
-          eq(tabsTable.status, "closed")
-        )
+          eq(tabsTable.status, "closed"),
+        ),
       );
 
     res.json({
-      summary: summary[0] || { totalRevenue: 0, totalTips: 0, totalDiscount: 0, tabsCount: 0, ordersCount: 0 },
+      summary: summary[0] || {
+        totalRevenue: 0,
+        totalTips: 0,
+        totalDiscount: 0,
+        tabsCount: 0,
+        ordersCount: 0,
+      },
       salesByDrink: salesByDrink.map((d) => ({
         ...d,
         totalRevenue: Number(d.totalRevenue) || 0,
@@ -147,7 +167,10 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
         totalRevenue: Number(h.totalRevenue) || 0,
         tabsCount: Number(h.tabsCount) || 0,
       })),
-      period: { startDate: startDate.toISOString(), endDate: endDate.toISOString() },
+      period: {
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+      },
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -160,28 +183,33 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
  * Parameters:
  *   - days: Analysis period in days (7, 14, or 30; default 14)
  */
-router.get("/analytics/inventory/forecast", async (req: Request, res: Response) => {
-  try {
-    const daysParam = Math.min(30, Math.max(7, parseInt(req.query.days as string) || 14));
+router.get(
+  "/analytics/inventory/forecast",
+  async (req: Request, res: Response) => {
+    try {
+      const daysParam = Math.min(
+        30,
+        Math.max(7, parseInt(req.query.days as string) || 14),
+      );
 
-    // Calculate cutoff date (days ago from now)
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - daysParam);
-    const cutoffTimestamp = Math.floor(cutoffDate.getTime() / 1000);
+      // Calculate cutoff date (days ago from now)
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysParam);
+      const cutoffTimestamp = Math.floor(cutoffDate.getTime() / 1000);
 
-    // Query: For each inventory item, calculate consumption velocity
-    // Sum all ingredient consumption across all closed tabs in the period
-    const forecasts = await db
-      .select({
-        itemId: inventoryItemsTable.id,
-        itemName: inventoryItemsTable.name,
-        itemNameEs: inventoryItemsTable.nameEs,
-        baseUnit: inventoryItemsTable.baseUnit,
-        currentStock: inventoryItemsTable.currentStock,
-        servingSize: inventoryItemsTable.servingSize,
-        lowStockThreshold: inventoryItemsTable.lowStockThreshold,
-        // Consumption in the period (sum of all ingredient usage)
-        consumedAmount: sql<number>`
+      // Query: For each inventory item, calculate consumption velocity
+      // Sum all ingredient consumption across all closed tabs in the period
+      const forecasts = await db
+        .select({
+          itemId: inventoryItemsTable.id,
+          itemName: inventoryItemsTable.name,
+          itemNameEs: inventoryItemsTable.nameEs,
+          baseUnit: inventoryItemsTable.baseUnit,
+          currentStock: inventoryItemsTable.currentStock,
+          servingSize: inventoryItemsTable.servingSize,
+          lowStockThreshold: inventoryItemsTable.lowStockThreshold,
+          // Consumption in the period (sum of all ingredient usage)
+          consumedAmount: sql<number>`
           COALESCE(
             SUM(
               CAST(${ordersTable.quantity} AS REAL) *
@@ -190,99 +218,104 @@ router.get("/analytics/inventory/forecast", async (req: Request, res: Response) 
             0
           )
         `,
-        // Count of orders that consumed this ingredient
-        orderCount: sql<number>`COALESCE(COUNT(${ordersTable.id}), 0)`,
-      })
-      .from(inventoryItemsTable)
-      .leftJoin(
-        recipeIngredientsTable,
-        sql`${recipeIngredientsTable.ingredientId} = ${inventoryItemsTable.id}`
-      )
-      .leftJoin(
-        ordersTable,
-        sql`${ordersTable.drinkId} = ${recipeIngredientsTable.drinkId} AND ${ordersTable.createdAt} >= ${cutoffTimestamp}`
-      )
-      .leftJoin(tabsTable, sql`${ordersTable.tabId} = ${tabsTable.id}`)
-      .groupBy(inventoryItemsTable.id)
-      .orderBy(inventoryItemsTable.name);
+          // Count of orders that consumed this ingredient
+          orderCount: sql<number>`COALESCE(COUNT(${ordersTable.id}), 0)`,
+        })
+        .from(inventoryItemsTable)
+        .leftJoin(
+          recipeIngredientsTable,
+          sql`${recipeIngredientsTable.ingredientId} = ${inventoryItemsTable.id}`,
+        )
+        .leftJoin(
+          ordersTable,
+          sql`${ordersTable.drinkId} = ${recipeIngredientsTable.drinkId} AND ${ordersTable.createdAt} >= ${cutoffTimestamp}`,
+        )
+        .leftJoin(tabsTable, sql`${ordersTable.tabId} = ${tabsTable.id}`)
+        .groupBy(inventoryItemsTable.id)
+        .orderBy(inventoryItemsTable.name);
 
-    // Process results to calculate velocity and predictions
-    const predictions = forecasts.map((item) => {
-      const consumedAmount = Number(item.consumedAmount) || 0;
-      const currentStock = item.currentStock || 0;
-      const servingSize = item.servingSize || 1;
-      const lowThreshold = item.lowStockThreshold || 1;
+      // Process results to calculate velocity and predictions
+      const predictions = forecasts.map((item) => {
+        const consumedAmount = Number(item.consumedAmount) || 0;
+        const currentStock = item.currentStock || 0;
+        const servingSize = item.servingSize || 1;
+        const lowThreshold = item.lowStockThreshold || 1;
 
-      // Daily velocity = consumed in period / days
-      const dailyVelocity = consumedAmount / daysParam;
+        // Daily velocity = consumed in period / days
+        const dailyVelocity = consumedAmount / daysParam;
 
-      // Days until stockout = current stock / daily velocity
-      let daysUntilStockout = Infinity;
-      if (dailyVelocity > 0) {
-        daysUntilStockout = currentStock / dailyVelocity;
-      }
+        // Days until stockout = current stock / daily velocity
+        let daysUntilStockout = Infinity;
+        if (dailyVelocity > 0) {
+          daysUntilStockout = currentStock / dailyVelocity;
+        }
 
-      // Calculate suggested reorder point: 3 days worth at current velocity + 1 buffer
-      const suggestedReorderPoint = dailyVelocity * 3 + servingSize * 2;
+        // Calculate suggested reorder point: 3 days worth at current velocity + 1 buffer
+        const suggestedReorderPoint = dailyVelocity * 3 + servingSize * 2;
 
-      // Determine alert level
-      let alertLevel: "critical" | "low" | "ok" = "ok";
-      let alertDays = 0;
-      if (daysUntilStockout <= 2) {
-        alertLevel = "critical";
-        alertDays = Math.ceil(daysUntilStockout);
-      } else if (daysUntilStockout <= 5) {
-        alertLevel = "low";
-        alertDays = Math.ceil(daysUntilStockout);
-      } else {
-        alertDays = Math.floor(daysUntilStockout);
-      }
+        // Determine alert level
+        let alertLevel: "critical" | "low" | "ok" = "ok";
+        let alertDays = 0;
+        if (daysUntilStockout <= 2) {
+          alertLevel = "critical";
+          alertDays = Math.ceil(daysUntilStockout);
+        } else if (daysUntilStockout <= 5) {
+          alertLevel = "low";
+          alertDays = Math.ceil(daysUntilStockout);
+        } else {
+          alertDays = Math.floor(daysUntilStockout);
+        }
 
-      return {
-        itemId: item.itemId,
-        itemName: item.itemName,
-        itemNameEs: item.itemNameEs || item.itemName,
-        baseUnit: item.baseUnit,
-        currentStock: parseFloat(currentStock.toFixed(2)),
-        dailyVelocity: parseFloat(dailyVelocity.toFixed(2)),
-        daysUntilStockout: daysUntilStockout === Infinity ? -1 : parseFloat(daysUntilStockout.toFixed(1)),
-        suggestedReorderPoint: parseFloat(suggestedReorderPoint.toFixed(2)),
-        lowThreshold,
-        alertLevel,
-        alertDays,
-        consumedInPeriod: parseFloat(consumedAmount.toFixed(2)),
-        ordersInPeriod: item.orderCount || 0,
-      };
-    });
+        return {
+          itemId: item.itemId,
+          itemName: item.itemName,
+          itemNameEs: item.itemNameEs || item.itemName,
+          baseUnit: item.baseUnit,
+          currentStock: parseFloat(currentStock.toFixed(2)),
+          dailyVelocity: parseFloat(dailyVelocity.toFixed(2)),
+          daysUntilStockout:
+            daysUntilStockout === Infinity
+              ? -1
+              : parseFloat(daysUntilStockout.toFixed(1)),
+          suggestedReorderPoint: parseFloat(suggestedReorderPoint.toFixed(2)),
+          lowThreshold,
+          alertLevel,
+          alertDays,
+          consumedInPeriod: parseFloat(consumedAmount.toFixed(2)),
+          ordersInPeriod: item.orderCount || 0,
+        };
+      });
 
-    // Sort by alert level criticality, then by days until stockout
-    const prioritized = predictions.sort((a, b) => {
-      const levelPriority = { critical: 0, low: 1, ok: 2 };
-      const aPriority = levelPriority[a.alertLevel];
-      const bPriority = levelPriority[b.alertLevel];
-      if (aPriority !== bPriority) return aPriority - bPriority;
-      return (
-        (a.daysUntilStockout === -1 ? Infinity : a.daysUntilStockout) -
-        (b.daysUntilStockout === -1 ? Infinity : b.daysUntilStockout)
-      );
-    });
+      // Sort by alert level criticality, then by days until stockout
+      const prioritized = predictions.sort((a, b) => {
+        const levelPriority = { critical: 0, low: 1, ok: 2 };
+        const aPriority = levelPriority[a.alertLevel];
+        const bPriority = levelPriority[b.alertLevel];
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        return (
+          (a.daysUntilStockout === -1 ? Infinity : a.daysUntilStockout) -
+          (b.daysUntilStockout === -1 ? Infinity : b.daysUntilStockout)
+        );
+      });
 
-    res.json({
-      period: {
-        days: daysParam,
-        startDate: cutoffDate.toISOString(),
-        endDate: new Date().toISOString(),
-      },
-      summary: {
-        critical: prioritized.filter((p) => p.alertLevel === "critical").length,
-        low: prioritized.filter((p) => p.alertLevel === "low").length,
-        ok: prioritized.filter((p) => p.alertLevel === "ok").length,
-      },
-      forecasts: prioritized,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
+      res.json({
+        period: {
+          days: daysParam,
+          startDate: cutoffDate.toISOString(),
+          endDate: new Date().toISOString(),
+        },
+        summary: {
+          critical: prioritized.filter((p) => p.alertLevel === "critical")
+            .length,
+          low: prioritized.filter((p) => p.alertLevel === "low").length,
+          ok: prioritized.filter((p) => p.alertLevel === "ok").length,
+        },
+        forecasts: prioritized,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
 
 export default router;

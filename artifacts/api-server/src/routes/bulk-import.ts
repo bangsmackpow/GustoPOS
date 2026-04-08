@@ -111,24 +111,26 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
       let processedCount = 0;
       let errorCount = 0;
 
-      for (const { index, data: item } of validRows) {
+      for (const { data: item } of validRows) {
         const name = item.name;
         const type = item.type;
         const subtype = item.subtype || null;
-        const baseUnit = item.baseUnit;
+
+        // Map CSV columns to only columns that exist in the database
+        const baseUnit = "ml";
         const baseUnitAmount =
           item.baseUnitAmount || item.unitSize || item.size || 750;
-        const servingSize = item.servingSize;
-        const orderCost = item.orderCost || item.cost || item.bulkCost || 0;
-        const currentStock = item.currentStock || item.stock || item.qty || 0;
-        const lowStockThreshold =
-          item.lowStockThreshold || item.min || item.minimumStock || 1;
-        const unitsPerCase = item.unitsPerCase;
+        const servingSize = item.servingSize || 44.36;
         const tareWeightG = item.tareWeightG ? Number(item.tareWeightG) : null;
         const fullBottleWeightG = item.fullBottleWeightG
           ? Number(item.fullBottleWeightG)
           : null;
-        const isOnMenu = item.isOnMenu;
+        const currentStock = item.currentStock || item.stock || item.qty || 0;
+        const orderCost = item.orderCost || item.cost || item.bulkCost || 0;
+        const lowStockThreshold =
+          item.lowStockThreshold || item.min || item.minimumStock || 1;
+        const unitsPerCase = item.unitsPerCase || 1;
+        const isOnMenu = item.isOnMenu ? 1 : 0;
 
         try {
           const [existing] = await tx
@@ -153,7 +155,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 orderCost,
                 lowStockThreshold,
                 unitsPerCase,
-                isOnMenu,
+                isOnMenu: !!isOnMenu,
                 updatedAt: new Date(),
               })
               .where(eq(inventoryItemsTable.id, existing.id));
@@ -172,9 +174,9 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
               orderCost,
               lowStockThreshold,
               unitsPerCase,
-              isOnMenu,
+              isOnMenu: !!isOnMenu,
               updatedAt: new Date(),
-            } as typeof inventoryItemsTable.$inferInsert);
+            });
           }
           processedCount++;
         } catch (itemErr: any) {
@@ -243,7 +245,7 @@ router.post("/bulk-drinks", async (req: Request, res: Response) => {
 
   try {
     await db.transaction(async (tx) => {
-      for (const { index, data: item } of validRows) {
+      for (const { data: item } of validRows) {
         const [existing] = await tx
           .select()
           .from(drinksTable)

@@ -4,7 +4,6 @@ import {
   inventoryItemsTable,
   inventoryCountsTable,
   drinksTable,
-  eventLogsTable,
 } from "@workspace/db";
 import { eq, desc, lt } from "drizzle-orm";
 import { logEvent } from "../lib/auditLog";
@@ -91,35 +90,65 @@ router.get("/items/:id", async (req: Request, res: Response) => {
 router.post("/items", async (req: Request, res: Response) => {
   try {
     const data = req.body;
+    console.log("[POST /items] Received data:", JSON.stringify(data));
+
+    const baseUnitAmount = Number(data.baseUnitAmount) || 750;
+    const currentBulk = Number(data.currentBulk) || 0;
+    const currentPartial = Number(data.currentPartial) || 0;
+    const currentStock = currentBulk * baseUnitAmount + currentPartial;
+
+    console.log("[POST /items] Calculated stock:", {
+      baseUnitAmount,
+      currentBulk,
+      currentPartial,
+      currentStock,
+    });
+
+    // Build only the fields that exist in the database
+    const insertValues: any = {
+      name: data.name,
+      type: data.type ?? "spirit",
+      currentStock: currentStock,
+    };
+
+    // Only add optional fields if they have values (safer for migration compatibility)
+    if (data.nameEs) insertValues.nameEs = data.nameEs;
+    if (data.subtype) insertValues.subtype = data.subtype;
+    if (data.baseUnit) insertValues.baseUnit = data.baseUnit;
+    if (data.baseUnitAmount) insertValues.baseUnitAmount = baseUnitAmount;
+    if (data.servingSize) insertValues.servingSize = Number(data.servingSize);
+    if (data.pourSize) insertValues.pourSize = Number(data.pourSize);
+    if (data.bottleSizeMl)
+      insertValues.bottleSizeMl = Number(data.bottleSizeMl);
+    if (data.glassWeightG)
+      insertValues.glassWeightG = Number(data.glassWeightG);
+    if (data.density) insertValues.density = Number(data.density);
+    if (data.tareWeightG) insertValues.tareWeightG = Number(data.tareWeightG);
+    if (data.fullBottleWeightG)
+      insertValues.fullBottleWeightG = Number(data.fullBottleWeightG);
+    if (data.currentBulk !== undefined) insertValues.currentBulk = currentBulk;
+    if (data.currentPartial !== undefined)
+      insertValues.currentPartial = currentPartial;
+    if (data.orderCost !== undefined)
+      insertValues.orderCost = Number(data.orderCost);
+    if (data.lowStockThreshold !== undefined)
+      insertValues.lowStockThreshold = Number(data.lowStockThreshold);
+    if (data.unitsPerCase)
+      insertValues.unitsPerCase = Number(data.unitsPerCase);
+    if (data.isOnMenu !== undefined) insertValues.isOnMenu = !!data.isOnMenu;
+
+    console.log("[POST /items] Insert values:", JSON.stringify(insertValues));
 
     const [item] = await db
       .insert(inventoryItemsTable)
-      .values({
-        name: data.name,
-        nameEs: data.nameEs ?? null,
-        type: data.type ?? "spirit",
-        subtype: data.subtype ?? null,
-        baseUnit: data.baseUnit ?? "ml",
-        baseUnitAmount: Number(data.baseUnitAmount) || 750,
-        servingSize: Number(data.servingSize) || 44.36,
-        pourSize: Number(data.pourSize) || 1.5,
-        bottleSizeMl: data.bottleSizeMl ? Number(data.bottleSizeMl) : null,
-        glassWeightG: data.glassWeightG ? Number(data.glassWeightG) : null,
-        density: Number(data.density) || 0.94,
-        tareWeightG: data.tareWeightG ? Number(data.tareWeightG) : null,
-        fullBottleWeightG: data.fullBottleWeightG
-          ? Number(data.fullBottleWeightG)
-          : null,
-        currentStock: Number(data.currentStock) || 0,
-        orderCost: Number(data.orderCost) || 0,
-        lowStockThreshold: Number(data.lowStockThreshold) || 1,
-        unitsPerCase: Number(data.unitsPerCase) || 1,
-        isOnMenu: !!data.isOnMenu,
-      })
+      .values(insertValues)
       .returning();
 
+    console.log("[POST /items] Successfully created item:", item.id);
     res.json(item);
   } catch (err: any) {
+    console.error("[POST /items] Error:", err.message);
+    console.error("[POST /items] Stack:", err.stack);
     res.status(400).json({ error: err.message });
   }
 });
@@ -129,6 +158,7 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
   try {
     const id = getId(req);
     const data = req.body;
+    console.log("[PATCH /items/:id] Received data:", JSON.stringify(data));
 
     // Handle isOnMenu toggle — minimal update
     if (Object.keys(data).length === 1 && data.isOnMenu !== undefined) {
@@ -172,25 +202,97 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       return res.json(item);
     }
 
-    // Full update — strip timestamps
-    const { createdAt: _createdAt, updatedAt: _updatedAt, ...cleanData } = data;
-
+    // Get existing item for stock calculation
     const [existingItem] = await db
       .select()
       .from(inventoryItemsTable)
       .where(eq(inventoryItemsTable.id, id))
       .limit(1);
 
+    if (!existingItem) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    // Handle currentBulk and currentPartial updates - recalculate currentStock
+    let currentBulk = existingItem.currentBulk ?? 0;
+    let currentPartial = existingItem.currentPartial ?? 0;
+
+    if (data.currentBulk !== undefined) {
+      currentBulk = Number(data.currentBulk) || 0;
+    }
+    if (data.currentPartial !== undefined) {
+      currentPartial = Number(data.currentPartial) || 0;
+    }
+
+    // Recalculate currentStock if bulk or partial was provided
+    if (data.currentBulk !== undefined || data.currentPartial !== undefined) {
+      const baseUnitAmount =
+        Number(data.baseUnitAmount) || existingItem.baseUnitAmount || 750;
+      const newStock = currentBulk * baseUnitAmount + currentPartial;
+      data.currentStock = newStock;
+      data.currentBulk = currentBulk;
+      data.currentPartial = currentPartial;
+    }
+
+    // Full update - only include known fields that exist in DB
+    const updateData: any = { updatedAt: new Date() };
+
+    // Map known fields
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.nameEs !== undefined) updateData.nameEs = data.nameEs || null;
+    if (data.type !== undefined) updateData.type = data.type;
+    if (data.subtype !== undefined) updateData.subtype = data.subtype || null;
+    if (data.baseUnit !== undefined) updateData.baseUnit = data.baseUnit;
+    if (data.baseUnitAmount !== undefined)
+      updateData.baseUnitAmount = Number(data.baseUnitAmount);
+    if (data.servingSize !== undefined)
+      updateData.servingSize = Number(data.servingSize);
+    if (data.pourSize !== undefined)
+      updateData.pourSize = Number(data.pourSize);
+    if (data.bottleSizeMl !== undefined)
+      updateData.bottleSizeMl = data.bottleSizeMl
+        ? Number(data.bottleSizeMl)
+        : null;
+    if (data.glassWeightG !== undefined)
+      updateData.glassWeightG = data.glassWeightG
+        ? Number(data.glassWeightG)
+        : null;
+    if (data.density !== undefined) updateData.density = Number(data.density);
+    if (data.tareWeightG !== undefined)
+      updateData.tareWeightG = data.tareWeightG
+        ? Number(data.tareWeightG)
+        : null;
+    if (data.fullBottleWeightG !== undefined)
+      updateData.fullBottleWeightG = data.fullBottleWeightG
+        ? Number(data.fullBottleWeightG)
+        : null;
+    if (data.currentStock !== undefined)
+      updateData.currentStock = Number(data.currentStock);
+    if (data.currentBulk !== undefined) updateData.currentBulk = currentBulk;
+    if (data.currentPartial !== undefined)
+      updateData.currentPartial = currentPartial;
+    if (data.orderCost !== undefined)
+      updateData.orderCost = Number(data.orderCost);
+    if (data.lowStockThreshold !== undefined)
+      updateData.lowStockThreshold = Number(data.lowStockThreshold);
+    if (data.unitsPerCase !== undefined)
+      updateData.unitsPerCase = Number(data.unitsPerCase);
+    if (data.isOnMenu !== undefined) updateData.isOnMenu = !!data.isOnMenu;
+
+    console.log(
+      "[PATCH /items/:id] Final update data:",
+      JSON.stringify(updateData),
+    );
+
     const [item] = await db
       .update(inventoryItemsTable)
-      .set({
-        ...cleanData,
-        updatedAt: new Date(),
-      })
+      .set(updateData)
       .where(eq(inventoryItemsTable.id, id))
       .returning();
 
     if (!item) return res.status(404).json({ error: "Item not found" });
+
+    console.log("[PATCH /items/:id] Successfully updated item:", item.id);
 
     await logEvent({
       userId: (req as any).user?.id || "system",

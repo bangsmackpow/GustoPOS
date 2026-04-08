@@ -16,7 +16,6 @@ import {
   ArrowDown,
   Trash2,
   Search,
-  Filter,
   ChevronRight,
   Menu,
   Copy as CopyIcon,
@@ -33,7 +32,7 @@ const DRINK_CATEGORIES = [
   { value: "other", label: "Other", labelEs: "Otro" },
 ];
 
-const SPIRIT_SUBTYPES = [
+const _SPIRIT_SUBTYPES = [
   { value: "tequila", label: "Tequila" },
   { value: "mezcal", label: "Mezcal" },
   { value: "vodka", label: "Vodka" },
@@ -396,7 +395,9 @@ export default function Drinks() {
                       <th className="p-4 font-medium">
                         <div className="flex flex-col">
                           <span>{getTranslation("margin", language)}</span>
-                          <span className="text-xs text-muted-foreground font-normal">$ / %</span>
+                          <span className="text-xs text-muted-foreground font-normal">
+                            $ / %
+                          </span>
                         </div>
                       </th>
                       <th className="p-4 font-medium text-right">Actions</th>
@@ -411,14 +412,15 @@ export default function Drinks() {
                         ((finalPrice - drink.costPerDrink) /
                           (finalPrice || 1)) *
                         100;
-                      
+
                       // Color code margin: green (>40%), yellow (20-40%), red (<20%)
-                      const marginColor = marginPercent >= 40 
-                        ? "text-emerald-400" 
-                        : marginPercent >= 20 
-                        ? "text-yellow-400" 
-                        : "text-red-400";
-                      
+                      const marginColor =
+                        marginPercent >= 40
+                          ? "text-emerald-400"
+                          : marginPercent >= 20
+                            ? "text-yellow-400"
+                            : "text-red-400";
+
                       return (
                         <tr
                           key={drink.id}
@@ -504,14 +506,18 @@ export default function Drinks() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                title={getTranslation("clone", language) || "Clone"}
+                                title={
+                                  getTranslation("clone", language) || "Clone"
+                                }
                                 onClick={() => {
                                   // Clone: open modal with copied drink (no id, name prefixed)
-                                  const { id, name, nameEs, ...rest } = drink;
+                                  const { name, nameEs, ...rest } = drink;
                                   setEditingDrink({
                                     ...rest,
                                     name: `Copy of ${name}`,
-                                    nameEs: nameEs ? `Copia de ${nameEs}` : `Copy of ${name}`,
+                                    nameEs: nameEs
+                                      ? `Copia de ${nameEs}`
+                                      : `Copy of ${name}`,
                                     id: undefined,
                                   });
                                 }}

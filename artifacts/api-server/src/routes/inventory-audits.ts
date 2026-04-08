@@ -1,13 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import {
-  db,
-  inventoryAuditsTable,
-  inventoryItemsTable,
-  ordersTable,
-  tabsTable,
-  recipeIngredientsTable,
-} from "@workspace/db";
-import { eq, desc, sql, gte, lte, and } from "drizzle-orm";
+import { db, inventoryAuditsTable, inventoryItemsTable } from "@workspace/db";
+import { eq, desc, sql, gte, and } from "drizzle-orm";
 import { logEvent } from "../lib/auditLog";
 
 const router: IRouter = Router();
@@ -301,7 +294,7 @@ router.post("/", async (req: Request, res: Response) => {
       systemStock > 0 ? (variance / systemStock) * 100 : 0;
 
     // Record the audit
-    const audit = await db.insert(inventoryAuditsTable).values({
+    await db.insert(inventoryAuditsTable).values({
       itemId,
       systemStock,
       physicalCount,

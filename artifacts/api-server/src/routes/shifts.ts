@@ -15,7 +15,7 @@ import { StartShiftBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-async function getReportData(shiftId: string) {
+async function _getReportData(shiftId: string) {
   const [shift] = await db
     .select()
     .from(shiftsTable)
