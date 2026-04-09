@@ -522,14 +522,14 @@ export const CloseTabParams = zod.object({
 });
 
 export const CloseTabBody = zod.object({
-  paymentMethod: zod.enum(["cash", "card"]).optional(),
+  paymentMethod: zod.enum(["cash", "card"]),
   notes: zod.string().nullish(),
-  tipMxn: zod.number().min(0).optional(),
+  tipMxn: zod.number().optional(),
   payments: zod
     .array(
       zod.object({
-        amountMxn: zod.number().positive(),
-        tipMxn: zod.number().min(0).default(0),
+        amountMxn: zod.number(),
+        tipMxn: zod.number().optional(),
         paymentMethod: zod.enum(["cash", "card"]),
       }),
     )
@@ -646,10 +646,6 @@ export const GetActiveShiftResponse = zod.object({
  */
 export const CloseShiftParams = zod.object({
   id: zod.coerce.string(),
-});
-
-export const CloseShiftBody = zod.object({
-  force: zod.boolean().optional().default(false),
 });
 
 export const CloseShiftResponse = zod.object({
@@ -779,6 +775,13 @@ export const GetSettingsResponse = zod.object({
   inventoryAlertEmail: zod.string().nullish(),
   enableLitestream: zod.boolean(),
   enableUsbBackup: zod.boolean(),
+  pinLockTimeoutMin: zod.number().optional(),
+  autoBackupEnabled: zod.boolean().optional(),
+  autoBackupIntervalMin: zod.number().optional(),
+  maxAutoBackups: zod.number().optional(),
+  lastAutoBackup: zod.date().optional(),
+  lastDailyBackup: zod.date().optional(),
+  lastWeeklyBackup: zod.date().optional(),
 });
 
 /**
@@ -799,6 +802,9 @@ export const UpdateSettingsBody = zod.object({
   enableLitestream: zod.boolean().nullish(),
   enableUsbBackup: zod.boolean().nullish(),
   pinLockTimeoutMin: zod.number().nullish(),
+  autoBackupEnabled: zod.boolean().nullish(),
+  autoBackupIntervalMin: zod.number().nullish(),
+  maxAutoBackups: zod.number().nullish(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -816,8 +822,284 @@ export const UpdateSettingsResponse = zod.object({
   inventoryAlertEmail: zod.string().nullish(),
   enableLitestream: zod.boolean(),
   enableUsbBackup: zod.boolean(),
-  pinLockTimeoutMin: zod.number(),
+  pinLockTimeoutMin: zod.number().optional(),
+  autoBackupEnabled: zod.boolean().optional(),
+  autoBackupIntervalMin: zod.number().optional(),
+  maxAutoBackups: zod.number().optional(),
+  lastAutoBackup: zod.date().optional(),
+  lastDailyBackup: zod.date().optional(),
+  lastWeeklyBackup: zod.date().optional(),
 });
+
+/**
+ * @summary Create a manual backup
+ */
+export const CreateManualBackupResponse = zod.object({
+  success: zod.boolean().optional(),
+  backup: zod
+    .object({
+      id: zod.string(),
+      filename: zod.string(),
+      path: zod.string().optional(),
+      size: zod.number(),
+      createdAt: zod.date(),
+      type: zod.enum(["auto", "daily", "weekly", "manual"]),
+    })
+    .optional(),
+});
+
+/**
+ * @summary List all backups
+ */
+export const ListBackupsResponse = zod.object({
+  backups: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        filename: zod.string(),
+        path: zod.string().optional(),
+        size: zod.number(),
+        createdAt: zod.date(),
+        type: zod.enum(["auto", "daily", "weekly", "manual"]),
+      }),
+    )
+    .optional(),
+});
+
+/**
+ * @summary Restore from a backup
+ */
+export const RestoreBackupParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const RestoreBackupResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Delete a backup
+ */
+export const DeleteBackupParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteBackupResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Get backup settings
+ */
+export const GetBackupSettingsResponse = zod.object({
+  autoBackupEnabled: zod.boolean().optional(),
+  autoBackupIntervalMin: zod.number().optional(),
+  maxAutoBackups: zod.number().optional(),
+  lastAutoBackup: zod.date().optional(),
+  lastDailyBackup: zod.date().optional(),
+  lastWeeklyBackup: zod.date().optional(),
+});
+
+/**
+ * @summary Start auto-backup
+ */
+export const StartAutoBackupResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Create backup on shift close
+ */
+export const BackupOnShiftCloseResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Reset database to fresh state
+ */
+export const ResetDatabaseResponse = zod.object({
+  success: zod.boolean(),
+});
+
+/**
+ * @summary Get all tax rates
+ */
+export const GetTaxRatesResponse = zod.object({
+  rates: zod.array(
+    zod.object({
+      id: zod.string(),
+      category: zod.string(),
+      rate: zod.number(),
+      description: zod.string().optional(),
+      isActive: zod.boolean(),
+    }),
+  ),
+});
+
+/**
+ * @summary Get tax configuration
+ */
+export const GetTaxConfigResponse = zod.object({
+  defaultRate: zod.number(),
+  rates: zod.record(zod.string(), zod.number()),
+  lastUpdated: zod.string(),
+});
+
+/**
+ * @summary Get tax rate by category
+ */
+export const GetTaxRateByCategoryParams = zod.object({
+  category: zod.coerce.string(),
+});
+
+export const GetTaxRateByCategoryResponse = zod.object({
+  id: zod.string(),
+  category: zod.string(),
+  rate: zod.number(),
+  description: zod.string().optional(),
+  isActive: zod.boolean(),
+});
+
+/**
+ * @summary Update tax rate
+ */
+export const UpdateTaxRateParams = zod.object({
+  category: zod.coerce.string(),
+});
+
+export const UpdateTaxRateBody = zod.object({
+  rate: zod.number(),
+  description: zod.string().optional(),
+});
+
+export const UpdateTaxRateResponse = zod.object({
+  success: zod.boolean(),
+  rate: zod.object({
+    id: zod.string(),
+    category: zod.string(),
+    rate: zod.number(),
+    description: zod.string().optional(),
+    isActive: zod.boolean(),
+  }),
+});
+
+/**
+ * @summary Get promo code by code
+ */
+export const GetPromoCodeByCodeParams = zod.object({
+  code: zod.coerce.string(),
+});
+
+export const GetPromoCodeByCodeResponse = zod.object({
+  id: zod.string(),
+  code: zod.string(),
+  description: zod.string().optional(),
+  discountType: zod.enum(["percentage", "fixed_amount"]),
+  discountValue: zod.number(),
+  maxUses: zod.number().optional(),
+  currentUses: zod.number().optional(),
+  expiresAt: zod.date().optional(),
+  isActive: zod.boolean().optional(),
+});
+
+/**
+ * @summary Apply promo code to tab
+ */
+export const ApplyPromoCodeToTabParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ApplyPromoCodeToTabBody = zod.object({
+  promoCode: zod.string(),
+});
+
+export const ApplyPromoCodeToTabResponse = zod.object({
+  id: zod.string(),
+  discountMxn: zod.number(),
+  promoCodeId: zod.string(),
+});
+
+/**
+ * @summary Get staff shifts for a shift
+ */
+export const GetStaffShiftsParams = zod.object({
+  shiftId: zod.coerce.string(),
+});
+
+export const GetStaffShiftsResponseItem = zod.object({
+  id: zod.string(),
+  shiftId: zod.string(),
+  staffUserId: zod.string(),
+  staffName: zod.string(),
+  staffRole: zod.string().optional(),
+  clockInAt: zod.date(),
+  clockOutAt: zod.date().optional(),
+  breakStartAt: zod.date().optional(),
+  breakEndAt: zod.date().optional(),
+  notes: zod.string().nullish(),
+  hoursWorked: zod.number().optional(),
+  breakMinutes: zod.number().optional(),
+});
+export const GetStaffShiftsResponse = zod.array(GetStaffShiftsResponseItem);
+
+/**
+ * @summary Clock in staff member
+ */
+export const ClockInStaffBody = zod.object({
+  shiftId: zod.string(),
+  staffUserId: zod.string(),
+  notes: zod.string().optional(),
+});
+
+export const ClockInStaffResponse = zod.object({
+  success: zod.boolean(),
+  shift: zod.object({
+    id: zod.string(),
+    staffName: zod.string(),
+    clockInAt: zod.date(),
+    notes: zod.string().optional(),
+  }),
+});
+
+/**
+ * @summary Clock out staff member
+ */
+export const ClockOutStaffBody = zod.object({
+  staffShiftId: zod.string(),
+  notes: zod.string().optional(),
+});
+
+export const ClockOutStaffResponse = zod.object({
+  success: zod.boolean(),
+  shift: zod.object({
+    staffName: zod.string(),
+    clockInAt: zod.date(),
+    clockOutAt: zod.date(),
+    hoursWorked: zod.number(),
+  }),
+});
+
+/**
+ * @summary Get staff performance metrics for a shift
+ */
+export const GetStaffPerformanceParams = zod.object({
+  shiftId: zod.coerce.string(),
+});
+
+export const GetStaffPerformanceResponseItem = zod.object({
+  staffUserId: zod.string(),
+  staffName: zod.string(),
+  staffRole: zod.string().optional(),
+  totalOrders: zod.number(),
+  totalRevenueMxn: zod.number().optional(),
+  totalTipsMxn: zod.number().optional(),
+  tabsOpened: zod.number().optional(),
+  tabsClosed: zod.number().optional(),
+  drinksServed: zod.number().optional(),
+});
+export const GetStaffPerformanceResponse = zod.array(
+  GetStaffPerformanceResponseItem,
+);
 
 /**
  * @summary List local events and rushes
@@ -854,351 +1136,4 @@ export const DeleteRushesIdParams = zod.object({
 
 export const DeleteRushesIdResponse = zod.object({
   success: zod.boolean(),
-});
-
-/**
- * @summary Validate and get promo code details
- */
-export const GetPromoCodesCodeParams = zod.object({
-  code: zod.string(),
-});
-
-export const GetPromoCodesCodeResponse = zod.object({
-  id: zod.string(),
-  code: zod.string(),
-  description: zod.string().nullish(),
-  discountType: zod.enum(["percentage", "fixed_amount"]),
-  discountValue: zod.number(),
-  maxUses: zod.number().nullish(),
-  currentUses: zod.number(),
-  expiresAt: zod.date().nullish(),
-});
-
-/**
- * @summary Apply a promo code to a tab
- */
-export const PatchTabsIdApplyCodeParams = zod.object({
-  id: zod.string(),
-});
-
-export const PatchTabsIdApplyCodeBody = zod.object({
-  promoCode: zod.string(),
-});
-
-export const PatchTabsIdApplyCodeResponse = zod.object({
-  id: zod.string(),
-  discountMxn: zod.number(),
-  promoCodeId: zod.string().nullish(),
-});
-
-/**
- * @summary Get sales analytics
- */
-export const GetAnalyticsSalesResponse = zod.object({
-  summary: zod.object({
-    totalRevenue: zod.number(),
-    totalTips: zod.number(),
-    totalDiscount: zod.number(),
-    tabsCount: zod.number(),
-    ordersCount: zod.number(),
-  }),
-  salesByDrink: zod.array(
-    zod.object({
-      drinkId: zod.string(),
-      drinkName: zod.string(),
-      drinkNameEs: zod.string().nullish(),
-      unitsPriced: zod.number(),
-      totalRevenue: zod.number(),
-      averagePrice: zod.number(),
-    }),
-  ),
-  salesByStaff: zod.array(
-    zod.object({
-      userId: zod.string(),
-      userName: zod.string(),
-      totalRevenue: zod.number(),
-      tabsCount: zod.number(),
-      avgTicket: zod.number(),
-      tipsTotal: zod.number(),
-    }),
-  ),
-  hourlySales: zod.array(
-    zod.object({
-      hour: zod.number(),
-      totalRevenue: zod.number(),
-      tabsCount: zod.number(),
-    }),
-  ),
-  period: zod.object({
-    startDate: zod.string(),
-    endDate: zod.string(),
-  }),
-});
-
-/**
- * @summary Get inventory audit history
- */
-export const GetInventoryAuditsHistoryResponse = zod.object({
-  period: zod.object({
-    days: zod.number(),
-    startDate: zod.string(),
-    endDate: zod.string(),
-  }),
-  audits: zod.array(
-    zod.object({
-      id: zod.string(),
-      itemId: zod.string(),
-      itemName: zod.string(),
-      itemNameEs: zod.string().nullish(),
-      baseUnit: zod.string(),
-      systemStock: zod.number(),
-      physicalCount: zod.number(),
-      variance: zod.number(),
-      variancePercent: zod.number(),
-      auditReason: zod.string().nullish(),
-      notes: zod.string().nullish(),
-      auditedByUserId: zod.string(),
-      auditedAt: zod.date(),
-    }),
-  ),
-});
-
-/**
- * @summary Get inventory variance summary with recommendations
- */
-export const GetInventoryAuditsVarianceSummaryResponse = zod.object({
-  period: zod.object({
-    days: zod.number(),
-    startDate: zod.string(),
-    endDate: zod.string(),
-  }),
-  summary: zod.object({
-    totalAudits: zod.number(),
-    itemsAudited: zod.number(),
-    itemsWithVariance: zod.number(),
-  }),
-  itemVariances: zod.array(
-    zod.object({
-      itemId: zod.string(),
-      itemName: zod.string(),
-      itemNameEs: zod.string().nullish(),
-      auditCount: zod.number(),
-      totalVariance: zod.number(),
-      avgVariancePercent: zod.number(),
-      maxVariance: zod.number(),
-      minVariance: zod.number(),
-      negativeCount: zod.number(),
-      positiveCount: zod.number(),
-      lastVariancePercent: zod.number(),
-    }),
-  ),
-  recommendations: zod.array(
-    zod.object({
-      itemId: zod.string(),
-      itemName: zod.string(),
-      issue: zod.string(),
-      severity: zod.enum(["critical", "high", "medium", "low"]),
-      recommendation: zod.string(),
-    }),
-  ),
-});
-
-/**
- * @summary Record an inventory audit
- */
-export const PostInventoryAuditsBody = zod.object({
-  itemId: zod.string(),
-  physicalCount: zod.number(),
-  auditReason: zod.string().optional(),
-  notes: zod.string().optional(),
-  auditedByUserId: zod.string(),
-});
-
-export const PostInventoryAuditsResponse = zod.object({
-  success: zod.boolean(),
-  audit: zod.object({
-    itemId: zod.string(),
-    systemStock: zod.number(),
-    physicalCount: zod.number(),
-    variance: zod.number(),
-    variancePercent: zod.number(),
-  }),
-});
-
-/**
- * @summary Get inventory forecasts with consumption velocity and stockout predictions
- */
-export const GetAnalyticsInventoryForecastResponse = zod.object({
-  period: zod.object({
-    days: zod.number(),
-    startDate: zod.string(),
-    endDate: zod.string(),
-  }),
-  summary: zod.object({
-    critical: zod.number(),
-    low: zod.number(),
-    ok: zod.number(),
-  }),
-  forecasts: zod.array(
-    zod.object({
-      itemId: zod.string(),
-      itemName: zod.string(),
-      itemNameEs: zod.string(),
-      baseUnit: zod.string(),
-      currentStock: zod.number(),
-      dailyVelocity: zod.number(),
-      daysUntilStockout: zod.number(),
-      suggestedReorderPoint: zod.number(),
-      lowThreshold: zod.number(),
-      alertLevel: zod.enum(["critical", "low", "ok"]),
-      alertDays: zod.number(),
-      consumedInPeriod: zod.number(),
-      ordersInPeriod: zod.number(),
-    }),
-  ),
-});
-
-/**
- * @summary Get current tax configuration
- */
-export const GetTaxRatesResponse = zod.object({
-  rates: zod.array(
-    zod.object({
-      id: zod.string(),
-      category: zod.string(),
-      rate: zod.number(),
-      description: zod.string().nullable(),
-      isActive: zod.boolean(),
-    }),
-  ),
-});
-
-export const GetTaxConfigResponse = zod.object({
-  defaultRate: zod.number(),
-  rates: zod.record(zod.number()),
-  lastUpdated: zod.string(),
-});
-
-/**
- * @summary Update tax rate
- */
-export const UpdateTaxRateBody = zod.object({
-  category: zod.string(),
-  rate: zod.number(),
-  description: zod.string().optional(),
-});
-
-export const UpdateTaxRateResponse = zod.object({
-  success: zod.boolean(),
-  rate: zod.object({
-    id: zod.string(),
-    category: zod.string(),
-    rate: zod.number(),
-    description: zod.string().nullable(),
-    isActive: zod.boolean(),
-  }),
-});
-
-/**
- * @summary Get staff shifts for a shift
- */
-export const GetStaffShiftsResponse = zod.array(
-  zod.object({
-    id: zod.string(),
-    shiftId: zod.string(),
-    staffUserId: zod.string(),
-    staffName: zod.string(),
-    staffRole: zod.enum([
-      "admin",
-      "manager",
-      "head_bartender",
-      "bartender",
-      "server",
-    ]),
-    clockInAt: zod.date(),
-    clockOutAt: zod.date().nullable(),
-    breakStartAt: zod.date().nullable(),
-    breakEndAt: zod.date().nullable(),
-    notes: zod.string().nullable(),
-    hoursWorked: zod.number(),
-    breakMinutes: zod.number(),
-  }),
-);
-
-/**
- * @summary Clock in staff member
- */
-export const PostStaffShiftClockInBody = zod.object({
-  shiftId: zod.string(),
-  staffUserId: zod.string(),
-  notes: zod.string().optional(),
-});
-
-export const PostStaffShiftClockInResponse = zod.object({
-  success: zod.boolean(),
-  shift: zod.object({
-    id: zod.string(),
-    staffName: zod.string(),
-    clockInAt: zod.date(),
-    notes: zod.string().nullable(),
-  }),
-});
-
-/**
- * @summary Clock out staff member
- */
-export const PostStaffShiftClockOutBody = zod.object({
-  staffShiftId: zod.string(),
-  notes: zod.string().optional(),
-});
-
-export const PostStaffShiftClockOutResponse = zod.object({
-  success: zod.boolean(),
-  shift: zod.object({
-    staffName: zod.string(),
-    clockInAt: zod.date(),
-    clockOutAt: zod.date(),
-    hoursWorked: zod.number(),
-  }),
-});
-
-/**
- * @summary Get staff performance metrics for a shift
- */
-export const GetStaffPerformanceResponse = zod.object({
-  period: zod.object({
-    shiftId: zod.string(),
-    startDate: zod.string(),
-    endDate: zod.string(),
-  }),
-  staffMetrics: zod.array(
-    zod.object({
-      id: zod.string(),
-      staffUserId: zod.string(),
-      staffName: zod.string(),
-      staffRole: zod.enum([
-        "admin",
-        "manager",
-        "head_bartender",
-        "bartender",
-        "server",
-      ]),
-      totalOrders: zod.number(),
-      totalRevenue: zod.number(),
-      totalTips: zod.number(),
-      totalTabs: zod.number(),
-      avgOrderValue: zod.number(),
-      avgTabValue: zod.number(),
-      tipPercentage: zod.number(),
-      customerCount: zod.number(),
-      ordersPerHour: zod.number(),
-      revenuePerHour: zod.number(),
-    }),
-  ),
-  summary: zod.object({
-    totalRevenue: zod.number(),
-    totalTips: zod.number(),
-    topPerformer: zod.string().nullable(),
-    topPerformerRevenue: zod.number(),
-  }),
 });

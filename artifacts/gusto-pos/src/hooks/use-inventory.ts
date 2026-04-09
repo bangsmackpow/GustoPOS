@@ -1,14 +1,17 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 
 const API_BASE = "/api/inventory";
 
 // ─── Inventory Items ─────────────────────────────────────────────────────────
 
-export function useGetInventoryItems() {
+export function useGetInventoryItems(includeDeleted: boolean = false) {
   return useQuery({
-    queryKey: ["inventory-items"],
+    queryKey: ["inventory-items", { includeDeleted }],
     queryFn: async () => {
-      const res = await fetch(`${API_BASE}/items`);
+      const url = includeDeleted
+        ? `${API_BASE}/items?includeDeleted=true`
+        : `${API_BASE}/items`;
+      const res = await fetch(url);
       if (!res.ok) throw new Error("Failed to fetch inventory items");
       return res.json();
     },
@@ -98,5 +101,37 @@ export function useGetInventoryCounts(itemId: string) {
       return res.json();
     },
     enabled: !!itemId,
+  });
+}
+
+export function useGetTrashCount() {
+  return useQuery({
+    queryKey: ["inventory-trash-count"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/trash/count`);
+      if (!res.ok) throw new Error("Failed to fetch trash count");
+      return res.json();
+    },
+  });
+}
+
+export function useClearTrash() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      console.log("[useClearTrash] Calling DELETE /api/inventory/trash/clear");
+      const res = await fetch(`${API_BASE}/trash/clear`, { method: "DELETE" });
+      console.log("[useClearTrash] Response status:", res.status);
+      const data = await res.json();
+      console.log("[useClearTrash] Response data:", data);
+      if (!res.ok) {
+        throw new Error(data.error || `Failed to clear trash (${res.status})`);
+      }
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["inventory-items"] });
+      qc.invalidateQueries({ queryKey: ["inventory-trash-count"] });
+    },
   });
 }

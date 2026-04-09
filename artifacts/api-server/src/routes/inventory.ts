@@ -35,14 +35,19 @@ function getId(req: Request): string {
 // ─── Item Routes ─────────────────────────────────────────────────────────────
 
 // GET /api/inventory/items
-router.get("/items", async (_req: Request, res: Response) => {
+router.get("/items", async (req: Request, res: Response) => {
   try {
+    const includeDeleted = req.query.includeDeleted === "true";
     const items = await db
       .select()
       .from(inventoryItemsTable)
       .orderBy(inventoryItemsTable.name);
 
-    res.json(items.filter((i) => !i.isDeleted));
+    if (includeDeleted) {
+      res.json(items);
+    } else {
+      res.json(items.filter((i) => !i.isDeleted));
+    }
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -136,6 +141,9 @@ router.post("/items", async (req: Request, res: Response) => {
     if (data.unitsPerCase)
       insertValues.unitsPerCase = Number(data.unitsPerCase);
     if (data.isOnMenu !== undefined) insertValues.isOnMenu = !!data.isOnMenu;
+    if (data.parentItemId) insertValues.parentItemId = data.parentItemId;
+    if (data.alcoholDensity !== undefined)
+      insertValues.alcoholDensity = Number(data.alcoholDensity);
 
     console.log("[POST /items] Insert values:", JSON.stringify(insertValues));
 
@@ -278,6 +286,10 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
     if (data.unitsPerCase !== undefined)
       updateData.unitsPerCase = Number(data.unitsPerCase);
     if (data.isOnMenu !== undefined) updateData.isOnMenu = !!data.isOnMenu;
+    if (data.parentItemId !== undefined)
+      updateData.parentItemId = data.parentItemId || null;
+    if (data.alcoholDensity !== undefined)
+      updateData.alcoholDensity = Number(data.alcoholDensity);
 
     console.log(
       "[PATCH /items/:id] Final update data:",
@@ -354,14 +366,51 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
 router.delete("/items/:id", async (req: Request, res: Response) => {
   try {
     const id = getId(req);
+    console.log("[DELETE] Attempting to delete item:", id);
+
     const [deleted] = await db
       .update(inventoryItemsTable)
       .set({ isDeleted: true, updatedAt: new Date() })
       .where(eq(inventoryItemsTable.id, id))
       .returning();
 
-    if (!deleted) return res.status(404).json({ error: "Item not found" });
-    return res.json({ ok: true });
+    console.log("[DELETE] Result:", deleted);
+
+    if (!deleted)
+      return res.status(404).json({ error: "Item not found", ok: false });
+    return res.json({ ok: true, message: "Item moved to trash" });
+  } catch (err: any) {
+    console.error("[DELETE] Error:", err);
+    return res.status(500).json({ error: err.message, ok: false });
+  }
+});
+
+// DELETE /api/inventory/trash/clear
+router.delete("/trash/clear", async (req: Request, res: Response) => {
+  try {
+    console.log("[DELETE /trash/clear] Starting...");
+    const result = await db
+      .delete(inventoryItemsTable)
+      .where(eq(inventoryItemsTable.isDeleted, true))
+      .returning();
+
+    console.log("[DELETE /trash/clear] Deleted count:", result.length);
+    return res.json({ ok: true, deletedCount: result.length });
+  } catch (err: any) {
+    console.error("[DELETE /trash/clear] Error:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/inventory/trash/count
+router.get("/trash/count", async (_req: Request, res: Response) => {
+  try {
+    const items = await db
+      .select({ id: inventoryItemsTable.id })
+      .from(inventoryItemsTable)
+      .where(eq(inventoryItemsTable.isDeleted, true));
+
+    return res.json({ count: items.length });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }

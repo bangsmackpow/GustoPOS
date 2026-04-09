@@ -34,24 +34,44 @@ export function PinPad({
     if (pin.length !== 4) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/pin-verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ pin }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        const matchedUser = users?.find((u) => u.id === data.user.id);
-        if (matchedUser) {
-          setActiveStaff(matchedUser);
+      if (!users || users.length === 0) {
+        setError(true);
+        setPin("");
+        setIsSubmitting(false);
+        return;
+      }
+      let foundMatch = false;
+      const testPin = async (email: string | null | undefined) => {
+        if (!email) return false;
+        const res = await fetch("/api/pin-login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ pin, email }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          const matchedUser = users.find((u) => u.id === data.user.id);
+          if (matchedUser) {
+            setActiveStaff(matchedUser);
+          }
+          if (onLogin) {
+            onLogin();
+          } else {
+            onClose();
+          }
+          return true;
         }
-        if (onLogin) {
-          onLogin();
-        } else {
-          onClose();
+        return false;
+      };
+      for (const user of users) {
+        const success = await testPin(user.email);
+        if (success) {
+          foundMatch = true;
+          break;
         }
-      } else {
+      }
+      if (!foundMatch) {
         setError(true);
         setPin("");
       }
@@ -77,7 +97,7 @@ export function PinPad({
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         className="glass rounded-3xl p-8 max-w-sm w-full relative"
       >
-        {!lockScreen && (
+        {lockScreen && (
           <button
             onClick={onClose}
             className="absolute top-6 right-6 text-muted-foreground hover:text-foreground transition-colors"

@@ -489,11 +489,26 @@ export const CloseTabBodyPaymentMethod = {
   card: "card",
 } as const;
 
+export type CloseTabBodyPaymentsItemPaymentMethod =
+  (typeof CloseTabBodyPaymentsItemPaymentMethod)[keyof typeof CloseTabBodyPaymentsItemPaymentMethod];
+
+export const CloseTabBodyPaymentsItemPaymentMethod = {
+  cash: "cash",
+  card: "card",
+} as const;
+
+export type CloseTabBodyPaymentsItem = {
+  amountMxn: number;
+  tipMxn?: number;
+  paymentMethod: CloseTabBodyPaymentsItemPaymentMethod;
+};
+
 export interface CloseTabBody {
   paymentMethod: CloseTabBodyPaymentMethod;
   /** @nullable */
   notes?: string | null;
   tipMxn?: number;
+  payments?: CloseTabBodyPaymentsItem[];
 }
 
 export interface CreateOrderBody {
@@ -625,7 +640,13 @@ export interface AppSettings {
   inventoryAlertEmail?: string | null;
   enableLitestream: boolean;
   enableUsbBackup: boolean;
-  pinLockTimeoutMin: number;
+  pinLockTimeoutMin?: number;
+  autoBackupEnabled?: boolean;
+  autoBackupIntervalMin?: number;
+  maxAutoBackups?: number;
+  lastAutoBackup?: string;
+  lastDailyBackup?: string;
+  lastWeeklyBackup?: string;
 }
 
 export interface UpdateSettingsBody {
@@ -655,6 +676,14 @@ export interface UpdateSettingsBody {
   enableLitestream?: boolean | null;
   /** @nullable */
   enableUsbBackup?: boolean | null;
+  /** @nullable */
+  pinLockTimeoutMin?: number | null;
+  /** @nullable */
+  autoBackupEnabled?: boolean | null;
+  /** @nullable */
+  autoBackupIntervalMin?: number | null;
+  /** @nullable */
+  maxAutoBackups?: number | null;
 }
 
 export type RushImpact = (typeof RushImpact)[keyof typeof RushImpact];
@@ -718,6 +747,166 @@ export interface CreateRushBody {
 
 export interface DeleteResponse {
   success: boolean;
+}
+
+export interface TaxRate {
+  id: string;
+  category: string;
+  rate: number;
+  description?: string;
+  isActive: boolean;
+}
+
+export interface GetTaxRatesResponse {
+  rates: TaxRate[];
+}
+
+export type GetTaxConfigResponseRates = { [key: string]: number };
+
+export interface GetTaxConfigResponse {
+  defaultRate: number;
+  rates: GetTaxConfigResponseRates;
+  lastUpdated: string;
+}
+
+export interface UpdateTaxRateBody {
+  rate: number;
+  description?: string;
+}
+
+export interface UpdateTaxRateResponse {
+  success: boolean;
+  rate: TaxRate;
+}
+
+export type PromoCodeDiscountType =
+  (typeof PromoCodeDiscountType)[keyof typeof PromoCodeDiscountType];
+
+export const PromoCodeDiscountType = {
+  percentage: "percentage",
+  fixed_amount: "fixed_amount",
+} as const;
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  description?: string;
+  discountType: PromoCodeDiscountType;
+  discountValue: number;
+  maxUses?: number;
+  currentUses?: number;
+  expiresAt?: string;
+  isActive?: boolean;
+}
+
+export interface ApplyPromoCodeBody {
+  promoCode: string;
+}
+
+export interface ApplyPromoCodeResponse {
+  id: string;
+  discountMxn: number;
+  promoCodeId: string;
+}
+
+export interface StaffShift {
+  id: string;
+  shiftId: string;
+  staffUserId: string;
+  staffName: string;
+  staffRole?: string;
+  clockInAt: string;
+  clockOutAt?: string;
+  breakStartAt?: string;
+  breakEndAt?: string;
+  /** @nullable */
+  notes?: string | null;
+  hoursWorked?: number;
+  breakMinutes?: number;
+}
+
+export interface ClockInBody {
+  shiftId: string;
+  staffUserId: string;
+  notes?: string;
+}
+
+export type ClockInResponseShift = {
+  id: string;
+  staffName: string;
+  clockInAt: string;
+  notes?: string;
+};
+
+export interface ClockInResponse {
+  success: boolean;
+  shift: ClockInResponseShift;
+}
+
+export interface ClockOutBody {
+  staffShiftId: string;
+  notes?: string;
+}
+
+export type ClockOutResponseShift = {
+  staffName: string;
+  clockInAt: string;
+  clockOutAt: string;
+  hoursWorked: number;
+};
+
+export interface ClockOutResponse {
+  success: boolean;
+  shift: ClockOutResponseShift;
+}
+
+export interface StaffPerformance {
+  staffUserId: string;
+  staffName: string;
+  staffRole?: string;
+  totalOrders: number;
+  totalRevenueMxn?: number;
+  totalTipsMxn?: number;
+  tabsOpened?: number;
+  tabsClosed?: number;
+  drinksServed?: number;
+}
+
+export type BackupInfoType =
+  (typeof BackupInfoType)[keyof typeof BackupInfoType];
+
+export const BackupInfoType = {
+  auto: "auto",
+  daily: "daily",
+  weekly: "weekly",
+  manual: "manual",
+} as const;
+
+export interface BackupInfo {
+  id: string;
+  filename: string;
+  path?: string;
+  size: number;
+  createdAt: string;
+  type: BackupInfoType;
+}
+
+export interface BackupResponse {
+  success?: boolean;
+  backup?: BackupInfo;
+}
+
+export interface BackupListResponse {
+  backups?: BackupInfo[];
+}
+
+export interface BackupSettings {
+  autoBackupEnabled?: boolean;
+  autoBackupIntervalMin?: number;
+  maxAutoBackups?: number;
+  lastAutoBackup?: string;
+  lastDailyBackup?: string;
+  lastWeeklyBackup?: string;
 }
 
 export type GetTabsParams = {

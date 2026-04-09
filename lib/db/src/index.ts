@@ -13,6 +13,100 @@ if (!databaseUrl) {
   throw new Error("DATABASE_URL environment variable is required");
 }
 
+// Get database file path for backup operations
+export function getDatabasePath(): string {
+  let dbPath = databaseUrl
+    .replace(/^file:\/\//, "")
+    .replace(/^file:/, "")
+    .replace(/%20/g, " ");
+  if (!path.isAbsolute(dbPath)) {
+    dbPath = path.resolve(process.cwd(), dbPath);
+  }
+  return dbPath;
+}
+
+// Get backup directory path
+export function getBackupDirectory(): string {
+  const dbPath = getDatabasePath();
+  const dbDir = path.dirname(dbPath);
+  return path.join(dbDir, "backups");
+}
+
+// Ensure backup directory exists
+export function ensureBackupDirectory(): string {
+  const backupDir = getBackupDirectory();
+  if (!fs.existsSync(backupDir)) {
+    console.log(`Creating backup directory: ${backupDir}`);
+    fs.mkdirSync(backupDir, { recursive: true });
+  }
+  return backupDir;
+}
+
+// Ensure the application support directory exists (for desktop app)
+export function ensureAppDataDirectory(): string {
+  const isDesktop = process.env.GUSTO_DESKTOP === "true";
+  if (isDesktop) {
+    const appSupportDir = path.join(
+      process.env.HOME || process.env.USERPROFILE || "",
+      "Library",
+      "Application Support",
+      "GustoPOS",
+    );
+    if (!fs.existsSync(appSupportDir)) {
+      console.log(`Creating app data directory: ${appSupportDir}`);
+      fs.mkdirSync(appSupportDir, { recursive: true });
+    }
+    return appSupportDir;
+  }
+  return "";
+}
+
+// Configure SQLite for optimal local performance
+async function configureSQLitePerformance() {
+  try {
+    // Enable WAL mode for better concurrency and crash recovery
+    await client.execute({ sql: "PRAGMA journal_mode=WAL", args: [] });
+    // Use NORMAL sync for speed/durability balance
+    await client.execute({ sql: "PRAGMA synchronous=NORMAL", args: [] });
+    // Increase cache size to 64MB
+    await client.execute({ sql: "PRAGMA cache_size=-64000", args: [] });
+    // Store temp tables in memory
+    await client.execute({ sql: "PRAGMA temp_store=MEMORY", args: [] });
+    // Enable foreign keys
+    await client.execute({ sql: "PRAGMA foreign_keys=ON", args: [] });
+    console.log("✓ SQLite performance configured (WAL mode enabled)");
+  } catch (error) {
+    console.warn("Could not configure SQLite performance settings:", error);
+  }
+}
+
+// Run integrity check on startup
+async function runIntegrityCheck(): Promise<boolean> {
+  try {
+    const result = await client.execute({
+      sql: "PRAGMA integrity_check",
+      args: [],
+    });
+    if (result.rows && result.rows.length > 0) {
+      const status = result.rows[0] as unknown as { integrity_check: string };
+      if (status.integrity_check === "ok") {
+        console.log("✓ Database integrity check passed");
+        return true;
+      } else {
+        console.error(
+          "✗ Database integrity check failed:",
+          status.integrity_check,
+        );
+        return false;
+      }
+    }
+    return true;
+  } catch (error) {
+    console.warn("Could not run integrity check:", error);
+    return true;
+  }
+}
+
 // Ensure the database directory exists (for file: URLs)
 if (databaseUrl.startsWith("file:")) {
   const dbPath = databaseUrl.replace(/^file:/, "");
@@ -95,6 +189,15 @@ export async function initializeDatabase() {
   console.log("Checking database schema...");
   console.log(`Database URL: ${databaseUrl}`);
 
+  // Configure SQLite for optimal local performance
+  await configureSQLitePerformance();
+
+  // Ensure app data directory exists (for desktop)
+  ensureAppDataDirectory();
+
+  // Ensure backup directory exists
+  ensureBackupDirectory();
+
   // Print full path for debugging
   if (databaseUrl?.startsWith("file:")) {
     const dbPath = databaseUrl.replace(/^file:\/\//, "").replace(/%20/g, " ");
@@ -119,6 +222,12 @@ export async function initializeDatabase() {
       console.log(`Database directory already exists: ${dbDir}`);
     }
     console.log(`Database full path: ${dbPath}`);
+  }
+
+  // Run integrity check
+  const integrityOk = await runIntegrityCheck();
+  if (!integrityOk) {
+    console.error("⚠️ Database integrity check failed - data may be corrupted");
   }
 
   // Verify migrations folder exists

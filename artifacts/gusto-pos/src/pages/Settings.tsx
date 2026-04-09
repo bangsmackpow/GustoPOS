@@ -41,6 +41,7 @@ import {
   Upload,
   FileSpreadsheet,
   Database,
+  RefreshCw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -66,6 +67,12 @@ const APP_COLUMNS = [
     suggest: ["name", "item", "product", "description"],
   },
   {
+    key: "nameEs",
+    label: "Name (Spanish)",
+    required: false,
+    suggest: ["name_es", "nombre", "nameesp", "spanish"],
+  },
+  {
     key: "type",
     label: "Type",
     required: true,
@@ -77,7 +84,6 @@ const APP_COLUMNS = [
     required: false,
     suggest: ["subtype", "sub-category", "variety", "style"],
   },
-  // Add index signature to allow dynamic key access for inventory items
   {
     key: "baseUnit",
     label: "Base Unit",
@@ -91,22 +97,181 @@ const APP_COLUMNS = [
     suggest: ["bulk size", "size", "volume", "amount", "baseunitamount"],
   },
   {
+    key: "bulkUnit",
+    label: "Bulk Unit",
+    required: false,
+    suggest: ["bulk_unit", "bulkunit", "case", "case size"],
+  },
+  {
+    key: "bulkSize",
+    label: "Bulk Size",
+    required: false,
+    suggest: ["bulk_size", "bulksize", "case size", "units per case"],
+  },
+  {
+    key: "partialUnit",
+    label: "Partial Unit",
+    required: false,
+    suggest: ["partial_unit", "partialunit", "open bottle", "remainder"],
+  },
+  {
     key: "servingSize",
     label: "Serving Size",
     required: false,
-    suggest: ["serving size", "servingsize", "pour", "serving"],
+    suggest: ["serving size", "servingsize", "pour", "serving", "pour size"],
+  },
+  {
+    key: "servingUnit",
+    label: "Serving Unit",
+    required: false,
+    suggest: ["serving_unit", "servingunit", "serve unit", "oz"],
+  },
+  {
+    key: "pourSize",
+    label: "Pour Size",
+    required: false,
+    suggest: ["pour_size", "poursize", "pour", "shot size"],
+  },
+  {
+    key: "bottleSizeMl",
+    label: "Bottle Size (ml)",
+    required: false,
+    suggest: ["bottle_size_ml", "bottlesize", "ml", "bottle ml"],
+  },
+  {
+    key: "alcoholDensity",
+    label: "Alcohol Density",
+    required: false,
+    suggest: ["alcohol_density", "alcoholdensity", "abv", "proof"],
+  },
+  {
+    key: "density",
+    label: "Density",
+    required: false,
+    suggest: ["density", "specific gravity"],
+  },
+  {
+    key: "tareWeightG",
+    label: "Tare Weight (g)",
+    required: false,
+    suggest: [
+      "tare_weight_g",
+      "tareweight",
+      "tare",
+      "empty weight",
+      "empty bottle",
+    ],
+  },
+  {
+    key: "glassWeightG",
+    label: "Glass Weight (g)",
+    required: false,
+    suggest: ["glass_weight_g", "glassweight", "glass", "bottle weight"],
+  },
+  {
+    key: "fullBottleWeightG",
+    label: "Full Bottle Weight (g)",
+    required: false,
+    suggest: [
+      "full_bottle_weight_g",
+      "fullbottleweight",
+      "full weight",
+      "full bottle",
+    ],
   },
   {
     key: "orderCost",
     label: "Order Cost",
     required: false,
-    suggest: ["bulk cost", "cost", "price", "ordercost", "unit cost"],
+    suggest: [
+      "bulk cost",
+      "cost",
+      "price",
+      "ordercost",
+      "unit cost",
+      "wholesale",
+    ],
+  },
+  {
+    key: "markupFactor",
+    label: "Markup Factor",
+    required: false,
+    suggest: ["markup", "markupfactor", "multiplier", "margin"],
   },
   {
     key: "currentStock",
     label: "Current Stock",
     required: false,
     suggest: ["stock", "quantity", "qty", "currentstock", "on hand"],
+  },
+  {
+    key: "currentBulk",
+    label: "Current Bulk",
+    required: false,
+    suggest: ["current_bulk", "bulk", "unopened", "sealed"],
+  },
+  {
+    key: "currentPartial",
+    label: "Current Partial",
+    required: false,
+    suggest: ["current_partial", "partial", "open", "opened"],
+  },
+  {
+    key: "lowStockMethod",
+    label: "Low Stock Method",
+    required: false,
+    suggest: [
+      "low_stock_method",
+      "lowstockmethod",
+      "alert method",
+      "threshold type",
+    ],
+  },
+  {
+    key: "lowStockManualThreshold",
+    label: "Manual Threshold",
+    required: false,
+    suggest: [
+      "low_stock_manual_threshold",
+      "manualthreshold",
+      "manual threshold",
+      "min stock",
+    ],
+  },
+  {
+    key: "lowStockPercent",
+    label: "Low Stock %",
+    required: false,
+    suggest: [
+      "low_stock_percent",
+      "lowstockpercent",
+      "alert percent",
+      "percentage",
+    ],
+  },
+  {
+    key: "lowStockUsageDays",
+    label: "Usage Days",
+    required: false,
+    suggest: ["low_stock_usage_days", "usagedays", "days", "forecast days"],
+  },
+  {
+    key: "unitsPerCase",
+    label: "Units Per Case",
+    required: false,
+    suggest: [
+      "units_per_case",
+      "unitspercase",
+      "case qty",
+      "case quantity",
+      "pack size",
+    ],
+  },
+  {
+    key: "isOnMenu",
+    label: "On Menu",
+    required: false,
+    suggest: ["is_on_menu", "onmenu", "available", "active"],
   },
 ];
 
@@ -144,7 +309,14 @@ export default function Settings() {
     inventoryAlertEmail: "",
     enableLitestream: false,
     enableUsbBackup: false,
+    autoBackupEnabled: true,
+    autoBackupIntervalMin: 15,
+    maxAutoBackups: 5,
   });
+
+  const [backups, setBackups] = useState<any[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [creatingBackup, setCreatingBackup] = useState(false);
 
   const qc = useQueryClient();
   const [editingStaff, setEditingStaff] = useState<any>(null);
@@ -175,6 +347,9 @@ export default function Settings() {
   const [mappingStep, setMappingStep] = useState<"upload" | "map" | "preview">(
     "upload",
   );
+  const [importStrategy, setImportStrategy] = useState<
+    "update" | "replace" | "skip" | "merge"
+  >("update");
   const [newRush, setNewRush] = useState({
     title: "",
     type: "cruise" as const,
@@ -224,10 +399,35 @@ export default function Settings() {
         inventoryAlertEmail: settings.inventoryAlertEmail || "",
         enableLitestream: settings.enableLitestream,
         enableUsbBackup: settings.enableUsbBackup,
+        autoBackupEnabled: settings.autoBackupEnabled ?? true,
+        autoBackupIntervalMin: settings.autoBackupIntervalMin ?? 15,
+        maxAutoBackups: settings.maxAutoBackups ?? 5,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
+
+  const fetchBackups = async () => {
+    setLoadingBackups(true);
+    try {
+      const res = await fetch("/api/admin/backups");
+      const data = await res.json();
+      setBackups(data.backups || []);
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load backups",
+      });
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBackups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSaveSettings = () => {
     updateSettings.mutate(
@@ -401,7 +601,10 @@ export default function Settings() {
       return t;
     };
 
-    const normalizeSubtype = (subtype: string, type: string): string | null => {
+    const normalizeSubtype = (
+      subtype: string,
+      _type: string,
+    ): string | null => {
       const s = subtype.toLowerCase().trim();
       if (!s) return null;
       const subtypeMap: Record<string, string> = {
@@ -659,7 +862,10 @@ export default function Settings() {
       const res = await fetch("/api/admin/bulk-ingredients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ingredients: ingredientPreview }),
+        body: JSON.stringify({
+          ingredients: ingredientPreview,
+          strategy: importStrategy,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -724,6 +930,31 @@ export default function Settings() {
       });
     } finally {
       setIsSeeding(false);
+    }
+  };
+
+  const handleCreateBackup = async () => {
+    setCreatingBackup(true);
+    try {
+      const res = await fetch("/api/admin/backup", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: getTranslation("success", language),
+          description: "Backup created successfully",
+        });
+        fetchBackups();
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: err.message || "Failed to create backup",
+      });
+    } finally {
+      setCreatingBackup(false);
     }
   };
 
@@ -928,6 +1159,59 @@ export default function Settings() {
         <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
           <Shield size={18} /> Backups & Disaster Recovery
         </h3>
+
+        {/* Quick Backup Button */}
+        <Button
+          className="w-full"
+          onClick={handleCreateBackup}
+          disabled={creatingBackup}
+        >
+          {creatingBackup ? (
+            <RefreshCw size={16} className="mr-2 animate-spin" />
+          ) : (
+            <HardDrive size={16} className="mr-2" />
+          )}
+          {creatingBackup ? "Creating Backup..." : "Create Backup Now"}
+        </Button>
+
+        {/* Backup List */}
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <h4 className="text-sm font-medium text-muted-foreground">
+              Available Backups
+            </h4>
+            <Button variant="ghost" size="sm" onClick={() => fetchBackups()}>
+              <RefreshCw size={14} className="mr-1" /> Refresh
+            </Button>
+          </div>
+          {loadingBackups ? (
+            <div className="text-center py-4 text-muted-foreground">
+              Loading...
+            </div>
+          ) : backups.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground text-sm">
+              No backups yet. Click &quot;Create Backup Now&quot; above.
+            </div>
+          ) : (
+            <div className="max-h-48 overflow-y-auto space-y-1">
+              {backups.slice(0, 10).map((backup: any) => (
+                <div
+                  key={backup.id}
+                  className="flex items-center justify-between p-2 bg-white/5 rounded-lg text-sm"
+                >
+                  <span className="text-muted-foreground">
+                    {format(new Date(backup.createdAt), "MMM d, HH:mm")} -{" "}
+                    {(backup.size / 1024 / 1024).toFixed(1)}MB
+                  </span>
+                  <span className="capitalize text-xs px-2 py-0.5 bg-white/10 rounded">
+                    {backup.type}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
             <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary shrink-0">
@@ -1694,6 +1978,65 @@ export default function Settings() {
             {mappingStep === "map" && (
               <div className="flex-1 overflow-y-auto space-y-4">
                 <div className="bg-white/5 rounded-2xl border border-white/5 p-4">
+                  <h3 className="text-sm font-bold text-foreground mb-3">
+                    Import Strategy
+                  </h3>
+                  <div className="flex gap-2 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setImportStrategy("update")}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                        importStrategy === "update"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Update Existing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportStrategy("merge")}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                        importStrategy === "merge"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Merge (Keep Existing)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportStrategy("skip")}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                        importStrategy === "skip"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Skip Existing
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setImportStrategy("replace")}
+                      className={`px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
+                        importStrategy === "replace"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Replace All
+                    </button>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    {importStrategy === "update" &&
+                      "Updates existing items with same name, creates new items if they don't exist"}
+                    {importStrategy === "merge" &&
+                      "Only updates empty/missing fields, keeps existing values intact"}
+                    {importStrategy === "skip" &&
+                      "Creates new items only, skips items with matching names"}
+                    {importStrategy === "replace" &&
+                      "Deletes ALL inventory items first, then imports all items from CSV"}
+                  </p>
                   <h3 className="text-sm font-bold text-foreground mb-3">
                     Map CSV Columns
                   </h3>

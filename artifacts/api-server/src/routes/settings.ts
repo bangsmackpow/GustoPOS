@@ -18,6 +18,12 @@ function formatSettings(s: typeof settingsTable.$inferSelect) {
     enableLitestream: s.enableLitestream,
     enableUsbBackup: s.enableUsbBackup,
     pinLockTimeoutMin: s.pinLockTimeoutMin ?? 5,
+    autoBackupEnabled: s.autoBackupEnabled ?? true,
+    autoBackupIntervalMin: s.autoBackupIntervalMin ?? 15,
+    maxAutoBackups: s.maxAutoBackups ?? 5,
+    lastAutoBackup: s.lastAutoBackup,
+    lastDailyBackup: s.lastDailyBackup,
+    lastWeeklyBackup: s.lastWeeklyBackup,
   };
 }
 
@@ -74,6 +80,13 @@ router.patch("/", requireRole("admin"), async (req: Request, res: Response) => {
       updateData.enableUsbBackup = data.enableUsbBackup ?? false;
     if (data.pinLockTimeoutMin !== undefined)
       updateData.pinLockTimeoutMin = Number(data.pinLockTimeoutMin) || 5;
+    if (data.autoBackupEnabled !== undefined)
+      updateData.autoBackupEnabled = data.autoBackupEnabled ?? true;
+    if (data.autoBackupIntervalMin !== undefined)
+      updateData.autoBackupIntervalMin =
+        Number(data.autoBackupIntervalMin) || 15;
+    if (data.maxAutoBackups !== undefined)
+      updateData.maxAutoBackups = Number(data.maxAutoBackups) || 5;
 
     const [settings] = await db
       .update(settingsTable)

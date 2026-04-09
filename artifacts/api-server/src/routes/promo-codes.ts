@@ -2,11 +2,11 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, promoCodesTable, tabsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import {
-  GetPromoCodesCodeParams,
-  GetPromoCodesCodeResponse,
-  PatchTabsIdApplyCodeParams,
-  PatchTabsIdApplyCodeBody,
-  PatchTabsIdApplyCodeResponse,
+  GetPromoCodeByCodeParams,
+  GetPromoCodeByCodeResponse,
+  ApplyPromoCodeToTabParams,
+  ApplyPromoCodeToTabBody,
+  ApplyPromoCodeToTabResponse,
 } from "@workspace/api-zod";
 import { logEvent } from "../lib/auditLog";
 
@@ -17,7 +17,7 @@ const router: IRouter = Router();
  * Validate and get promo code details
  */
 router.get("/promo-codes/:code", async (req: Request, res: Response) => {
-  const parsed = GetPromoCodesCodeParams.safeParse({ code: req.params.code });
+  const parsed = GetPromoCodeByCodeParams.safeParse({ code: req.params.code });
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid code" });
     return;
@@ -51,7 +51,7 @@ router.get("/promo-codes/:code", async (req: Request, res: Response) => {
     return;
   }
 
-  const response = GetPromoCodesCodeResponse.parse({
+  const response = GetPromoCodeByCodeResponse.parse({
     id: promo.id,
     code: promo.code,
     description: promo.description,
@@ -70,7 +70,7 @@ router.get("/promo-codes/:code", async (req: Request, res: Response) => {
  * Apply a promo code to a tab
  */
 router.patch("/tabs/:id/apply-code", async (req: Request, res: Response) => {
-  const paramsCheck = PatchTabsIdApplyCodeParams.safeParse({
+  const paramsCheck = ApplyPromoCodeToTabParams.safeParse({
     id: req.params.id,
   });
   if (!paramsCheck.success) {
@@ -78,7 +78,7 @@ router.patch("/tabs/:id/apply-code", async (req: Request, res: Response) => {
     return;
   }
 
-  const bodyCheck = PatchTabsIdApplyCodeBody.safeParse(req.body);
+  const bodyCheck = ApplyPromoCodeToTabBody.safeParse(req.body);
   if (!bodyCheck.success) {
     res.status(400).json({ error: "Invalid request body" });
     return;
@@ -172,7 +172,7 @@ router.patch("/tabs/:id/apply-code", async (req: Request, res: Response) => {
     return { discountMxn, promoCodeId: promo.id };
   });
 
-  const response = PatchTabsIdApplyCodeResponse.parse({
+  const response = ApplyPromoCodeToTabResponse.parse({
     id: tab.id,
     discountMxn: result.discountMxn,
     promoCodeId: result.promoCodeId,

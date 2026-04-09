@@ -6,10 +6,10 @@ import * as zod from "zod";
 import { customHeaders } from "../lib/headers";
 import {
   GetStaffShiftsResponse,
-  PostStaffShiftClockInBody,
-  PostStaffShiftClockInResponse,
-  PostStaffShiftClockOutBody,
-  PostStaffShiftClockOutResponse,
+  ClockInStaffBody,
+  ClockInStaffResponse,
+  ClockOutStaffBody,
+  ClockOutStaffResponse,
 } from "@workspace/api-zod";
 
 const router = Router();
@@ -71,12 +71,12 @@ router.get("/:shiftId", async (req: Request, res: Response) => {
           shiftId: s.shiftId,
           staffUserId: s.staffUserId,
           staffName: s.staffName.trim(),
-          staffRole: s.staffRole as any,
+          staffRole: s.staffRole ?? undefined,
           clockInAt: new Date(s.clockInAt!),
-          clockOutAt: s.clockOutAt ? new Date(s.clockOutAt) : null,
-          breakStartAt: s.breakStartAt ? new Date(s.breakStartAt) : null,
-          breakEndAt: s.breakEndAt ? new Date(s.breakEndAt) : null,
-          notes: s.notes,
+          clockOutAt: s.clockOutAt ? new Date(s.clockOutAt) : undefined,
+          breakStartAt: s.breakStartAt ? new Date(s.breakStartAt) : undefined,
+          breakEndAt: s.breakEndAt ? new Date(s.breakEndAt) : undefined,
+          notes: s.notes ?? undefined,
           hoursWorked: Math.round(hoursWorked * 100) / 100,
           breakMinutes,
         };
@@ -96,7 +96,7 @@ router.get("/:shiftId", async (req: Request, res: Response) => {
  */
 router.post("/clock-in", async (req: Request, res: Response) => {
   try {
-    const body = PostStaffShiftClockInBody.parse(req.body);
+    const body = ClockInStaffBody.parse(req.body);
 
     // Verify shift exists and is open
     const shift = await db.query.shiftsTable.findFirst({
@@ -148,13 +148,13 @@ router.post("/clock-in", async (req: Request, res: Response) => {
       where: (table) => eq(table.id, newId),
     });
 
-    const response: zod.infer<typeof PostStaffShiftClockInResponse> = {
+    const response: zod.infer<typeof ClockInStaffResponse> = {
       success: true,
       shift: {
         id: staffShift!.id,
         staffName: `${user.firstName} ${user.lastName || ""}`.trim(),
         clockInAt: new Date(staffShift!.clockInAt!),
-        notes: staffShift!.notes,
+        notes: staffShift!.notes ?? undefined,
       },
     };
 
@@ -171,7 +171,7 @@ router.post("/clock-in", async (req: Request, res: Response) => {
  */
 router.post("/clock-out", async (req: Request, res: Response) => {
   try {
-    const body = PostStaffShiftClockOutBody.parse(req.body);
+    const body = ClockOutStaffBody.parse(req.body);
 
     // Verify staff shift exists
     const staffShift = await db.query.staffShiftsTable.findFirst({
@@ -209,7 +209,7 @@ router.post("/clock-out", async (req: Request, res: Response) => {
         ((now.getTime() - clockInTime.getTime()) / (1000 * 60 * 60)) * 100,
       ) / 100;
 
-    const response: zod.infer<typeof PostStaffShiftClockOutResponse> = {
+    const response: zod.infer<typeof ClockOutStaffResponse> = {
       success: true,
       shift: {
         staffName: `${user!.firstName} ${user!.lastName || ""}`.trim(),

@@ -1,3 +1,7 @@
+-- Migration: 0000 - Core tables with full schema
+-- Complete schema for fresh database creation
+-- All columns match Drizzle schema exactly
+
 CREATE TABLE `sessions` (
 	`sid` text PRIMARY KEY NOT NULL,
 	`sess` text NOT NULL,
@@ -15,10 +19,12 @@ CREATE TABLE `users` (
 	`pin` text DEFAULT '0000' NOT NULL,
 	`is_active` integer DEFAULT true NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
-	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
+	`updated_at` integer DEFAULT (unixepoch()) NOT NULL,
+	`password` text
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
+CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);
+--> statement-breakpoint
 CREATE TABLE `drinks` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -26,10 +32,12 @@ CREATE TABLE `drinks` (
 	`description` text,
 	`description_es` text,
 	`category` text DEFAULT 'other' NOT NULL,
+	`tax_category` text DEFAULT 'standard' NOT NULL,
+	`actual_price` real DEFAULT 0 NOT NULL,
 	`markup_factor` real DEFAULT 3 NOT NULL,
-	`upcharge` real DEFAULT 0 NOT NULL,
-	`actual_price` real,
 	`is_available` integer DEFAULT true NOT NULL,
+	`is_on_menu` integer DEFAULT false NOT NULL,
+	`is_deleted` integer DEFAULT false NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
@@ -66,7 +74,9 @@ CREATE TABLE `recipe_ingredients` (
 	`id` text PRIMARY KEY NOT NULL,
 	`drink_id` text NOT NULL,
 	`ingredient_id` text NOT NULL,
-	`amount_in_ml` real NOT NULL,
+	`amount_in_ml` real DEFAULT 0 NOT NULL,
+	`amount_in_base_unit` real DEFAULT 0 NOT NULL,
+	`cost_contribution` real DEFAULT 0 NOT NULL,
 	FOREIGN KEY (`drink_id`) REFERENCES `drinks`(`id`) ON UPDATE no action ON DELETE cascade,
 	FOREIGN KEY (`ingredient_id`) REFERENCES `ingredients`(`id`) ON UPDATE no action ON DELETE restrict
 );
@@ -74,6 +84,8 @@ CREATE TABLE `recipe_ingredients` (
 CREATE TABLE `settings` (
 	`id` text PRIMARY KEY DEFAULT 'default' NOT NULL,
 	`bar_name` text DEFAULT 'GustoPOS' NOT NULL,
+	`bar_icon` text DEFAULT 'Wine' NOT NULL,
+	`base_currency` text DEFAULT 'MXN' NOT NULL,
 	`usd_to_mxn_rate` real DEFAULT 17.5 NOT NULL,
 	`cad_to_mxn_rate` real DEFAULT 12.8 NOT NULL,
 	`default_markup_factor` real DEFAULT 3 NOT NULL,
@@ -83,6 +95,9 @@ CREATE TABLE `settings` (
 	`smtp_password` text,
 	`smtp_from_email` text,
 	`inventory_alert_email` text,
+	`enable_litestream` integer DEFAULT false NOT NULL,
+	`enable_usb_backup` integer DEFAULT false NOT NULL,
+	`pin_lock_timeout_min` integer DEFAULT 5 NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
@@ -102,6 +117,11 @@ CREATE TABLE `tabs` (
 	`staff_user_id` text NOT NULL,
 	`shift_id` text,
 	`total_mxn` real DEFAULT 0 NOT NULL,
+	`tip_mxn` real DEFAULT 0 NOT NULL,
+	`discount_mxn` real DEFAULT 0 NOT NULL,
+	`tax_mxn` real DEFAULT 0 NOT NULL,
+	`tax_percent` real DEFAULT 0 NOT NULL,
+	`promo_code_id` text,
 	`payment_method` text,
 	`currency` text DEFAULT 'MXN' NOT NULL,
 	`notes` text,

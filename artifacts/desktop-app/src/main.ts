@@ -72,9 +72,9 @@ async function startApi(): Promise<void> {
   const isDev = !app.isPackaged;
 
   // In production, artifacts are in Resources folder
-  // In dev, we point to the workspace build folders
+  // In dev mode, point to the workspace build output
   const apiPath = isDev
-    ? path.resolve(__dirname, "../../api-server/dist/index.cjs")
+    ? path.resolve(process.cwd(), "artifacts/api-server/dist/index.cjs")
     : path.join(process.resourcesPath, "api/index.cjs");
 
   const dbPath = path.join(app.getPath("userData"), "gusto.db");
@@ -110,19 +110,21 @@ async function startApi(): Promise<void> {
   console.log("Database at:", dbPath);
 
   // pnpm hoists packages to .pnpm/node_modules/, not the root node_modules/
-  // We need to point NODE_PATH to the pnpm hoisted location
+  // In dev mode, we need to use the workspace root's node_modules
   const apiNodeModules = isDev
-    ? path.resolve(__dirname, "../../../../node_modules/.pnpm/node_modules")
+    ? path.resolve(process.cwd(), "node_modules/.pnpm/node_modules")
     : path.join(process.resourcesPath, "api/node_modules");
 
   // Also include the dist/node_modules for external deps (like @libsql)
   const distNodeModules = isDev
-    ? path.resolve(__dirname, "../../api-server/dist/node_modules")
+    ? path.resolve(process.cwd(), "artifacts/api-server/dist/node_modules")
     : path.join(process.resourcesPath, "api/node_modules");
 
-  // Load admin credentials from stack.env (searches Resources, app dir, userData)
+  // Load admin credentials from stack.env
+  // In dev mode, use stack.env at project root
+  // In prod mode, search in Resources, app dir, userData
   const envFileVars = isDev
-    ? loadEnvFile(path.resolve(__dirname, "../../../../stack.env"))
+    ? loadEnvFile(path.resolve(process.cwd(), "stack.env"))
     : findEnvFile();
 
   try {
@@ -142,14 +144,16 @@ async function startApi(): Promise<void> {
         ADMIN_LOGIN_ENABLED: envFileVars.ADMIN_LOGIN_ENABLED || "true",
         ADMIN_SEED_ENABLED: envFileVars.ADMIN_SEED_ENABLED || "true",
         // Ensure migrations can be found
+        // In dev mode: use workspace lib/db/migrations
+        // In prod mode: use the bundled api/migrations in Resources
         MIGRATIONS_PATH: isDev
-          ? path.resolve(__dirname, "../../../lib/db/migrations")
+          ? path.resolve(process.cwd(), "lib/db/migrations")
           : path.join(process.resourcesPath, "api/migrations"),
         SEEDS_PATH: isDev
-          ? path.resolve(__dirname, "../../../db/seeds")
+          ? path.resolve(process.cwd(), "db/seeds")
           : path.join(process.resourcesPath, "api/seeds"),
         STATIC_PATH: isDev
-          ? path.resolve(__dirname, "../../gusto-pos/dist/public")
+          ? path.resolve(process.cwd(), "artifacts/gusto-pos/dist/public")
           : path.join(process.resourcesPath, "api/public"),
       },
       stdio: ["pipe", "pipe", "pipe"],

@@ -353,7 +353,7 @@ export default function Dashboard() {
                 onClick={async () => {
                   setCloseError(null);
                   closeShift.mutate(
-                    { id: activeShiftData.id, force: forceClose },
+                    { id: activeShiftData.id },
                     {
                       onError: (error: any) => {
                         if (

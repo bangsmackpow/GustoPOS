@@ -1,0 +1,576 @@
+Starting API at: /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs
+Database at: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app/gusto.db
+Loaded env file from: /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/stack.env
+[API] [API] Serving static assets from: /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/public
+[Sentry] SENTRY_DSN not set — error monitoring disabled
+Checking database schema...
+Database URL: file:///Users/McKinneyMakesMedia/Library/Application%20Support/@workspace/desktop-app/gusto.db
+Resolved database path: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app/gusto.db
+Using migrations from: /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/migrations
+Database directory to ensure: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app
+Database directory already exists: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app
+Database full path: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app/gusto.db
+Running database migrations...
+✓ Migration check complete.
+Verifying database tables...
+[API] ✓ Database schema verified successfully.
+Verifying database tables...
+✓ Database schema verified successfully.
+[Initialize] Starting admin user initialization...
+[Initialize] Checking for existing admin user: lukemckinneyart@gmail.com
+API check failed: fetch failed
+[API] [Initialize] Found existing admin user, updating credentials...
+[API] [Initialize] ✓ Admin user updated successfully: lukemckinneyart@gmail.com
+[Initialize] ✓ Database initialization completed successfully
+[Desktop] Admin user initialization confirmed!
+[API] {"level":30,"time":1775682541692,"pid":9579,"hostname":"iMac.local","port":3000,"msg":"Server listening"}
+API is ready, loading application...
+[API] {"level":30,"time":1775682542061,"pid":9579,"hostname":"iMac.local","req":{"id":1,"method":"GET","url":"/api/healthz"},"res":{"statusCode":200},"responseTime":4,"msg":"request completed"}
+[API] {"level":30,"time":1775682542085,"pid":9579,"hostname":"iMac.local","req":{"id":2,"method":"GET","url":"/"},"res":{"statusCode":200},"responseTime":3,"msg":"request completed"}
+2026-04-08 15:09:02.125 GustoPOS[8623:4782988] +[IMKClient subclass]: chose IMKClient_Modern
+2026-04-08 15:09:02.125 GustoPOS[8623:4782988] +[IMKInputSession subclass]: chose IMKInputSession_Modern
+[API] {"level":30,"time":1775682542136,"pid":9579,"hostname":"iMac.local","req":{"id":4,"method":"GET","url":"/assets/index-CMX_MD1c.css"},"res":{"statusCode":200},"responseTime":3,"msg":"request completed"}
+[API] {"level":30,"time":1775682542138,"pid":9579,"hostname":"iMac.local","req":{"id":3,"method":"GET","url":"/assets/index-qa4GwTD4.js"},"res":{"statusCode":200},"responseTime":6,"msg":"request completed"}
+[API] {"level":30,"time":1775682542271,"pid":9579,"hostname":"iMac.local","req":{"id":5,"method":"GET","url":"/api/auth/user"},"res":{"statusCode":304},"responseTime":2,"msg":"request completed"}
+[API] {"level":30,"time":1775682542274,"pid":9579,"hostname":"iMac.local","req":{"id":6,"method":"GET","url":"/api/shifts/active"},"res":{"statusCode":304},"responseTime":3,"msg":"request completed"}
+[API] {"level":30,"time":1775682542277,"pid":9579,"hostname":"iMac.local","req":{"id":7,"method":"GET","url":"/api/settings"},"res":{"statusCode":304},"responseTime":2,"msg":"request completed"}
+[API ERROR] Error fetching ingredients: _DrizzleQueryError: Failed query: select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"
+params: 
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:120462:19 {
+  query: 'select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"',
+  params: [],
+  cause: LibsqlError: SQLITE_ERROR: no such column: parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682542304,"pid":9579,"hostname":"iMac.local","req":{"id":8,"method":"GET","url":"/api/ingredients"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":4,"msg":"request errored"}
+[API] {"level":30,"time":1775682542312,"pid":9579,"hostname":"iMac.local","req":{"id":9,"method":"GET","url":"/api/tabs"},"res":{"statusCode":304},"responseTime":7,"msg":"request completed"}
+[API] {"level":30,"time":1775682542313,"pid":9579,"hostname":"iMac.local","req":{"id":10,"method":"GET","url":"/api/rushes"},"res":{"statusCode":304},"responseTime":7,"msg":"request completed"}
+[API ERROR] Error fetching drinks: _DrizzleQueryError: Failed query: select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)
+params: drink-beer,drink-margarita,drink-mojito,drink-paloma,drink-soft-drink,drink-shot
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async getDrinksBatched (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121121:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121177:20 {
+  query: 'select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)',
+  params: [
+    'drink-beer',
+    'drink-margarita',
+    'drink-mojito',
+    'drink-paloma',
+    'drink-soft-drink',
+    'drink-shot'
+  ],
+  cause: LibsqlError: SQLITE_ERROR: no such column: inventory_items.parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: inventory_items.parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682542319,"pid":9579,"hostname":"iMac.local","req":{"id":12,"method":"GET","url":"/api/drinks"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":5,"msg":"request errored"}
+[API] {"level":30,"time":1775682542323,"pid":9579,"hostname":"iMac.local","req":{"id":11,"method":"GET","url":"/images/pattern.png"},"res":{"statusCode":200},"responseTime":10,"msg":"request completed"}
+[API ERROR] Error fetching ingredients: _DrizzleQueryError: Failed query: select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"
+params: 
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:120462:19 {
+  query: 'select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"',
+  params: [],
+  cause: LibsqlError: SQLITE_ERROR: no such column: parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682543453,"pid":9579,"hostname":"iMac.local","req":{"id":13,"method":"GET","url":"/api/ingredients"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":1,"msg":"request errored"}
+[API ERROR] Error fetching drinks: _DrizzleQueryError: Failed query: select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)
+params: drink-beer,drink-margarita,drink-mojito,drink-paloma,drink-soft-drink,drink-shot
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async getDrinksBatched (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121121:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121177:20 {
+  query: 'select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)',
+  params: [
+    'drink-beer',
+    'drink-margarita',
+    'drink-mojito',
+    'drink-paloma',
+    'drink-soft-drink',
+    'drink-shot'
+  ],
+  cause: LibsqlError: SQLITE_ERROR: no such column: inventory_items.parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: inventory_items.parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682543456,"pid":9579,"hostname":"iMac.local","req":{"id":14,"method":"GET","url":"/api/drinks"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":2,"msg":"request errored"}
+[API ERROR] Error fetching ingredients: _DrizzleQueryError: Failed query: select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"
+params: 
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:120462:19 {
+  query: 'select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"',
+  params: [],
+  cause: LibsqlError: SQLITE_ERROR: no such column: parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682545460,"pid":9579,"hostname":"iMac.local","req":{"id":15,"method":"GET","url":"/api/ingredients"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":1,"msg":"request errored"}
+[API ERROR] Error fetching drinks: _DrizzleQueryError: Failed query: select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)
+params: drink-beer,drink-margarita,drink-mojito,drink-paloma,drink-soft-drink,drink-shot
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async getDrinksBatched (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121121:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121177:20 {
+  query: 'select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)',
+  params: [
+    'drink-beer',
+    'drink-margarita',
+    'drink-mojito',
+    'drink-paloma',
+    'drink-soft-drink',
+    'drink-shot'
+  ],
+  cause: LibsqlError: SQLITE_ERROR: no such column: inventory_items.parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: inventory_items.parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682545463,"pid":9579,"hostname":"iMac.local","req":{"id":16,"method":"GET","url":"/api/drinks"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":2,"msg":"request errored"}
+[API ERROR] Error fetching ingredients: _DrizzleQueryError: Failed query: select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"
+params: 
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:120462:19 {
+  query: 'select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"',
+  params: [],
+  cause: LibsqlError: SQLITE_ERROR: no such column: parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682549470,"pid":9579,"hostname":"iMac.local","req":{"id":17,"method":"GET","url":"/api/ingredients"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":1,"msg":"request errored"}
+[API ERROR] Error fetching drinks: _DrizzleQueryError: Failed query: select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)
+params: drink-beer,drink-margarita,drink-mojito,drink-paloma,drink-soft-drink,drink-shot
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async getDrinksBatched (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121121:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121177:20 {
+  query: 'select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)',
+  params: [
+    'drink-beer',
+    'drink-margarita',
+    'drink-mojito',
+    'drink-paloma',
+    'drink-soft-drink',
+    'drink-shot'
+  ],
+  cause: LibsqlError: SQLITE_ERROR: no such column: inventory_items.parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: inventory_items.parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682549474,"pid":9579,"hostname":"iMac.local","req":{"id":18,"method":"GET","url":"/api/drinks"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":3,"msg":"request errored"}
+[API ERROR] Error fetching ingredients: _DrizzleQueryError: Failed query: select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"
+params: 
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:120462:19 {
+  query: 'select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"',
+  params: [],
+  cause: LibsqlError: SQLITE_ERROR: no such column: parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682558119,"pid":9579,"hostname":"iMac.local","req":{"id":19,"method":"GET","url":"/api/ingredients"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":2,"msg":"request errored"}
+[API ERROR] Error fetching drinks: _DrizzleQueryError: Failed query: select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)
+params: drink-beer,drink-margarita,drink-mojito,drink-paloma,drink-soft-drink,drink-shot
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async getDrinksBatched (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121121:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121177:20 {
+  query: 'select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)',
+  params: [
+    'drink-beer',
+    'drink-margarita',
+    'drink-mojito',
+    'drink-paloma',
+    'drink-soft-drink',
+    'drink-shot'
+  ],
+  cause: LibsqlError: SQLITE_ERROR: no such column: inventory_items.parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: inventory_items.parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682558124,"pid":9579,"hostname":"iMac.local","req":{"id":20,"method":"GET","url":"/api/drinks"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":4,"msg":"request errored"}
+[API] {"level":30,"time":1775682558125,"pid":9579,"hostname":"iMac.local","req":{"id":21,"method":"GET","url":"/api/auth/user"},"res":{"statusCode":304},"responseTime":1,"msg":"request completed"}
+[API ERROR] Error fetching ingredients: _DrizzleQueryError: Failed query: select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"
+params: 
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:120462:19 {
+  query: 'select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"',
+  params: [],
+  cause: LibsqlError: SQLITE_ERROR: no such column: parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682559124,"pid":9579,"hostname":"iMac.local","req":{"id":22,"method":"GET","url":"/api/ingredients"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":2,"msg":"request errored"}
+[API ERROR] Error fetching drinks: _DrizzleQueryError: Failed query: select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)
+params: drink-beer,drink-margarita,drink-mojito,drink-paloma,drink-soft-drink,drink-shot
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async getDrinksBatched (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121121:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121177:20 {
+  query: 'select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)',
+  params: [
+    'drink-beer',
+    'drink-margarita',
+    'drink-mojito',
+    'drink-paloma',
+    'drink-soft-drink',
+    'drink-shot'
+  ],
+  cause: LibsqlError: SQLITE_ERROR: no such column: inventory_items.parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: inventory_items.parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682559129,"pid":9579,"hostname":"iMac.local","req":{"id":23,"method":"GET","url":"/api/drinks"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":2,"msg":"request errored"}
+[API ERROR] Error fetching ingredients: _DrizzleQueryError: Failed query: select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"
+params: 
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:120462:19 {
+  query: 'select "id", "name", "name_es", "type", "subtype", "parent_item_id", "base_unit", "base_unit_amount", "bulk_unit", "bulk_size", "partial_unit", "serving_size", "serving_unit", "pour_size", "bottle_size_ml", "alcohol_density", "tare_weight_g", "glass_weight_g", "full_bottle_weight_g", "density", "bulk_cost", "order_cost", "markup_factor", "is_on_menu", "is_deleted", "low_stock_method", "low_stock_manual_threshold", "low_stock_threshold", "low_stock_percent", "low_stock_percent_base", "low_stock_usage_days", "current_bulk", "current_partial", "current_stock", "units_per_case", "last_audited_at", "last_audited_by_user_id", "created_at", "updated_at" from "inventory_items" order by "inventory_items"."name"',
+  params: [],
+  cause: LibsqlError: SQLITE_ERROR: no such column: parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682561129,"pid":9579,"hostname":"iMac.local","req":{"id":24,"method":"GET","url":"/api/ingredients"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":2,"msg":"request errored"}
+[API ERROR] Error fetching drinks: _DrizzleQueryError: Failed query: select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)
+params: drink-beer,drink-margarita,drink-mojito,drink-paloma,drink-soft-drink,drink-shot
+    at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68016:19)
+    at async LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:16)
+    at async LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:22)
+    at async getDrinksBatched (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121121:22)
+    at async /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:121177:20 {
+  query: 'select "recipe_ingredients"."id", "recipe_ingredients"."drink_id", "recipe_ingredients"."ingredient_id", "recipe_ingredients"."amount_in_ml", "recipe_ingredients"."amount_in_base_unit", "inventory_items"."id", "inventory_items"."name", "inventory_items"."name_es", "inventory_items"."type", "inventory_items"."subtype", "inventory_items"."parent_item_id", "inventory_items"."base_unit", "inventory_items"."base_unit_amount", "inventory_items"."bulk_unit", "inventory_items"."bulk_size", "inventory_items"."partial_unit", "inventory_items"."serving_size", "inventory_items"."serving_unit", "inventory_items"."pour_size", "inventory_items"."bottle_size_ml", "inventory_items"."alcohol_density", "inventory_items"."tare_weight_g", "inventory_items"."glass_weight_g", "inventory_items"."full_bottle_weight_g", "inventory_items"."density", "inventory_items"."bulk_cost", "inventory_items"."order_cost", "inventory_items"."markup_factor", "inventory_items"."is_on_menu", "inventory_items"."is_deleted", "inventory_items"."low_stock_method", "inventory_items"."low_stock_manual_threshold", "inventory_items"."low_stock_threshold", "inventory_items"."low_stock_percent", "inventory_items"."low_stock_percent_base", "inventory_items"."low_stock_usage_days", "inventory_items"."current_bulk", "inventory_items"."current_partial", "inventory_items"."current_stock", "inventory_items"."units_per_case", "inventory_items"."last_audited_at", "inventory_items"."last_audited_by_user_id", "inventory_items"."created_at", "inventory_items"."updated_at" from "recipe_ingredients" left join "inventory_items" on "recipe_ingredients"."ingredient_id" = "inventory_items"."id" where "recipe_ingredients"."drink_id" in (?, ?, ?, ?, ?, ?)',
+  params: [
+    'drink-beer',
+    'drink-margarita',
+    'drink-mojito',
+    'drink-paloma',
+    'drink-soft-drink',
+    'drink-shot'
+  ],
+  cause: LibsqlError: SQLITE_ERROR: no such column: inventory_items.parent_item_id
+      at mapSqliteError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53779:12)
+      at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53700:11)
+      at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+      ... 5 lines matching cause stack trace ...
+      at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21)
+      at SQLiteSelectBase.then (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:64337:21) {
+    code: 'SQLITE_ERROR',
+    rawCode: 1,
+    [cause]: SqliteError: no such column: inventory_items.parent_item_id
+        at convertError (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:51:12)
+        at Database.prepare (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/node_modules/libsql/index.js:119:13)
+        at executeStmt (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53676:25)
+        at Sqlite3Client.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:53819:16)
+        at /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68521:65
+        at LibSQLPreparedQuery.queryWithCache (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68014:26)
+        at LibSQLPreparedQuery.values (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68519:27)
+        at LibSQLPreparedQuery.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:68462:33)
+        at SQLiteSelectBase.all (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66893:32)
+        at SQLiteSelectBase.execute (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:66902:21) {
+      code: 'SQLITE_ERROR',
+      rawCode: 1
+    }
+  }
+}
+[API] {"level":30,"time":1775682561133,"pid":9579,"hostname":"iMac.local","req":{"id":25,"method":"GET","url":"/api/drinks"},"res":{"statusCode":500},"err":{"type":"Error","message":"failed with status code 500","stack":"Error: failed with status code 500\n    at onResFinished (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28500:44)\n    at ServerResponse.onResponseComplete (/Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs:28550:18)\n    at ServerResponse.emit (node:events:529:35)\n    at onFinish (node:_http_outgoing:1001:10)\n    at callback (node:internal/streams/writable:555:21)\n    at afterWrite (node:internal/streams/writable:500:5)\n    at afterWriteTick (node:internal/streams/writable:487:10)\n    at process.processTicksAndRejections (node:internal/process/task_queues:81:21)"},"responseTime":2,"msg":"request errored"}
+[8623:0408/150955.644830:ERROR:network_service_instance_impl.cc(601)] Network service crashed, restarting service.
+[8623:0408/150955.646384:ERROR:gpu_process_host.cc(993)] GPU process exited unexpectedly: exit_code=15
+[8623:0408/150955.684761:ERROR:command_buffer_proxy_impl.cc(319)] GPU state invalid after WaitForGetOffsetInRange.
+API process exited with code null (signal: SIGTERM)

@@ -20,6 +20,12 @@ function formatInventoryItem(item: typeof inventoryItemsTable.$inferSelect) {
     orderCost: Number(item.orderCost),
     unitsPerCase: Number(item.unitsPerCase),
     isOnMenu: item.isOnMenu,
+    isDeleted: item.isDeleted,
+    bottleSizeMl: item.bottleSizeMl ? Number(item.bottleSizeMl) : null,
+    fullBottleWeightG: item.fullBottleWeightG
+      ? Number(item.fullBottleWeightG)
+      : null,
+    glassWeightG: item.glassWeightG ? Number(item.glassWeightG) : null,
     createdAt: new Date(item.createdAt).toISOString(),
     updatedAt: new Date(item.updatedAt).toISOString(),
   };

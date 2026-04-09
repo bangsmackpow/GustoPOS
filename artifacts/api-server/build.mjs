@@ -43,14 +43,7 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".cjs" },
     logLevel: "info",
-    external: [
-      "*.node",
-      "libsql",
-      "electron",
-      "@mapbox/node-pre-gyp",
-      "@sentry/profiling-node",
-      "@sentry-internal/node-cpu-profiler",
-    ],
+    external: ["*.node", "libsql", "electron", "@mapbox/node-pre-gyp"],
     sourcemap: "linked",
     plugins: [esbuildPluginPino({ transports: ["pino-pretty"] })],
     banner: {
@@ -73,6 +66,9 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     "@neon-rs",
     "detect-libc",
     "bcryptjs",
+    "drizzle-orm",
+    "drizzle-zod",
+    "zod",
   ];
 
   const hasAllExternalDeps = await (async () => {

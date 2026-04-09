@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { useSearchParams } from "wouter";
-import { useGetInventoryItems } from "@/hooks/use-inventory";
+import {
+  useGetInventoryItems,
+  useGetTrashCount,
+  useClearTrash,
+} from "@/hooks/use-inventory";
 import { useSaveIngredientMutation } from "@/hooks/use-pos-mutations";
 import { useGetCurrentAuthUser } from "@workspace/api-client-react";
 import { usePosStore } from "@/store";
@@ -9,13 +13,14 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
-  Edit2,
   X,
   AlertTriangle,
-  Check,
   Trash2,
   Search,
   Menu,
+  ChevronDown,
+  ChevronRight,
+  Settings,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -64,9 +69,12 @@ const TYPE_LABELS: Record<string, { en: string; es: string }> = {
 
 export default function Inventory() {
   const { language } = usePosStore();
-  const { data: items } = useGetInventoryItems();
+  const [showTrash, setShowTrash] = useState(false);
+  const { data: items } = useGetInventoryItems(showTrash);
+  const { data: trashCount } = useGetTrashCount();
+  const clearTrash = useClearTrash();
   const { data: auth } = useGetCurrentAuthUser();
-  const _isAdmin = (auth as any)?.role === "admin";
+  const isAdmin = (auth as any)?.role === "admin";
   const saveIngredient = useSaveIngredientMutation();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -84,11 +92,16 @@ export default function Inventory() {
 
   const [search, setSearch] = useState("");
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [editingCell, setEditingCell] = useState<{
-    id: string;
-    field: string;
-  } | null>(null);
+  const [expandedParents, setExpandedParents] = useState<Set<string>>(
+    new Set(),
+  );
 
+  const toggleParent = (id: string) => {
+    const next = new Set(expandedParents);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setExpandedParents(next);
+  };
   const activeType = searchParams.get("type") || "all";
 
   const setActiveType = (type: string) => {
@@ -116,6 +129,8 @@ export default function Inventory() {
 
   const filteredItems =
     items?.filter((item: any) => {
+      // If it's a variation (has parent), don't show it in the main list unless its parent is expanded
+      // Actually, we filter at the parent level first.
       const matchesType = activeType === "all" || item.type === activeType;
       const matchesSubtype =
         !searchParams.get("subtype") ||
@@ -128,7 +143,25 @@ export default function Inventory() {
       return matchesType && matchesSubtype && matchesSearch;
     }) || [];
 
-  const handleCellSave = async (id: string, field: string, value: any) => {
+  // Grouping Logic
+  const topLevelItems = filteredItems.filter((i: any) => !i.parentItemId);
+
+  const getVariations = (parentId: string) => {
+    return (items || []).filter((i: any) => i.parentItemId === parentId);
+  };
+
+  const getPooledStock = (item: any) => {
+    if (item.type !== "spirit" && item.type !== "mixer")
+      return Number(item.currentStock);
+    const variations = getVariations(item.id);
+    if (variations.length === 0) return Number(item.currentStock);
+    return variations.reduce(
+      (sum: number, v: any) => sum + Number(v.currentStock),
+      Number(item.currentStock),
+    );
+  };
+
+  const _handleCellSave = async (id: string, field: string, value: any) => {
     const item = items?.find((i: any) => i.id === id);
     if (!item) return;
 
@@ -157,7 +190,6 @@ export default function Inventory() {
         description: e.message,
       });
     }
-    setEditingCell(null);
   };
 
   const handleMenuToggle = (item: any) => {
@@ -188,15 +220,17 @@ export default function Inventory() {
       const res = await fetch(`/api/inventory/items/${showDeleteModal.id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: deletePassword }),
       });
-      if (!res.ok) throw new Error("Failed to delete");
+      const data = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Failed to delete");
+      }
       qc.invalidateQueries({ queryKey: ["/api/inventory/items"] });
       setShowDeleteModal(null);
       setDeletePassword("");
       toast({
         title: getTranslation("success", language),
-        description: "Item deleted",
+        description: "Item moved to trash",
       });
     } catch (e: any) {
       setDeleteError(e.message);
@@ -371,6 +405,64 @@ export default function Inventory() {
               <AlertTriangle size={14} className="text-primary" />
               Low Stock ({getLowStockCount()})
             </label>
+
+            <button
+              onClick={() => setShowTrash(!showTrash)}
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${showTrash ? "bg-destructive/20 text-destructive font-bold" : "text-muted-foreground hover:bg-white/5 hover:text-foreground"}`}
+            >
+              <Trash2
+                size={14}
+                className={
+                  showTrash ? "text-destructive" : "text-muted-foreground"
+                }
+              />
+              {showTrash ? "View Active Inventory" : "Trash Folder"}
+              {trashCount?.count > 0 && (
+                <span className="ml-auto text-xs bg-destructive/20 px-2 py-0.5 rounded-full">
+                  {trashCount.count}
+                </span>
+              )}
+            </button>
+
+            {showTrash && isAdmin && trashCount?.count > 0 && (
+              <button
+                onClick={() => {
+                  console.log(
+                    "[Clear Trash] Clicked, count:",
+                    trashCount.count,
+                  );
+                  if (
+                    confirm(
+                      `Delete ${trashCount.count} permanently? This cannot be undone.`,
+                    )
+                  ) {
+                    console.log("[Clear Trash] Confirmed, calling mutate");
+                    clearTrash.mutate(undefined, {
+                      onSuccess: (data) => {
+                        console.log("[Clear Trash] Success:", data);
+                        toast({
+                          title: getTranslation("success", language),
+                          description: `${trashCount.count} items permanently deleted`,
+                        });
+                      },
+                      onError: (e: any) => {
+                        console.error("[Clear Trash] Error:", e);
+                        toast({
+                          variant: "destructive",
+                          title: getTranslation("error", language),
+                          description: e.message || "Failed to clear trash",
+                        });
+                      },
+                    });
+                  }
+                }}
+                disabled={clearTrash.isPending}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-destructive hover:bg-destructive/20"
+              >
+                <Trash2 size={14} />
+                {clearTrash.isPending ? "Clearing..." : "Clear Trash"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -437,6 +529,7 @@ export default function Inventory() {
                 <tr className="border-b border-white/5 text-muted-foreground text-sm">
                   <th className="p-3 font-medium w-10">Menu</th>
                   <th className="p-3 font-medium w-32 min-w-[128px]">Name</th>
+                  <th className="p-3 font-medium w-20">Size</th>
                   <th className="p-3 font-medium w-24">Type</th>
                   <th className="p-3 font-medium w-24">Stock</th>
                   <th className="p-3 font-medium w-20">Servings</th>
@@ -445,7 +538,12 @@ export default function Inventory() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filteredItems.map((item: any) => {
+                {topLevelItems.map((item: any) => {
+                  const variations = getVariations(item.id);
+                  const hasVariations = variations.length > 0;
+                  const isExpanded = expandedParents.has(item.id);
+                  const pooledStock = getPooledStock(item);
+
                   const isLayoutA =
                     item.type === "spirit" ||
                     (item.type === "mixer" && item.subtype === "bulk");
@@ -456,178 +554,211 @@ export default function Inventory() {
                   let isLow = false;
                   if (isLayoutA) {
                     isLow =
-                      (item.currentStock || 0) <=
+                      pooledStock <=
                       (item.lowStockThreshold || 1) *
                         (item.baseUnitAmount || 750);
                   } else if (isLayoutB) {
                     isLow =
-                      (item.currentStock || 0) <=
+                      pooledStock <=
                       (item.lowStockThreshold || 1) * (item.unitsPerCase || 24);
                   } else {
-                    isLow =
-                      (item.currentStock || 0) <= (item.lowStockThreshold || 1);
+                    isLow = pooledStock <= (item.lowStockThreshold || 1);
                   }
 
                   return (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-white/5 transition-colors"
-                    >
-                      <td className="p-3 text-center">
-                        <button
-                          onClick={() => handleMenuToggle(item)}
-                          className={`w-6 h-6 rounded-md flex items-center justify-center transition-all border-2 ${item.isOnMenu ? "bg-primary border-primary text-primary-foreground" : "bg-transparent border-white/30 hover:border-primary/60"}`}
-                        >
-                          {item.isOnMenu && <Check size={14} strokeWidth={3} />}
-                        </button>
-                      </td>
-                      <td className="p-3 w-32 min-w-[128px]">
-                        {editingCell?.id === item.id &&
-                        editingCell?.field === "name" ? (
-                          <input
-                            autoFocus
-                            defaultValue={item.name}
-                            className="w-full bg-secondary border border-white/10 rounded-lg px-3 py-1.5 text-sm"
-                            onBlur={(e) =>
-                              handleCellSave(item.id, "name", e.target.value)
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter")
-                                handleCellSave(
-                                  item.id,
-                                  "name",
-                                  (e.target as HTMLInputElement).value,
-                                );
-                              if (e.key === "Escape") setEditingCell(null);
-                            }}
-                          />
-                        ) : (
-                          <div
-                            className="cursor-pointer hover:text-primary truncate"
-                            onClick={() =>
-                              setEditingCell({ id: item.id, field: "name" })
-                            }
-                            title={
-                              language === "es" && item.nameEs
-                                ? item.nameEs
-                                : item.name
-                            }
+                    <React.Fragment key={item.id}>
+                      <tr
+                        className={`hover:bg-white/5 transition-colors ${hasVariations ? "bg-white/5" : ""}`}
+                      >
+                        <td className="p-3">
+                          <button
+                            onClick={() => handleMenuToggle(item)}
+                            className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold transition-all border ${item.isOnMenu ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" : "bg-white/5 border-white/10 text-muted-foreground"}`}
                           >
-                            <div className="truncate">
-                              {language === "es" && item.nameEs
-                                ? item.nameEs
-                                : item.name}
+                            <div
+                              className={`w-2 h-2 rounded-full ${item.isOnMenu ? "bg-emerald-400 animate-pulse" : "bg-muted-foreground"}`}
+                            />
+                            {item.isOnMenu
+                              ? language === "es"
+                                ? "ACTIVO"
+                                : "ACTIVE"
+                              : language === "es"
+                                ? "INACTIVO"
+                                : "INACTIVE"}
+                          </button>
+                        </td>
+                        <td className="p-3 w-32 min-w-[128px]">
+                          <div className="flex items-center gap-2">
+                            {hasVariations && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleParent(item.id);
+                                }}
+                                className="p-1 hover:bg-white/10 rounded transition-colors"
+                              >
+                                {isExpanded ? (
+                                  <ChevronDown size={14} />
+                                ) : (
+                                  <ChevronRight size={14} />
+                                )}
+                              </button>
+                            )}
+                            <div
+                              className="cursor-pointer hover:text-primary truncate flex items-center gap-2"
+                              onClick={() => setEditingItem(item)}
+                            >
+                              <span className="font-bold">
+                                {language === "es" && item.nameEs
+                                  ? item.nameEs
+                                  : item.name}
+                              </span>
+                              {item.bottleSizeMl && (
+                                <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-muted-foreground font-mono">
+                                  {item.bottleSizeMl}ml
+                                </span>
+                              )}
                             </div>
-                            {item.nameEs && item.nameEs !== item.name && (
-                              <div className="text-xs text-muted-foreground truncate">
-                                {item.name}
-                              </div>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="text-sm text-muted-foreground capitalize">
+                            {typeLabel(item.type)}
+                            {item.subtype && (
+                              <span className="text-xs block text-muted-foreground/60">
+                                {getSubtypeLabel(item.type, item.subtype)}
+                              </span>
                             )}
                           </div>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <div className="text-sm text-muted-foreground capitalize">
-                          {typeLabel(item.type)}
-                          {item.subtype && (
-                            <span className="text-xs block text-muted-foreground/60">
-                              {getSubtypeLabel(item.type, item.subtype)}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <div
-                          className={`cursor-pointer hover:text-primary font-medium ${isLow ? "text-primary" : "text-foreground"}`}
-                          onClick={() => setEditingItem(item)}
-                        >
-                          {isLow && (
-                            <AlertTriangle size={12} className="inline mr-1" />
-                          )}
-                          {(() => {
-                            if (isLayoutA) {
-                              const bottleSize = item.baseUnitAmount || 750;
-                              const fullBottles = Math.floor(
-                                item.currentStock / bottleSize,
-                              );
-                              const partialMl = item.currentStock % bottleSize;
-                              return (
-                                <span className="text-sm">
-                                  {fullBottles}{" "}
-                                  {getTranslation("bottles", language)}
-                                  {partialMl > 0 && (
-                                    <span className="text-xs text-muted-foreground ml-1">
-                                      ({partialMl.toFixed(0)}ml)
-                                    </span>
-                                  )}
-                                </span>
-                              );
-                            }
-                            if (isLayoutB) {
-                              const caseSize = item.unitsPerCase || 24;
-                              const fullCases = (
-                                item.currentStock / caseSize
-                              ).toFixed(1);
-                              return (
-                                <span className="text-sm">
-                                  {fullCases}{" "}
-                                  {getTranslation("cases", language)}
-                                </span>
-                              );
-                            }
-                            return (
-                              <span className="text-sm">
-                                {item.currentStock?.toFixed(1)}{" "}
-                                <span className="text-xs text-muted-foreground">
-                                  {item.baseUnit}
-                                </span>
+                        </td>
+                        <td className="p-3">
+                          <div
+                            className={`cursor-pointer hover:text-primary font-medium ${isLow ? "text-primary" : "text-foreground"}`}
+                            onClick={() => setEditingItem(item)}
+                          >
+                            <div className="flex flex-col">
+                              <span>
+                                {isLow && (
+                                  <AlertTriangle
+                                    size={12}
+                                    className="inline mr-1"
+                                  />
+                                )}
+                                {pooledStock.toFixed(1)} {item.baseUnit}
                               </span>
-                            );
-                          })()}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        {(() => {
-                          const servings =
-                            (item.currentStock || 0) / (item.servingSize || 1);
-                          return (
-                            <div className="text-sm font-bold text-foreground">
-                              {servings.toFixed(1)}
+                              {hasVariations && (
+                                <span className="text-[10px] text-muted-foreground uppercase">
+                                  Pooled Total ({variations.length + 1})
+                                </span>
+                              )}
                             </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="p-3">
-                        {(() => {
-                          let costPerSrv = 0;
-                          if (isLayoutB) {
-                            costPerSrv =
-                              (item.orderCost || 0) / (item.unitsPerCase || 24);
-                          } else {
-                            const servingsPerContainer =
-                              (item.baseUnitAmount || 1) /
-                              (item.servingSize || 1);
-                            costPerSrv =
-                              (item.orderCost || 0) /
-                              (servingsPerContainer || 1);
-                          }
-                          return (
-                            <div className="text-sm text-primary">
-                              {formatMoney(costPerSrv)}
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="p-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingItem(item)}
-                        >
-                          <Edit2 size={16} />
-                        </Button>
-                      </td>
-                    </tr>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span className="font-mono text-sm">
+                            {pooledStock > 0 && item.servingSize > 0
+                              ? (pooledStock / item.servingSize).toFixed(1)
+                              : "0"}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className="font-mono text-sm text-emerald-400">
+                            {item.orderCost > 0 && item.baseUnitAmount > 0
+                              ? formatMoney(
+                                  (item.orderCost / item.baseUnitAmount) *
+                                    item.servingSize,
+                                )
+                              : "—"}
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setEditingItem({
+                                  ...item,
+                                  id: undefined,
+                                  parentItemId: item.id,
+                                  name: item.name,
+                                  currentStock: 0,
+                                  isDeleted: false,
+                                });
+                              }}
+                              className="p-2 hover:bg-white/10 rounded-xl transition-colors text-primary hover:text-primary"
+                              title="Add Variation"
+                            >
+                              <Plus size={18} />
+                            </button>
+                            <button
+                              onClick={() => setEditingItem(item)}
+                              className="p-2 hover:bg-white/10 rounded-xl transition-colors text-muted-foreground hover:text-foreground"
+                              title={getTranslation("edit", language)}
+                            >
+                              <Settings size={18} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+
+                      {isExpanded &&
+                        variations.map((v: any) => (
+                          <tr
+                            key={v.id}
+                            className="bg-white/[0.02] border-l-4 border-primary/30"
+                          >
+                            <td className="p-3 opacity-20 pl-10" />
+                            <td className="p-3 pl-10 flex items-center gap-3">
+                              <div className="w-4 h-px bg-white/20" />
+                              <div
+                                className="cursor-pointer hover:text-primary truncate flex items-center gap-2"
+                                onClick={() => setEditingItem(v)}
+                              >
+                                <span className="text-sm">{v.name}</span>
+                                {v.bottleSizeMl && (
+                                  <span className="text-[10px] bg-white/10 px-1.5 py-0.5 rounded text-muted-foreground font-mono">
+                                    {v.bottleSizeMl}ml
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <span className="text-[10px] uppercase opacity-40">
+                                Variation
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-mono text-xs opacity-70">
+                                {v.currentStock} {v.baseUnit}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-mono text-xs opacity-50">
+                                {v.currentStock > 0 && v.servingSize > 0
+                                  ? (v.currentStock / v.servingSize).toFixed(1)
+                                  : "0"}
+                              </span>
+                            </td>
+                            <td className="p-3">
+                              <span className="font-mono text-xs opacity-50">
+                                {v.orderCost > 0 && v.baseUnitAmount > 0
+                                  ? formatMoney(
+                                      (v.orderCost / v.baseUnitAmount) *
+                                        v.servingSize,
+                                    )
+                                  : "—"}
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              <button
+                                onClick={() => setEditingItem(v)}
+                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                              >
+                                <Settings size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -804,6 +935,26 @@ export default function Inventory() {
                                 glassWeight > 0 ? glassWeight : null,
                             });
                           }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {language === "es"
+                            ? "Peso Tara (g)"
+                            : "Tare Weight (g)"}
+                        </label>
+                        <input
+                          type="number"
+                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                          value={editingItem.tareWeightG ?? ""}
+                          onChange={(e) =>
+                            setEditingItem({
+                              ...editingItem,
+                              tareWeightG: e.target.value
+                                ? parseFloat(e.target.value)
+                                : null,
+                            })
+                          }
                         />
                       </div>
                       <div className="space-y-2">
@@ -1085,16 +1236,18 @@ export default function Inventory() {
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("units_per_case", language)}
+                          {getTranslation("tare_weight", language)}
                         </label>
                         <input
                           type="number"
                           className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.unitsPerCase || 24}
+                          value={editingItem.tareWeightG ?? ""}
                           onChange={(e) =>
                             setEditingItem({
                               ...editingItem,
-                              unitsPerCase: parseInt(e.target.value) || 24,
+                              tareWeightG: e.target.value
+                                ? parseFloat(e.target.value)
+                                : null,
                             })
                           }
                         />
@@ -1267,37 +1420,53 @@ export default function Inventory() {
                 </div>
               );
             })()}
-            <div className="flex justify-end gap-3 mt-6">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditingItem(null);
-                  setFullBottleCount(0);
-                  setPartialBottleWeight("");
-                }}
-              >
-                {getTranslation("cancel", language)}
-              </Button>
-              <Button
-                onClick={() => {
-                  saveIngredient.mutate(
-                    { id: editingItem.id, data: editingItem },
-                    {
-                      onSuccess: () => {
-                        setEditingItem(null);
-                        setFullBottleCount(0);
-                        setPartialBottleWeight("");
-                        qc.invalidateQueries({
-                          queryKey: ["/api/inventory/items"],
-                        });
+            <div className="flex justify-between items-center mt-6">
+              <div>
+                {editingItem.id && (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setShowDeleteModal(editingItem);
+                      setEditingItem(null);
+                    }}
+                  >
+                    <Trash2 size={18} className="mr-2" />
+                    {getTranslation("delete", language)}
+                  </Button>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditingItem(null);
+                    setFullBottleCount(0);
+                    setPartialBottleWeight("");
+                  }}
+                >
+                  {getTranslation("cancel", language)}
+                </Button>
+                <Button
+                  onClick={() => {
+                    saveIngredient.mutate(
+                      { id: editingItem.id, data: editingItem },
+                      {
+                        onSuccess: () => {
+                          setEditingItem(null);
+                          setFullBottleCount(0);
+                          setPartialBottleWeight("");
+                          qc.invalidateQueries({
+                            queryKey: ["inventory-items"],
+                          });
+                        },
                       },
-                    },
-                  );
-                }}
-                disabled={saveIngredient.isPending}
-              >
-                {getTranslation("save", language)}
-              </Button>
+                    );
+                  }}
+                  disabled={saveIngredient.isPending}
+                >
+                  {getTranslation("save", language)}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

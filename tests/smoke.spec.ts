@@ -189,7 +189,7 @@ test.describe("Shift Close with Force Option", () => {
 
     // Check for force close checkbox in close summary
     // This requires an active shift with open tabs, so we just check the checkbox exists in DOM
-    const forceCheckbox = page
+    const _forceCheckbox = page
       .locator('input[type="checkbox"]')
       .or(page.locator("text=Force close"));
     // Force checkbox is only visible when closing shift with open tabs

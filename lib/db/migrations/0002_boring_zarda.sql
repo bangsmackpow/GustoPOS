@@ -1,4 +1,7 @@
-CREATE TABLE `rushes` (
+-- Note: password, enable_litestream and enable_usb_backup now included in 0000_slippery_george_stacy.sql
+-- This migration creates rushes table
+
+CREATE TABLE IF NOT EXISTS `rushes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`title` text NOT NULL,
 	`description` text,
@@ -8,7 +11,3 @@ CREATE TABLE `rushes` (
 	`type` text DEFAULT 'event' NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL
 );
---> statement-breakpoint
-ALTER TABLE `users` ADD `password` text;--> statement-breakpoint
-ALTER TABLE `settings` ADD `enable_litestream` integer DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE `settings` ADD `enable_usb_backup` integer DEFAULT false NOT NULL;

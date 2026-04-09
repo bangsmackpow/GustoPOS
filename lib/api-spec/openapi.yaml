@@ -25,8 +25,18 @@ tags:
     description: End-of-night reporting
   - name: settings
     description: App settings (currency, exchange rates)
+  - name: tax-rates
+    description: Tax rates management
+  - name: promo-codes
+    description: Promo codes management
+  - name: staff-shifts
+    description: Staff shift management
+  - name: staff-performance
+    description: Staff performance metrics
   - name: rushes
     description: Local events and traffic drivers
+  - name: admin
+    description: Admin operations (backup, reset)
 paths:
   /healthz:
     get:
@@ -616,6 +626,314 @@ paths:
               schema:
                 $ref: "#/components/schemas/AppSettings"
 
+  /admin/backup:
+    post:
+      operationId: createManualBackup
+      tags: [admin]
+      summary: Create a manual backup
+      responses:
+        "200":
+          description: Backup created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupResponse"
+
+  /admin/backups:
+    get:
+      operationId: listBackups
+      tags: [admin]
+      summary: List all backups
+      responses:
+        "200":
+          description: List of backups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupListResponse"
+
+  /admin/backups/{id}/restore:
+    post:
+      operationId: restoreBackup
+      tags: [admin]
+      summary: Restore from a backup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Backup restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/backups/{id}:
+    delete:
+      operationId: deleteBackup
+      tags: [admin]
+      summary: Delete a backup
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Backup deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/backup-settings:
+    get:
+      operationId: getBackupSettings
+      tags: [admin]
+      summary: Get backup settings
+      responses:
+        "200":
+          description: Backup settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupSettings"
+
+  /admin/backup/start-auto:
+    post:
+      operationId: startAutoBackup
+      tags: [admin]
+      summary: Start auto-backup
+      responses:
+        "200":
+          description: Auto-backup started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/backup/shift-close:
+    post:
+      operationId: backupOnShiftClose
+      tags: [admin]
+      summary: Create backup on shift close
+      responses:
+        "200":
+          description: Backup created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/reset-database:
+    post:
+      operationId: resetDatabase
+      tags: [admin]
+      summary: Reset database to fresh state
+      responses:
+        "200":
+          description: Database reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /tax-rates:
+    get:
+      operationId: getTaxRates
+      tags: [tax-rates]
+      summary: Get all tax rates
+      responses:
+        "200":
+          description: Tax rates
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetTaxRatesResponse"
+
+  /tax-rates/config:
+    get:
+      operationId: getTaxConfig
+      tags: [tax-rates]
+      summary: Get tax configuration
+      responses:
+        "200":
+          description: Tax configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetTaxConfigResponse"
+
+  /tax-rates/{category}:
+    get:
+      operationId: getTaxRateByCategory
+      tags: [tax-rates]
+      summary: Get tax rate by category
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Tax rate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TaxRate"
+    post:
+      operationId: updateTaxRate
+      tags: [tax-rates]
+      summary: Update tax rate
+      parameters:
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTaxRateBody"
+      responses:
+        "200":
+          description: Updated tax rate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateTaxRateResponse"
+
+  /promo-codes/{code}:
+    get:
+      operationId: getPromoCodeByCode
+      tags: [promo-codes]
+      summary: Get promo code by code
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Promo code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromoCode"
+
+  /tabs/{id}/apply-code:
+    patch:
+      operationId: applyPromoCodeToTab
+      tags: [promo-codes]
+      summary: Apply promo code to tab
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApplyPromoCodeBody"
+      responses:
+        "200":
+          description: Applied promo code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApplyPromoCodeResponse"
+
+  /staff-shifts/{shiftId}:
+    get:
+      operationId: getStaffShifts
+      tags: [staff-shifts]
+      summary: Get staff shifts for a shift
+      parameters:
+        - name: shiftId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Staff shifts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffShift"
+
+  /staff-shifts/clock-in:
+    post:
+      operationId: clockInStaff
+      tags: [staff-shifts]
+      summary: Clock in staff member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClockInBody"
+      responses:
+        "200":
+          description: Clocked in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClockInResponse"
+
+  /staff-shifts/clock-out:
+    post:
+      operationId: clockOutStaff
+      tags: [staff-shifts]
+      summary: Clock out staff member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClockOutBody"
+      responses:
+        "200":
+          description: Clocked out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClockOutResponse"
+
+  /staff-performance/{shiftId}:
+    get:
+      operationId: getStaffPerformance
+      tags: [staff-performance]
+      summary: Get staff performance metrics for a shift
+      parameters:
+        - name: shiftId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Staff performance metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffPerformance"
+
   /rushes:
     get:
       operationId: getRushes
@@ -1184,6 +1502,23 @@ components:
           enum: [cash, card]
         notes:
           type: ["string", "null"]
+        tipMxn:
+          type: number
+        payments:
+          type: array
+          items:
+            type: object
+            properties:
+              amountMxn:
+                type: number
+              tipMxn:
+                type: number
+              paymentMethod:
+                type: string
+                enum: [cash, card]
+            required:
+              - amountMxn
+              - paymentMethod
       required:
         - paymentMethod
 
@@ -1478,6 +1813,23 @@ components:
           type: boolean
         enableUsbBackup:
           type: boolean
+        pinLockTimeoutMin:
+          type: integer
+        autoBackupEnabled:
+          type: boolean
+        autoBackupIntervalMin:
+          type: integer
+        maxAutoBackups:
+          type: integer
+        lastAutoBackup:
+          type: string
+          format: date-time
+        lastDailyBackup:
+          type: string
+          format: date-time
+        lastWeeklyBackup:
+          type: string
+          format: date-time
       required:
         - baseCurrency
         - usdToMxnRate
@@ -1516,6 +1868,14 @@ components:
           type: ["boolean", "null"]
         enableUsbBackup:
           type: ["boolean", "null"]
+        pinLockTimeoutMin:
+          type: ["integer", "null"]
+        autoBackupEnabled:
+          type: ["boolean", "null"]
+        autoBackupIntervalMin:
+          type: ["integer", "null"]
+        maxAutoBackups:
+          type: ["integer", "null"]
 
     Rush:
       type: object
@@ -1577,3 +1937,318 @@ components:
           type: boolean
       required:
         - success
+
+    TaxRate:
+      type: object
+      properties:
+        id:
+          type: string
+        category:
+          type: string
+        rate:
+          type: number
+        description:
+          type: string
+        isActive:
+          type: boolean
+      required:
+        - id
+        - category
+        - rate
+        - isActive
+
+    GetTaxRatesResponse:
+      type: object
+      properties:
+        rates:
+          type: array
+          items:
+            $ref: "#/components/schemas/TaxRate"
+      required:
+        - rates
+
+    GetTaxConfigResponse:
+      type: object
+      properties:
+        defaultRate:
+          type: number
+        rates:
+          type: object
+          additionalProperties:
+            type: number
+        lastUpdated:
+          type: string
+      required:
+        - defaultRate
+        - rates
+        - lastUpdated
+
+    UpdateTaxRateBody:
+      type: object
+      properties:
+        rate:
+          type: number
+        description:
+          type: string
+      required:
+        - rate
+
+    UpdateTaxRateResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        rate:
+          $ref: "#/components/schemas/TaxRate"
+      required:
+        - success
+        - rate
+
+    PromoCode:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        discountType:
+          type: string
+          enum: [percentage, fixed_amount]
+        discountValue:
+          type: number
+        maxUses:
+          type: integer
+        currentUses:
+          type: integer
+        expiresAt:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+      required:
+        - id
+        - code
+        - discountType
+        - discountValue
+
+    ApplyPromoCodeBody:
+      type: object
+      properties:
+        promoCode:
+          type: string
+      required:
+        - promoCode
+
+    ApplyPromoCodeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        discountMxn:
+          type: number
+        promoCodeId:
+          type: string
+      required:
+        - id
+        - discountMxn
+        - promoCodeId
+
+    StaffShift:
+      type: object
+      properties:
+        id:
+          type: string
+        shiftId:
+          type: string
+        staffUserId:
+          type: string
+        staffName:
+          type: string
+        staffRole:
+          type: string
+        clockInAt:
+          type: string
+          format: date-time
+        clockOutAt:
+          type: string
+          format: date-time
+        breakStartAt:
+          type: string
+          format: date-time
+        breakEndAt:
+          type: string
+          format: date-time
+        notes:
+          type: ["string", "null"]
+        hoursWorked:
+          type: number
+        breakMinutes:
+          type: integer
+      required:
+        - id
+        - shiftId
+        - staffUserId
+        - staffName
+        - clockInAt
+
+    ClockInBody:
+      type: object
+      properties:
+        shiftId:
+          type: string
+        staffUserId:
+          type: string
+        notes:
+          type: string
+      required:
+        - shiftId
+        - staffUserId
+
+    ClockInResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        shift:
+          type: object
+          properties:
+            id:
+              type: string
+            staffName:
+              type: string
+            clockInAt:
+              type: string
+              format: date-time
+            notes:
+              type: string
+          required:
+            - id
+            - staffName
+            - clockInAt
+      required:
+        - success
+        - shift
+
+    ClockOutBody:
+      type: object
+      properties:
+        staffShiftId:
+          type: string
+        notes:
+          type: string
+      required:
+        - staffShiftId
+
+    ClockOutResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        shift:
+          type: object
+          properties:
+            staffName:
+              type: string
+            clockInAt:
+              type: string
+              format: date-time
+            clockOutAt:
+              type: string
+              format: date-time
+            hoursWorked:
+              type: number
+          required:
+            - staffName
+            - clockInAt
+            - clockOutAt
+            - hoursWorked
+      required:
+        - success
+        - shift
+
+    StaffPerformance:
+      type: object
+      properties:
+        staffUserId:
+          type: string
+        staffName:
+          type: string
+        staffRole:
+          type: string
+        totalOrders:
+          type: integer
+        totalRevenueMxn:
+          type: number
+        totalTipsMxn:
+          type: number
+        tabsOpened:
+          type: integer
+        tabsClosed:
+          type: integer
+        drinksServed:
+          type: integer
+      required:
+        - staffUserId
+        - staffName
+        - totalOrders
+
+    BackupInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        filename:
+          type: string
+        path:
+          type: string
+        size:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        type:
+          type: string
+          enum: [auto, daily, weekly, manual]
+      required:
+        - id
+        - filename
+        - size
+        - createdAt
+        - type
+
+    BackupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        backup:
+          $ref: "#/components/schemas/BackupInfo"
+
+    BackupListResponse:
+      type: object
+      properties:
+        backups:
+          type: array
+          items:
+            $ref: "#/components/schemas/BackupInfo"
+
+    BackupSettings:
+      type: object
+      properties:
+        autoBackupEnabled:
+          type: boolean
+        autoBackupIntervalMin:
+          type: integer
+        maxAutoBackups:
+          type: integer
+        lastAutoBackup:
+          type: string
+          format: date-time
+        lastDailyBackup:
+          type: string
+          format: date-time
+        lastWeeklyBackup:
+          type: string
+          format: date-time

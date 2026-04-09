@@ -2,6 +2,7 @@ import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 import crypto from "crypto";
 import { usersTable } from "./auth";
+import { inventoryItemsTable } from "./inventory";
 
 // DEPRECATED: ingredientsTable replaced by inventoryItemsTable in inventory.ts
 // This table is kept for backward compatibility but no longer used by any routes
@@ -36,6 +37,7 @@ export const drinksTable = sqliteTable("drinks", {
   descriptionEs: text("description_es"),
   category: text("category").notNull().default("other"),
   taxCategory: text("tax_category").notNull().default("standard"),
+  taxRate: real("tax_rate").notNull().default(0),
   actualPrice: real("actual_price").notNull().default(0),
   markupFactor: real("markup_factor").notNull().default(3.0),
   isAvailable: integer("is_available", { mode: "boolean" })
@@ -60,9 +62,11 @@ export const recipeIngredientsTable = sqliteTable("recipe_ingredients", {
   drinkId: text("drink_id")
     .notNull()
     .references(() => drinksTable.id, { onDelete: "cascade" }),
-  ingredientId: text("ingredient_id").notNull(),
+  ingredientId: text("ingredient_id")
+    .notNull()
+    .references(() => inventoryItemsTable.id, { onDelete: "cascade" }),
   amountInMl: real("amount_in_ml").notNull().default(0),
-  amountInBaseUnit: real("amount_in_base_unit").notNull().default(0), // Alias
+  amountInBaseUnit: real("amount_in_base_unit").notNull().default(0),
 });
 
 export const shiftsTable = sqliteTable("shifts", {
@@ -141,7 +145,7 @@ export const ordersTable = sqliteTable("orders", {
 export const settingsTable = sqliteTable("settings", {
   id: text("id").primaryKey().default("default"),
   barName: text("bar_name").notNull().default("GustoPOS"),
-  barIcon: text("bar_icon"), // New field
+  barIcon: text("bar_icon").default("Wine"),
   baseCurrency: text("base_currency").notNull().default("MXN"),
   usdToMxnRate: real("usd_to_mxn_rate").notNull().default(17.5),
   cadToMxnRate: real("cad_to_mxn_rate").notNull().default(12.8),
@@ -159,6 +163,16 @@ export const settingsTable = sqliteTable("settings", {
     .notNull()
     .default(false),
   pinLockTimeoutMin: integer("pin_lock_timeout_min").notNull().default(5),
+  autoBackupEnabled: integer("auto_backup_enabled", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  autoBackupIntervalMin: integer("auto_backup_interval_min")
+    .notNull()
+    .default(15),
+  maxAutoBackups: integer("max_auto_backups").notNull().default(5),
+  lastAutoBackup: integer("last_auto_backup", { mode: "timestamp" }),
+  lastDailyBackup: integer("last_daily_backup", { mode: "timestamp" }),
+  lastWeeklyBackup: integer("last_weekly_backup", { mode: "timestamp" }),
   updatedAt: integer("updated_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

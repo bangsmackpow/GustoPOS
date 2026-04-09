@@ -182,6 +182,15 @@ router.post("/shifts/:id/close", async (req: Request, res: Response) => {
       user.id
     : null;
 
+  // Create backup on shift close
+  try {
+    const { backupOnShiftClose } = await import("../lib/backup");
+    await backupOnShiftClose();
+    console.log("[Shift] Backup created on shift close");
+  } catch (e) {
+    console.warn("[Shift] Could not create backup on shift close:", e);
+  }
+
   return res.json(formatShift(shift, userName));
 });
 
@@ -449,6 +458,14 @@ router.get(
         unit: i.baseUnit,
       }));
 
+    const deletedItems = allItems
+      .filter((i) => i.isDeleted)
+      .map((i) => ({
+        ingredientId: i.id,
+        ingredientName: i.name,
+        isDeleted: i.isDeleted,
+      }));
+
     const tabsFormatted = tabs.map((t) => ({
       id: t.id,
       nickname: t.nickname,
@@ -482,6 +499,7 @@ router.get(
       topSellers,
       inventoryUsed,
       lowStockAlerts,
+      deletedItems,
       tabs: tabsFormatted,
     });
   },

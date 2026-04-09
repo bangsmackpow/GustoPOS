@@ -11,6 +11,7 @@ export const inventoryItemsTable = sqliteTable("inventory_items", {
   nameEs: text("name_es"),
   type: text("type").notNull(), 
   subtype: text("subtype"),
+  parentItemId: text("parent_item_id").references((): any => inventoryItemsTable.id),
   
   // Measurement System
   baseUnit: text("base_unit").notNull().default("ml"), 

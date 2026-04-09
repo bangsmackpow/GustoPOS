@@ -1,0 +1,46 @@
+Database file will be created by SQLite: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app/gusto.db
+Starting API at: /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/index.cjs
+Database at: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app/gusto.db
+Loaded env file from: /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/stack.env
+API check failed: fetch failed
+[API] [API] Serving static assets from: /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/public
+[API] [Sentry] SENTRY_DSN not set — error monitoring disabled
+Checking database schema...
+Database URL: file:///Users/McKinneyMakesMedia/Library/Application%20Support/@workspace/desktop-app/gusto.db
+[API] Resolved database path: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app/gusto.db
+Using migrations from: /Users/McKinneyMakesMedia/Desktop/dev/GustoPOS-Curtis/GustoPOS/artifacts/desktop-app/dist/build/mac/GustoPOS.app/Contents/Resources/api/migrations
+Database directory to ensure: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app
+Database directory already exists: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app
+[API] Database full path: /Users/McKinneyMakesMedia/Library/Application Support/@workspace/desktop-app/gusto.db
+[API] Running database migrations...
+[API] ✓ Migration check complete.
+Verifying database tables...
+[API] ✓ Database schema verified successfully.
+Verifying database tables...
+[API] ✓ Database schema verified successfully.
+[Initialize] Starting admin user initialization...
+[API] [Initialize] Checking for existing admin user: lukemckinneyart@gmail.com
+2026-04-08 15:10:55.396 GustoPOS[29620:4847613] +[IMKClient subclass]: chose IMKClient_Modern
+2026-04-08 15:10:55.396 GustoPOS[29620:4847613] +[IMKInputSession subclass]: chose IMKInputSession_Modern
+[API] [Initialize] No existing user found, creating new admin...
+[API] [Initialize] ✓ Admin user created successfully: lukemckinneyart@gmail.com
+[Initialize] ✓ Database initialization completed successfully
+[Desktop] Admin user initialization confirmed!
+[API] {"level":30,"time":1775682655460,"pid":30295,"hostname":"iMac.local","port":3000,"msg":"Server listening"}
+API is ready, loading application...
+[API] {"level":30,"time":1775682655690,"pid":30295,"hostname":"iMac.local","req":{"id":1,"method":"GET","url":"/api/healthz"},"res":{"statusCode":200},"responseTime":5,"msg":"request completed"}
+[API] {"level":30,"time":1775682655717,"pid":30295,"hostname":"iMac.local","req":{"id":2,"method":"GET","url":"/"},"res":{"statusCode":200},"responseTime":4,"msg":"request completed"}
+[API] {"level":30,"time":1775682655777,"pid":30295,"hostname":"iMac.local","req":{"id":4,"method":"GET","url":"/assets/index-CMX_MD1c.css"},"res":{"statusCode":200},"responseTime":4,"msg":"request completed"}
+[API] {"level":30,"time":1775682655780,"pid":30295,"hostname":"iMac.local","req":{"id":3,"method":"GET","url":"/assets/index-qa4GwTD4.js"},"res":{"statusCode":200},"responseTime":11,"msg":"request completed"}
+[API] {"level":30,"time":1775682655866,"pid":30295,"hostname":"iMac.local","req":{"id":5,"method":"GET","url":"/api/auth/user"},"res":{"statusCode":304},"responseTime":2,"msg":"request completed"}
+[API] {"level":30,"time":1775682655869,"pid":30295,"hostname":"iMac.local","req":{"id":6,"method":"GET","url":"/api/shifts/active"},"res":{"statusCode":304},"responseTime":3,"msg":"request completed"}
+[API] {"level":30,"time":1775682655873,"pid":30295,"hostname":"iMac.local","req":{"id":7,"method":"GET","url":"/api/settings"},"res":{"statusCode":200},"responseTime":4,"msg":"request completed"}
+[API] {"level":30,"time":1775682655897,"pid":30295,"hostname":"iMac.local","req":{"id":8,"method":"GET","url":"/api/ingredients"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+[API] {"level":30,"time":1775682655901,"pid":30295,"hostname":"iMac.local","req":{"id":9,"method":"GET","url":"/api/tabs"},"res":{"statusCode":200},"responseTime":3,"msg":"request completed"}
+[API] {"level":30,"time":1775682655903,"pid":30295,"hostname":"iMac.local","req":{"id":10,"method":"GET","url":"/api/rushes"},"res":{"statusCode":304},"responseTime":4,"msg":"request completed"}
+[API] {"level":30,"time":1775682655905,"pid":30295,"hostname":"iMac.local","req":{"id":11,"method":"GET","url":"/api/drinks"},"res":{"statusCode":200},"responseTime":2,"msg":"request completed"}
+[API] {"level":30,"time":1775682655910,"pid":30295,"hostname":"iMac.local","req":{"id":12,"method":"GET","url":"/images/pattern.png"},"res":{"statusCode":200},"responseTime":5,"msg":"request completed"}
+[API] {"level":30,"time":1775682733059,"pid":30295,"hostname":"iMac.local","req":{"id":13,"method":"GET","url":"/api/auth/user"},"res":{"statusCode":304},"responseTime":1,"msg":"request completed"}
+[29620:0408/151254.321214:ERROR:network_service_instance_impl.cc(601)] Network service crashed, restarting service.
+[29620:0408/151254.323959:ERROR:command_buffer_proxy_impl.cc(319)] GPU state invalid after WaitForGetOffsetInRange.
+API process exited with code null (signal: SIGHUP)

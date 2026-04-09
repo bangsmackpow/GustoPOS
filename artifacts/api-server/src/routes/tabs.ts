@@ -460,6 +460,8 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
         drinkNameEs: drink.nameEs ?? null,
         quantity,
         unitPriceMxn: Number(unitPriceMxn),
+        taxCategory: drink.taxCategory ?? "standard",
+        taxRate: Number(drink.taxRate) || 0,
         notes: notes ?? null,
       } as typeof ordersTable.$inferInsert)
       .returning();

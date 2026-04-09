@@ -28,7 +28,7 @@ router.get("/", async (req: Request, res: Response) => {
         id: r.id,
         category: r.category,
         rate: r.rate,
-        description: r.description,
+        description: r.description ?? undefined,
         isActive: r.isActive,
       })),
     };
@@ -119,7 +119,7 @@ router.post("/:category", async (req: Request, res: Response) => {
         id: rate!.id,
         category: rate!.category,
         rate: rate!.rate,
-        description: rate!.description,
+        description: rate!.description ?? undefined,
         isActive: rate!.isActive,
       },
     };

@@ -29,6 +29,7 @@ import {
   AlertCircle,
   CheckCircle,
   Zap,
+  Trash2,
 } from "lucide-react";
 import { format, subDays } from "date-fns";
 
@@ -499,13 +500,13 @@ export default function Reports() {
                 </section>
 
                 {/* Low Stock Alerts */}
-                {report.lowStockAlerts.length > 0 && (
+                {report.lowStockAlerts && report.lowStockAlerts.length > 0 && (
                   <section className="bg-destructive/10 rounded-3xl p-6 border border-destructive/20">
                     <h3 className="text-lg font-medium text-destructive flex items-center gap-2 mb-4">
                       <AlertTriangle size={20} /> Low Stock Warnings
                     </h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {report.lowStockAlerts.map((item) => (
+                      {report.lowStockAlerts.map((item: any) => (
                         <div
                           key={item.ingredientId}
                           className="p-3 bg-destructive/5 rounded-2xl border border-destructive/10"
@@ -524,6 +525,33 @@ export default function Reports() {
                     </div>
                   </section>
                 )}
+
+                {/* Deleted Items */}
+                {(report as any).deletedItems &&
+                  (report as any).deletedItems.length > 0 && (
+                    <section className="glass rounded-3xl p-6 border border-white/5">
+                      <h3 className="text-lg font-medium text-muted-foreground flex items-center gap-2 mb-4">
+                        <Trash2 size={20} /> Deleted Inventory Items
+                      </h3>
+                      <div className="space-y-2">
+                        {(report as any).deletedItems.map((item: any) => (
+                          <div
+                            key={item.ingredientId}
+                            className="flex items-center justify-between p-3 bg-white/5 rounded-xl"
+                          >
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">
+                                {item.ingredientName}
+                              </p>
+                            </div>
+                            <span className="text-xs bg-destructive/20 text-destructive px-2 py-1 rounded-full">
+                              Deleted
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+                  )}
               </div>
             ) : (
               <div className="h-[400px] flex flex-col items-center justify-center text-center glass rounded-3xl border border-white/5">

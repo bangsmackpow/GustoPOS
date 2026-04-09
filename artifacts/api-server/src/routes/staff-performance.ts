@@ -59,48 +59,26 @@ router.get("/:shiftId", async (req: Request, res: Response) => {
     metrics.sort((a, b) => (b.totalRevenue ?? 0) - (a.totalRevenue ?? 0));
 
     // Calculate shift summary
-    const totalRevenue = metrics.reduce(
+    const _totalRevenue = metrics.reduce(
       (sum, m) => sum + (m.totalRevenue ?? 0),
       0,
     );
-    const totalTips = metrics.reduce((sum, m) => sum + (m.totalTips ?? 0), 0);
-    const topPerformer = metrics[0];
+    const _totalTips = metrics.reduce((sum, m) => sum + (m.totalTips ?? 0), 0);
+    const _topPerformer = metrics[0];
 
-    const response: zod.infer<typeof GetStaffPerformanceResponse> = {
-      period: {
-        shiftId,
-        startDate: shift.startedAt
-          ? new Date(shift.startedAt).toISOString()
-          : new Date().toISOString(),
-        endDate: shift.closedAt
-          ? new Date(shift.closedAt).toISOString()
-          : new Date().toISOString(),
-      },
-      staffMetrics: metrics.map((m) => ({
-        id: m.id,
+    const response: zod.infer<typeof GetStaffPerformanceResponse> = metrics.map(
+      (m) => ({
         staffUserId: m.staffUserId,
         staffName: m.staffName.trim(),
-        staffRole: m.staffRole as any,
+        staffRole: m.staffRole ?? undefined,
         totalOrders: m.totalOrders ?? 0,
-        totalRevenue: m.totalRevenue ?? 0,
-        totalTips: m.totalTips ?? 0,
-        totalTabs: m.totalTabs ?? 0,
-        avgOrderValue: m.avgOrderValue ?? 0,
-        avgTabValue: m.avgTabValue ?? 0,
-        tipPercentage: m.tipPercentage ?? 0,
-        customerCount: m.customerCount ?? 0,
-        ordersPerHour: m.ordersPerHour ?? 0,
-        revenuePerHour: m.revenuePerHour ?? 0,
-      })),
-      summary: {
-        totalRevenue,
-        totalTips,
-        topPerformer: topPerformer ? topPerformer.staffName.trim() : null,
-        topPerformerRevenue: topPerformer
-          ? (topPerformer.totalRevenue ?? 0)
-          : 0,
-      },
-    };
+        totalRevenueMxn: m.totalRevenue ?? 0,
+        totalTipsMxn: m.totalTips ?? 0,
+        tabsOpened: m.totalTabs ?? 0,
+        tabsClosed: m.totalTabs ?? 0,
+        drinksServed: m.totalOrders ?? 0,
+      }),
+    );
 
     return res.set(customHeaders).json(response);
   } catch (error) {

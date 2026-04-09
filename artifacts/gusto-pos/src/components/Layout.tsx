@@ -80,6 +80,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     isLocked,
     setIsLocked,
   } = usePosStore();
+  const [showClearTrashModal, setShowClearTrashModal] = useState(false);
   const {
     data: auth,
     isLoading,
@@ -174,6 +175,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleLogout = async () => {
+    // Phase 1: Global Admin Trash Alert
+    if ((auth as any)?.role === "admin") {
+      try {
+        const res = await fetch("/api/inventory/trash/count");
+        const data = await res.json();
+        if (data.count > 0) {
+          setShowClearTrashModal(true);
+          return; // Wait for modal decision
+        }
+      } catch (err) {
+        console.error("Failed to check trash", err);
+      }
+    }
+    executeLogout();
+  };
+
+  const executeLogout = async () => {
     try {
       await fetch("/api/auth/logout", { credentials: "include" });
     } catch (err) {
@@ -182,6 +200,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
     queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
     setActiveStaff(null);
     setLocation("/login");
+  };
+
+  const handleClearTrashAndLogout = async (shouldClear: boolean) => {
+    if (shouldClear) {
+      try {
+        await fetch("/api/inventory/trash/clear", { method: "DELETE" });
+      } catch (err) {
+        console.error("Clear trash failed", err);
+      }
+    }
+    setShowClearTrashModal(false);
+    executeLogout();
   };
 
   // Auth guard: consolidated into single effect to prevent race conditions
@@ -395,6 +425,41 @@ export function Layout({ children }: { children: React.ReactNode }) {
         />
       )}
       <QuickSearch isOpen={showSearch} onClose={() => setShowSearch(false)} />
+
+      {/* Clear Trash Global Modal */}
+      {showClearTrashModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90 backdrop-blur-xl">
+          <div className="glass p-8 rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-2xl">
+            <h2 className="text-3xl font-display font-bold mb-4 flex items-center gap-3">
+              <LogOut className="text-primary" />
+              {getTranslation("logout", language)}
+            </h2>
+            <p className="text-muted-foreground text-lg mb-8">
+              There are deleted items in the inventory trash. Would you like to **clear the trash** before logging out?
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={() => handleClearTrashAndLogout(true)}
+                className="w-full h-14 bg-destructive text-destructive-foreground rounded-2xl font-bold text-lg hover:brightness-110 transition-all active:scale-95"
+              >
+                Clear Trash & Logout
+              </button>
+              <button
+                onClick={() => handleClearTrashAndLogout(false)}
+                className="w-full h-14 bg-white/5 text-foreground rounded-2xl font-bold text-lg hover:bg-white/10 transition-all active:scale-95 border border-white/10"
+              >
+                Just Logout
+              </button>
+              <button
+                onClick={() => setShowClearTrashModal(false)}
+                className="w-full h-14 bg-transparent text-muted-foreground rounded-2xl font-medium text-lg hover:text-foreground transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

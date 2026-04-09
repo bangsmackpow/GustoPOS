@@ -1,10 +1,6 @@
 import React, { useState } from "react";
 import { useRoute, Link } from "wouter";
-import {
-  useGetTab,
-  useGetDrinks,
-  useGetIngredients,
-} from "@workspace/api-client-react";
+import { useGetTab, useGetDrinks } from "@workspace/api-client-react";
 import {
   useAddOrderMutation,
   useDeleteOrderMutation,
@@ -25,9 +21,9 @@ import {
   Beer,
   Info,
   X,
-  Package,
   Loader2,
   Edit2,
+  ShoppingBag,
 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -52,9 +48,6 @@ export default function TabDetail() {
     refetch,
   } = useGetTab(tabId);
   const { data: drinks } = useGetDrinks();
-  const { data: ingredients } = useGetIngredients() as {
-    data?: any[];
-  };
 
   const addOrder = useAddOrderMutation();
   const deleteOrder = useDeleteOrderMutation();
@@ -67,10 +60,6 @@ export default function TabDetail() {
   const [promoCode, setPromoCode] = useState<string>("");
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [viewingRecipe, setViewingRecipe] = useState<any>(null);
-  const [productSelector, setProductSelector] = useState<{
-    drink: any;
-    items: any[];
-  } | null>(null);
   const [addQuantity, setAddQuantity] = useState<number>(1);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [deletingOrder, setDeletingOrder] = useState<any>(null);
@@ -100,6 +89,13 @@ export default function TabDetail() {
     );
   }
 
+  const _drinkIngredients =
+    drinks?.length === 0
+      ? []
+      : (drinks?.[0] as any)?.recipe
+          ?.map((r: any) => r.ingredientId)
+          .filter(Boolean) || [];
+
   const categories = [
     "all",
     ...Array.from(new Set(drinks?.map((d) => d.category) || [])),
@@ -119,19 +115,6 @@ export default function TabDetail() {
       return;
     }
 
-    const drinkIngredients =
-      (drink as any).recipe?.map((r: any) => r.ingredientId).filter(Boolean) ||
-      [];
-    const matchingItems = (ingredients || []).filter(
-      (item: any) =>
-        drinkIngredients.includes(item.id) && item.currentStock > 0,
-    );
-
-    if (matchingItems.length > 1) {
-      setProductSelector({ drink, items: matchingItems });
-      return;
-    }
-
     addOrder.mutate(
       { id: tabId, data: { drinkId: drink.id, quantity: addQuantity } },
       {
@@ -140,34 +123,7 @@ export default function TabDetail() {
             title: getTranslation("success", language),
             description: `${language === "es" && drink.nameEs ? drink.nameEs : drink.name} added to tab.`,
           });
-          setAddQuantity(1); // Reset quantity after adding
-        },
-        onError: (error: any) => {
-          toast({
-            variant: "destructive",
-            title: getTranslation("error", language),
-            description: error.message || "Failed to add drink to tab.",
-          });
-        },
-      },
-    );
-  };
-
-  const handleSelectProduct = (item: any) => {
-    if (!productSelector) return;
-    addOrder.mutate(
-      {
-        id: tabId,
-        data: { drinkId: productSelector.drink.id, quantity: addQuantity },
-      },
-      {
-        onSuccess: () => {
-          toast({
-            title: getTranslation("success", language),
-            description: `${language === "es" && item.nameEs ? item.nameEs : item.name} added to tab.`,
-          });
-          setProductSelector(null);
-          setAddQuantity(1); // Reset quantity after adding
+          setAddQuantity(1);
         },
         onError: (error: any) => {
           toast({
@@ -264,27 +220,7 @@ export default function TabDetail() {
     );
   };
 
-  const getStockStatus = (drink: any) => {
-    if (!ingredients || !drink.recipe || drink.recipe.length === 0)
-      return { status: "available", message: "" };
-
-    let minServings = Infinity;
-
-    for (const r of drink.recipe) {
-      const ing = (ingredients as any[]).find((i) => i.id === r.ingredientId);
-      if (!ing) continue;
-
-      const amount = Number(r.amountInBaseUnit || 0);
-      if (amount <= 0) continue;
-      const available = Number(ing.currentStock) / amount;
-      if (available < minServings) minServings = available;
-    }
-
-    if (minServings <= 0 || isFinite(minServings) === false) {
-      return { status: "out", message: "Out of Stock" };
-    } else if (minServings < 5) {
-      return { status: "low", message: `${Math.floor(minServings)} left` };
-    }
+  const getStockStatus = (_drink: any) => {
     return { status: "available", message: "" };
   };
 
@@ -312,7 +248,7 @@ export default function TabDetail() {
           <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-4">
             {tabData.orders.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-                <Package size={32} className="mb-3 opacity-20" />
+                <ShoppingBag size={32} className="mb-3 opacity-20" />
                 <p className="text-sm">No items yet</p>
               </div>
             ) : (
@@ -631,14 +567,7 @@ export default function TabDetail() {
               {viewingRecipe.recipe.length > 0 ? (
                 <div className="space-y-3">
                   {viewingRecipe.recipe.map((ing: any, idx: number) => {
-                    const stockIng = (ingredients as any[])?.find(
-                      (i) => i.id === ing.ingredientId,
-                    );
-                    const currentStock = stockIng
-                      ? Number(stockIng.currentStock)
-                      : 0;
                     const amount = Number(ing.amountInBaseUnit || 0);
-                    const isLow = currentStock < amount * 5;
 
                     return (
                       <div
@@ -651,21 +580,13 @@ export default function TabDetail() {
                               ? ing.ingredientNameEs
                               : ing.ingredientName}
                           </span>
-                          {stockIng && (
-                            <span
-                              className={`text-[10px] font-bold uppercase ${isLow ? "text-primary" : "text-muted-foreground opacity-50"}`}
-                            >
-                              Stock: {currentStock.toFixed(0)}
-                              {stockIng.baseUnit}
-                            </span>
-                          )}
                         </div>
                         <div className="text-primary font-mono font-bold">
-                          {amount.toFixed(0)}
-                          {stockIng?.baseUnit || ""}{" "}
+                          {amount.toFixed(0)}ml
                           <span className="text-muted-foreground text-sm">
-                            /
-                          </span>{" "}
+                            {" "}
+                            /{" "}
+                          </span>
                           {(amount / 29.57).toFixed(1)}oz
                         </div>
                       </div>
@@ -870,51 +791,6 @@ export default function TabDetail() {
               >
                 {deleteOrder.isPending ? "..." : "Remove"}
               </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Product Selector Modal */}
-      {productSelector && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/90 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="glass p-8 rounded-3xl w-full max-w-md relative border border-white/10 shadow-2xl">
-            <button
-              onClick={() => setProductSelector(null)}
-              className="absolute top-6 right-6 text-muted-foreground hover:text-foreground"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-display font-bold text-primary mb-2">
-              {getTranslation("select_product", language) || "Select Product"}
-            </h2>
-            <p className="text-muted-foreground mb-6">
-              {language === "es" && productSelector.drink.nameEs
-                ? productSelector.drink.nameEs
-                : productSelector.drink.name}
-            </p>
-
-            <div className="space-y-3">
-              {productSelector.items.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleSelectProduct(item)}
-                  disabled={addOrder.isPending}
-                  className="w-full p-4 bg-white/5 rounded-xl border border-white/5 hover:border-primary/30 transition-colors text-left flex justify-between items-center disabled:opacity-50"
-                >
-                  <div>
-                    <p className="font-bold">
-                      {language === "es" && item.nameEs
-                        ? item.nameEs
-                        : item.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {item.currentStock.toFixed(1)} {item.baseUnit}
-                    </p>
-                  </div>
-                  <Package size={20} className="text-primary" />
-                </button>
-              ))}
             </div>
           </div>
         </div>
