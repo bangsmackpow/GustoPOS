@@ -5,43 +5,15 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1774768718315,
-      "tag": "0000_slippery_george_stacy",
+      "when": 1775772877713,
+      "tag": "0000_redundant_prodigy",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "6",
-      "when": 1774773481546,
-      "tag": "0001_hot_gabe_jones",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1774812856028,
-      "tag": "0002_boring_zarda",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1775536560000,
-      "tag": "0003_advanced_inventory",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "6",
-      "when": 1775536561000,
-      "tag": "0004_recipe_ingredients_fk",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "6",
-      "when": 1775682600000,
-      "tag": "0005_add_parent_item_id",
+      "when": 1775785200000,
+      "tag": "0001_add_inventory_columns",
       "breakpoints": true
     }
   ]

@@ -154,7 +154,7 @@ export function useCloseShiftMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (variables: { id: string }) => closeShift(variables.id),
+    mutationFn: (variables: { id: string; data?: Parameters<typeof closeShift>[1] }) => closeShift(variables.id, variables.data ?? {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: getGetActiveShiftQueryKey() });
       qc.invalidateQueries({ queryKey: getGetShiftsQueryKey() });

@@ -74,7 +74,7 @@ export default function Inventory() {
   const { data: trashCount } = useGetTrashCount();
   const clearTrash = useClearTrash();
   const { data: auth } = useGetCurrentAuthUser();
-  const isAdmin = (auth as any)?.role === "admin";
+  const isAdmin = auth?.user?.role === "admin";
   const saveIngredient = useSaveIngredientMutation();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -95,6 +95,11 @@ export default function Inventory() {
   const [expandedParents, setExpandedParents] = useState<Set<string>>(
     new Set(),
   );
+  const [servingSizeUnit, setServingSizeUnit] = useState<"ml" | "oz">("ml");
+  const [showAddInventory, setShowAddInventory] = useState<any>(null);
+  const [addInvFull, setAddInvFull] = useState(0);
+  const [addInvPartial, setAddInvPartial] = useState(0);
+  const [addInvCost, setAddInvCost] = useState(0);
 
   const toggleParent = (id: string) => {
     const next = new Set(expandedParents);
@@ -503,16 +508,16 @@ export default function Inventory() {
                 baseUnitAmount: 750,
                 bottleSizeMl: 750,
                 servingSize: 44.36,
-                pourSize: 1.5,
                 currentStock: 0,
                 orderCost: 0,
                 lowStockThreshold: 1,
                 unitsPerCase: 24,
-                tareWeightG: null,
                 fullBottleWeightG: null,
                 glassWeightG: null,
                 density: 0.94,
                 isOnMenu: false,
+                sellSingleServing: false,
+                singleServingPrice: null,
               })
             }
           >
@@ -529,11 +534,13 @@ export default function Inventory() {
                 <tr className="border-b border-white/5 text-muted-foreground text-sm">
                   <th className="p-3 font-medium w-10">Menu</th>
                   <th className="p-3 font-medium w-32 min-w-[128px]">Name</th>
-                  <th className="p-3 font-medium w-20">Size</th>
+                  <th className="p-3 font-medium w-20">Bottle</th>
                   <th className="p-3 font-medium w-24">Type</th>
                   <th className="p-3 font-medium w-24">Stock</th>
                   <th className="p-3 font-medium w-20">Servings</th>
+                  <th className="p-3 font-medium w-16">Avg $</th>
                   <th className="p-3 font-medium w-20">Cost/Srv</th>
+                  <th className="p-3 font-medium w-16">Weight</th>
                   <th className="p-3 font-medium w-16 text-right">Actions</th>
                 </tr>
               </thead>
@@ -622,6 +629,27 @@ export default function Inventory() {
                           </div>
                         </td>
                         <td className="p-3">
+                          <div className="text-sm text-muted-foreground">
+                            {item.bottleSizeMl ? (
+                              <span className="font-mono">
+                                {item.bottleSizeMl}ml
+                              </span>
+                            ) : item.baseUnitAmount ? (
+                              <span className="font-mono">
+                                {item.baseUnitAmount}
+                                {item.baseUnit}
+                              </span>
+                            ) : (
+                              <span className="opacity-40">—</span>
+                            )}
+                            {item.fullBottleWeightG && (
+                              <span className="text-[10px] block text-muted-foreground/60">
+                                {item.fullBottleWeightG.toFixed(0)}g full
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-3">
                           <div className="text-sm text-muted-foreground capitalize">
                             {typeLabel(item.type)}
                             {item.subtype && (
@@ -662,6 +690,15 @@ export default function Inventory() {
                           </span>
                         </td>
                         <td className="p-3">
+                          <span className="font-mono text-sm">
+                            {item.orderCost > 0 && item.baseUnitAmount > 0
+                              ? formatMoney(
+                                  item.orderCost / item.baseUnitAmount,
+                                )
+                              : "—"}
+                          </span>
+                        </td>
+                        <td className="p-3">
                           <span className="font-mono text-sm text-emerald-400">
                             {item.orderCost > 0 && item.baseUnitAmount > 0
                               ? formatMoney(
@@ -671,21 +708,32 @@ export default function Inventory() {
                               : "—"}
                           </span>
                         </td>
+                        <td className="p-3">
+                          <div className="text-xs text-muted-foreground">
+                            {item.glassWeightG ? (
+                              <span className="font-mono block">
+                                {item.glassWeightG.toFixed(0)}g glass
+                              </span>
+                            ) : item.density ? (
+                              <span className="opacity-40">
+                                {item.density} density
+                              </span>
+                            ) : (
+                              <span className="opacity-40">—</span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-2">
                             <button
                               onClick={() => {
-                                setEditingItem({
-                                  ...item,
-                                  id: undefined,
-                                  parentItemId: item.id,
-                                  name: item.name,
-                                  currentStock: 0,
-                                  isDeleted: false,
-                                });
+                                setShowAddInventory(item);
+                                setAddInvFull(0);
+                                setAddInvPartial(0);
+                                setAddInvCost(0);
                               }}
                               className="p-2 hover:bg-white/10 rounded-xl transition-colors text-primary hover:text-primary"
-                              title="Add Variation"
+                              title="Add Inventory"
                             >
                               <Plus size={18} />
                             </button>
@@ -739,6 +787,13 @@ export default function Inventory() {
                               </span>
                             </td>
                             <td className="p-3">
+                              <span className="font-mono text-xs">
+                                {v.orderCost > 0 && v.baseUnitAmount > 0
+                                  ? formatMoney(v.orderCost / v.baseUnitAmount)
+                                  : "—"}
+                              </span>
+                            </td>
+                            <td className="p-3">
                               <span className="font-mono text-xs opacity-50">
                                 {v.orderCost > 0 && v.baseUnitAmount > 0
                                   ? formatMoney(
@@ -748,13 +803,36 @@ export default function Inventory() {
                                   : "—"}
                               </span>
                             </td>
+                            <td className="p-3">
+                              <span className="text-[10px] text-muted-foreground opacity-50">
+                                {v.glassWeightG
+                                  ? `${v.glassWeightG.toFixed(0)}g glass`
+                                  : v.density
+                                    ? `${v.density} density`
+                                    : "—"}
+                              </span>
+                            </td>
                             <td className="p-3 text-right">
-                              <button
-                                onClick={() => setEditingItem(v)}
-                                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
-                              >
-                                <Settings size={14} />
-                              </button>
+                              <div className="flex justify-end gap-2">
+                                <button
+                                  onClick={() => {
+                                    setShowAddInventory(v);
+                                    setAddInvFull(0);
+                                    setAddInvPartial(0);
+                                    setAddInvCost(0);
+                                  }}
+                                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-primary hover:text-primary"
+                                  title="Add Inventory"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                                <button
+                                  onClick={() => setEditingItem(v)}
+                                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
+                                >
+                                  <Settings size={14} />
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -793,14 +871,27 @@ export default function Inventory() {
                   editingItem.subtype === "prepackaged");
 
               return (
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Common Fields */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-2 max-h-[70vh] overflow-y-auto pr-4 custom-scrollbar">
+                  {/* Row 1: Name & Type */}
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                      {getTranslation("item_name", language)}
+                    </label>
+                    <input
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                      value={editingItem.name || ""}
+                      onChange={(e) =>
+                        setEditingItem({ ...editingItem, name: e.target.value })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
                       {getTranslation("type", language)}
                     </label>
                     <select
-                      className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors appearance-none"
                       value={editingItem.type || "spirit"}
                       onChange={(e) =>
                         setEditingItem({
@@ -810,32 +901,23 @@ export default function Inventory() {
                         })
                       }
                     >
-                      <option value="spirit">
-                        {getTranslation("spirit", language)}
-                      </option>
-                      <option value="beer">
-                        {getTranslation("beer", language)}
-                      </option>
-                      <option value="mixer">
-                        {getTranslation("mixer", language)}
-                      </option>
-                      <option value="ingredient">
-                        {getTranslation("ingredient", language)}
-                      </option>
-                      <option value="merch">
-                        {getTranslation("merch", language)}
-                      </option>
-                      <option value="misc">
-                        {getTranslation("misc", language)}
-                      </option>
+                      {Object.keys(TYPE_LABELS).map((t) => (
+                        <option key={t} value={t}>
+                          {language === "es"
+                            ? TYPE_LABELS[t].es
+                            : TYPE_LABELS[t].en}
+                        </option>
+                      ))}
                     </select>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">
+
+                  {/* Row 2: Subtype & Density */}
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
                       {getTranslation("subtype", language)}
                     </label>
                     <select
-                      className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors appearance-none"
                       value={editingItem.subtype || ""}
                       onChange={(e) =>
                         setEditingItem({
@@ -852,309 +934,278 @@ export default function Inventory() {
                       ))}
                     </select>
                   </div>
-                  <div className="col-span-2 space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">
-                      {getTranslation("item_name", language)}
+
+                  {/* Row 3: Bottle Size & Full Weight */}
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                      {getTranslation("bottle_size_ml", language)}
                     </label>
                     <input
-                      className="max-w-md bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                      value={editingItem.name || ""}
+                      type="number"
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                      value={
+                        editingItem.bottleSizeMl ||
+                        editingItem.baseUnitAmount ||
+                        ""
+                      }
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setEditingItem({
+                          ...editingItem,
+                          bottleSizeMl: val,
+                          baseUnitAmount: val,
+                          baseUnit: "ml",
+                        });
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                      {getTranslation("full_bottle_weight_label", language)}
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                      value={editingItem.fullBottleWeightG || ""}
+                      onChange={(e) => {
+                        const fullWeight = parseFloat(e.target.value) || 0;
+                        const bottleSize =
+                          editingItem.bottleSizeMl ||
+                          editingItem.baseUnitAmount ||
+                          750;
+                        const density = editingItem.density || 0.94;
+                        const liquidWeight = bottleSize * density;
+                        const glassWeight = fullWeight - liquidWeight;
+                        setEditingItem({
+                          ...editingItem,
+                          fullBottleWeightG: fullWeight,
+                          glassWeightG: glassWeight > 0 ? glassWeight : null,
+                        });
+                      }}
+                    />
+                    {editingItem.glassWeightG && (
+                      <div className="flex justify-between items-center px-1">
+                        <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
+                          Glass: {editingItem.glassWeightG.toFixed(0)}g
+                        </span>
+                        <span className="text-[10px] text-emerald-400 uppercase font-bold tracking-widest">
+                          Liquid:{" "}
+                          {(
+                            editingItem.fullBottleWeightG -
+                            editingItem.glassWeightG
+                          ).toFixed(0)}
+                          g
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Row 4: Serving Size (with ml/oz toggle) & Order Cost */}
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                        Serving Size
+                      </label>
+                      <div className="flex bg-secondary/50 rounded-lg p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setServingSizeUnit("ml")}
+                          className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
+                            servingSizeUnit === "ml"
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          ml
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setServingSizeUnit("oz")}
+                          className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
+                            servingSizeUnit === "oz"
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          fl oz
+                        </button>
+                      </div>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.1"
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                      value={
+                        servingSizeUnit === "oz" && editingItem.servingSize
+                          ? (editingItem.servingSize / 29.5735).toFixed(2)
+                          : editingItem.servingSize || ""
+                      }
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value) || 0;
+                        setEditingItem({
+                          ...editingItem,
+                          servingSize:
+                            servingSizeUnit === "oz" ? val * 29.5735 : val,
+                        });
+                      }}
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                      {getTranslation("order_cost", language)}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                      value={editingItem.orderCost || ""}
                       onChange={(e) =>
-                        setEditingItem({ ...editingItem, name: e.target.value })
+                        setEditingItem({
+                          ...editingItem,
+                          orderCost: parseFloat(e.target.value) || 0,
+                        })
                       }
                     />
                   </div>
 
-                  {/* Alcohol Density - only for spirits */}
+                  {/* Row 5: Alcohol Density (col 1) & Average Cost (col 2) */}
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                      Alcohol Density{" "}
+                      <span className="text-xs text-muted-foreground/60">
+                        (spirit default: 0.94)
+                      </span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                      value={editingItem.density || 0.94}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          density: parseFloat(e.target.value) || 0.94,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                      Avg Cost{" "}
+                      <span className="text-xs text-muted-foreground/60">
+                        ($/serving)
+                      </span>
+                    </label>
+                    <div className="w-full bg-secondary/20 border border-white/5 rounded-xl px-4 py-3 text-muted-foreground">
+                      {editingItem.orderCost && editingItem.servingSize
+                        ? `$${(editingItem.orderCost / editingItem.servingSize).toFixed(2)}`
+                        : "—"}
+                    </div>
+                  </div>
+
+                  {/* Row 6: Low Stock Alert */}
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-bold text-primary uppercase tracking-widest text-[10px]">
+                      {getTranslation("low_stock_alert_label", language)}
+                    </label>
+                    <input
+                      type="number"
+                      step="0.5"
+                      className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                      value={editingItem.lowStockThreshold || ""}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          lowStockThreshold: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="flex flex-col space-y-2">
+                    {/* Empty cell for grid alignment */}
+                  </div>
+
+                  {/* Weighing Section (If applicable) */}
                   {isLayoutA && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-muted-foreground">
-                        Alcohol Density
-                      </label>
-                      <input
-                        type="number"
-                        step="0.001"
-                        className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                        value={editingItem.alcoholDensity ?? ""}
-                        onChange={(e) =>
-                          setEditingItem({
-                            ...editingItem,
-                            alcoholDensity: parseFloat(e.target.value) || 0.955,
-                          })
-                        }
-                      />
+                    <div className="col-span-2 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-6">
+                      <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-[10px]">
+                        <Settings size={14} />
+                        {getTranslation("weigh_bottle", language)}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-muted-foreground uppercase font-bold">
+                            Full Bottles
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            className="w-full bg-secondary/50 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/30"
+                            value={fullBottleCount}
+                            onChange={(e) => {
+                              const count = parseInt(e.target.value) || 0;
+                              setFullBottleCount(count);
+                              const size = editingItem.bottleSizeMl || 750;
+                              const partial =
+                                (editingItem.currentStock || 0) % size;
+                              setEditingItem({
+                                ...editingItem,
+                                currentStock: count * size + partial,
+                              });
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] text-muted-foreground uppercase font-bold">
+                            {getTranslation("current_bottle_weight", language)}
+                          </label>
+                          <input
+                            type="number"
+                            className="w-full bg-secondary/50 border border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary/30"
+                            value={partialBottleWeight}
+                            onChange={(e) => {
+                              const weight = parseFloat(e.target.value) || 0;
+                              setPartialBottleWeight(weight);
+                              if (editingItem.fullBottleWeightG) {
+                                const size = editingItem.bottleSizeMl || 750;
+                                const den = editingItem.density || 0.94;
+                                const glass =
+                                  editingItem.glassWeightG ||
+                                  editingItem.fullBottleWeightG - size * den;
+                                const liquid = Math.max(0, weight - glass);
+                                const partialMl = liquid / den;
+                                const fulls = Math.floor(
+                                  (editingItem.currentStock || 0) / size,
+                                );
+                                setEditingItem({
+                                  ...editingItem,
+                                  currentStock: fulls * size + partialMl,
+                                });
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
 
-                  {/* Layout A: Spirit / Bulk Mixer */}
-                  {isLayoutA && (
-                    <>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("bottle_size_ml", language)}
-                        </label>
-                        <input
-                          type="number"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={
-                            editingItem.bottleSizeMl ||
-                            editingItem.baseUnitAmount ||
-                            750
-                          }
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              bottleSizeMl: parseFloat(e.target.value) || 750,
-                              baseUnitAmount: parseFloat(e.target.value) || 750,
-                              baseUnit: "ml",
-                            })
-                          }
+                  {/* Toggles & Single Serving */}
+                  <div className="col-span-2 flex flex-col md:flex-row gap-6 pt-4 border-t border-white/5">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                      <div
+                        className={`w-10 h-6 rounded-full transition-colors relative ${editingItem.isOnMenu ? "bg-emerald-500/50" : "bg-white/10"}`}
+                      >
+                        <div
+                          className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${editingItem.isOnMenu ? "translate-x-4" : ""}`}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("full_bottle_weight_label", language)}
-                        </label>
-                        <input
-                          type="number"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.fullBottleWeightG || ""}
-                          onChange={(e) => {
-                            const fullWeight = parseFloat(e.target.value) || 0;
-                            const bottleSize =
-                              editingItem.bottleSizeMl ||
-                              editingItem.baseUnitAmount ||
-                              750;
-                            const density = editingItem.density || 0.94;
-                            const liquidWeight = bottleSize * density;
-                            const glassWeight = fullWeight - liquidWeight;
-                            setEditingItem({
-                              ...editingItem,
-                              fullBottleWeightG: fullWeight,
-                              glassWeightG:
-                                glassWeight > 0 ? glassWeight : null,
-                            });
-                          }}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {language === "es"
-                            ? "Peso Tara (g)"
-                            : "Tare Weight (g)"}
-                        </label>
-                        <input
-                          type="number"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.tareWeightG ?? ""}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              tareWeightG: e.target.value
-                                ? parseFloat(e.target.value)
-                                : null,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("pour_size", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.1"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.pourSize || 1.5}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              pourSize: parseFloat(e.target.value) || 1.5,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("order_cost", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.orderCost || 0}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              orderCost: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
-                      </div>
-
-                      <div className="col-span-2 mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
-                        <h4 className="text-sm font-semibold mb-3 text-primary">
-                          {getTranslation("weigh_bottle", language)}
-                        </h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground">
-                              {language === "es"
-                                ? "Botellas Completas"
-                                : "Full Bottles"}
-                            </label>
-                            <input
-                              type="number"
-                              min="0"
-                              className="w-full bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
-                              value={fullBottleCount}
-                              onChange={(e) => {
-                                const count = Math.max(
-                                  0,
-                                  parseInt(e.target.value) || 0,
-                                );
-                                setFullBottleCount(count);
-                                const bottleSize =
-                                  editingItem.bottleSizeMl ||
-                                  editingItem.baseUnitAmount ||
-                                  750;
-                                const partialMl = editingItem.currentStock
-                                  ? editingItem.currentStock % bottleSize
-                                  : 0;
-                                setEditingItem({
-                                  ...editingItem,
-                                  currentStock: count * bottleSize + partialMl,
-                                });
-                              }}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-xs font-medium text-muted-foreground">
-                              {getTranslation(
-                                "current_bottle_weight",
-                                language,
-                              )}
-                            </label>
-                            <input
-                              type="number"
-                              className="w-full bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
-                              value={partialBottleWeight}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                setPartialBottleWeight(isNaN(val) ? "" : val);
-                                if (
-                                  !isNaN(val) &&
-                                  editingItem.fullBottleWeightG
-                                ) {
-                                  const bottleSize =
-                                    editingItem.bottleSizeMl ||
-                                    editingItem.baseUnitAmount ||
-                                    750;
-                                  const density = editingItem.density || 0.94;
-                                  const glassWeight =
-                                    editingItem.glassWeightG ??
-                                    editingItem.fullBottleWeightG -
-                                      bottleSize * density;
-                                  const currentLiquidWeight = val - glassWeight;
-                                  const remainingMl = Math.max(
-                                    0,
-                                    currentLiquidWeight / density,
-                                  );
-                                  const fullBottles = Math.floor(
-                                    (editingItem.currentStock || 0) /
-                                      bottleSize,
-                                  );
-                                  setEditingItem({
-                                    ...editingItem,
-                                    currentStock:
-                                      fullBottles * bottleSize + remainingMl,
-                                  });
-                                }
-                              }}
-                            />
-                          </div>
-                          {partialBottleWeight !== "" &&
-                            editingItem.fullBottleWeightG && (
-                              <div className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground">
-                                  {getTranslation("calculate", language)}
-                                </label>
-                                {(() => {
-                                  const bottleSize =
-                                    editingItem.bottleSizeMl ||
-                                    editingItem.baseUnitAmount ||
-                                    750;
-                                  const density = editingItem.density || 0.94;
-                                  const glassWeight =
-                                    editingItem.glassWeightG ??
-                                    editingItem.fullBottleWeightG -
-                                      bottleSize * density;
-                                  const currentLiquidWeight =
-                                    partialBottleWeight - glassWeight;
-                                  const remainingMl = Math.max(
-                                    0,
-                                    currentLiquidWeight / density,
-                                  );
-                                  const usedMl = bottleSize - remainingMl;
-                                  const pourMl =
-                                    (editingItem.pourSize || 1.5) * 29.5735;
-                                  const usedPours = usedMl / pourMl;
-                                  const remainingPours = remainingMl / pourMl;
-                                  return (
-                                    <div className="space-y-1 text-sm">
-                                      <div className="flex justify-between">
-                                        <span className="text-muted-foreground">
-                                          {getTranslation(
-                                            "remaining_pours",
-                                            language,
-                                          )}
-                                        </span>
-                                        <span className="font-bold text-emerald-400">
-                                          {remainingPours.toFixed(1)}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-muted-foreground">
-                                          {getTranslation(
-                                            "used_pours",
-                                            language,
-                                          )}
-                                        </span>
-                                        <span className="font-bold text-destructive">
-                                          {usedPours.toFixed(1)}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-                              </div>
-                            )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("low_stock_alert_label", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.lowStockThreshold || 1}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              lowStockThreshold:
-                                parseFloat(e.target.value) || 1,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2 flex items-center pt-8">
                         <input
                           type="checkbox"
-                          className="w-5 h-5 mr-3 rounded border-white/20 bg-secondary text-primary"
-                          checked={editingItem.isOnMenu || false}
+                          className="hidden"
+                          checked={editingItem.isOnMenu}
                           onChange={(e) =>
                             setEditingItem({
                               ...editingItem,
@@ -1162,266 +1213,105 @@ export default function Inventory() {
                             })
                           }
                         />
-                        <label className="text-sm font-medium text-muted-foreground cursor-pointer">
-                          {getTranslation("on_menu_label", language)}
-                        </label>
                       </div>
+                      <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                        {getTranslation("on_menu_label", language)}
+                      </span>
+                    </label>
 
-                      <div className="col-span-2 grid grid-cols-3 gap-4 p-4 rounded-xl bg-primary/10 border border-primary/20 mt-2">
-                        <div className="flex flex-col">
-                          <span className="text-xs text-primary/70">
-                            {getTranslation("stock_ml", language)}
+                    <div className="flex-1 flex items-center gap-3 group">
+                      <div className="flex items-center bg-secondary/50 rounded-lg px-3 py-2 border border-white/10 transition-all">
+                        <span className="text-[10px] text-muted-foreground mr-3 font-bold uppercase whitespace-nowrap tracking-wider">
+                          Single Serving Price
+                        </span>
+                        <div className="bg-white/5 rounded px-2 py-1 flex items-center border border-white/5 focus-within:border-primary/30">
+                          <span className="text-xs text-primary/60 mr-1">
+                            $
                           </span>
-                          <span className="text-lg font-bold">
-                            {(editingItem.currentStock || 0).toFixed(0)} ml
-                          </span>
+                          <input
+                            type="number"
+                            className="bg-transparent border-none outline-none text-sm w-20 text-right text-primary font-mono"
+                            placeholder="0.00"
+                            value={editingItem.singleServingPrice || ""}
+                            onChange={(e) => {
+                              const price = parseFloat(e.target.value) || 0;
+                              setEditingItem({
+                                ...editingItem,
+                                singleServingPrice: price,
+                                sellSingleServing: price > 0,
+                              });
+                            }}
+                          />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-primary/70">
-                            {getTranslation("servings_remaining", language)}
-                          </span>
-                          <span className="text-lg font-bold">
-                            {(
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Calculated Stats Summary */}
+                  <div className="col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] text-primary/60 uppercase font-bold tracking-widest">
+                        {getTranslation("current_stock", language)}
+                      </span>
+                      <span className="text-sm font-bold">
+                        {(editingItem.currentStock || 0).toFixed(0)} ml
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-[9px] text-primary/60 uppercase font-bold tracking-widest">
+                        Servings
+                      </span>
+                      <span className="text-sm font-bold text-center">
+                        {editingItem.servingSize > 0
+                          ? (
                               (editingItem.currentStock || 0) /
-                              ((editingItem.pourSize || 1.5) * 29.5735)
-                            ).toFixed(1)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-primary/70">
-                            {getTranslation("cost_per_serving", language)}
-                          </span>
-                          <span className="text-lg font-bold">
-                            {formatMoney(
+                              editingItem.servingSize
+                            ).toFixed(1)
+                          : "0.0"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="text-[9px] text-primary/60 uppercase font-bold tracking-widest">
+                        Cost/Srv
+                      </span>
+                      <span className="text-sm font-bold text-emerald-400">
+                        {editingItem.servingSize > 0 &&
+                        (editingItem.bottleSizeMl ||
+                          editingItem.baseUnitAmount) > 0
+                          ? formatMoney(
                               (editingItem.orderCost || 0) /
                                 ((editingItem.bottleSizeMl ||
                                   editingItem.baseUnitAmount ||
                                   750) /
-                                  ((editingItem.pourSize || 1.5) * 29.5735) ||
-                                  1),
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Layout B: Beer / Packaged Mixer */}
-                  {isLayoutB && (
-                    <>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("stock", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={
-                            (editingItem.currentStock || 0) /
-                            (editingItem.unitsPerCase || 24)
-                          }
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              currentStock:
-                                (parseFloat(e.target.value) || 0) *
-                                (editingItem.unitsPerCase || 24),
-                              baseUnit: "unit",
-                              servingSize: 1,
-                              baseUnitAmount: 1,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("tare_weight", language)}
-                        </label>
-                        <input
-                          type="number"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.tareWeightG ?? ""}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              tareWeightG: e.target.value
-                                ? parseFloat(e.target.value)
-                                : null,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("order_cost", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.orderCost || 0}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              orderCost: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("low_stock_alert_label", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.5"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.lowStockThreshold || 1}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              lowStockThreshold:
-                                parseFloat(e.target.value) || 1,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2 flex items-center pt-8">
-                        <input
-                          type="checkbox"
-                          className="w-5 h-5 mr-3 rounded border-white/20 bg-secondary text-primary"
-                          checked={editingItem.isOnMenu || false}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              isOnMenu: e.target.checked,
-                            })
-                          }
-                        />
-                        <label
-                          className="text-sm font-medium text-muted-foreground cursor-pointer"
-                          onClick={() =>
-                            setEditingItem({
-                              ...editingItem,
-                              isOnMenu: !editingItem.isOnMenu,
-                            })
-                          }
-                        >
-                          {getTranslation("on_menu_label", language)}
-                        </label>
-                      </div>
-
-                      <div className="col-span-2 grid grid-cols-2 gap-4 p-4 rounded-xl bg-primary/10 border border-primary/20 mt-2">
-                        <div className="flex flex-col">
-                          <span className="text-xs text-primary/70">
-                            {getTranslation("stock_units", language)}
-                          </span>
-                          <span className="text-lg font-bold">
-                            {(editingItem.currentStock || 0).toFixed(0)}
-                          </span>
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-primary/70">
-                            {getTranslation("cost_per_unit", language)}
-                          </span>
-                          <span className="text-lg font-bold">
-                            {formatMoney(
-                              (editingItem.orderCost || 0) /
-                                (editingItem.unitsPerCase || 24),
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Fallback Layout C: Generic (Ingredient, Merch, Misc) */}
-                  {!isLayoutA && !isLayoutB && (
-                    <>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("current_stock", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="1"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.currentStock || 0}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              currentStock: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("order_cost", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.orderCost || 0}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              orderCost: parseFloat(e.target.value) || 0,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {getTranslation("low_stock_alert_label", language)}
-                        </label>
-                        <input
-                          type="number"
-                          step="1"
-                          className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                          value={editingItem.lowStockThreshold || 1}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              lowStockThreshold:
-                                parseFloat(e.target.value) || 1,
-                            })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2 flex items-center pt-8">
-                        <input
-                          type="checkbox"
-                          className="w-5 h-5 mr-3 rounded border-white/20 bg-secondary text-primary"
-                          checked={editingItem.isOnMenu || false}
-                          onChange={(e) =>
-                            setEditingItem({
-                              ...editingItem,
-                              isOnMenu: e.target.checked,
-                            })
-                          }
-                        />
-                        <label
-                          className="text-sm font-medium text-muted-foreground cursor-pointer"
-                          onClick={() =>
-                            setEditingItem({
-                              ...editingItem,
-                              isOnMenu: !editingItem.isOnMenu,
-                            })
-                          }
-                        >
-                          {getTranslation("on_menu_label", language)}
-                        </label>
-                      </div>
-                    </>
-                  )}
+                                  editingItem.servingSize),
+                            )
+                          : formatMoney(0)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               );
             })()}
             <div className="flex justify-between items-center mt-6">
-              <div>
+              <div className="flex gap-3">
+                {!editingItem.id && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingItem({
+                        ...editingItem,
+                        id: undefined,
+                        parentItemId: editingItem.id,
+                        name: editingItem.name,
+                        currentStock: 0,
+                        isDeleted: false,
+                      });
+                    }}
+                  >
+                    <Plus size={18} className="mr-2" />
+                    Add Variation
+                  </Button>
+                )}
                 {editingItem.id && (
                   <Button
                     variant="destructive"
@@ -1519,6 +1409,164 @@ export default function Inventory() {
           </div>
         </div>
       )}
+
+      {/* Add Inventory Modal */}
+      {showAddInventory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="glass p-6 rounded-3xl w-full max-w-md relative">
+            <button
+              onClick={() => setShowAddInventory(null)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-display mb-2">Add Inventory</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              {showAddInventory.name} ({showAddInventory.bottleSizeMl}ml)
+            </p>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                    Full Bottles
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                    value={addInvFull || ""}
+                    onChange={(e) =>
+                      setAddInvFull(parseInt(e.target.value) || 0)
+                    }
+                  />
+                </div>
+                <div className="flex flex-col space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                    Partial (servings)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                    value={addInvPartial || ""}
+                    onChange={(e) =>
+                      setAddInvPartial(parseFloat(e.target.value) || 0)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col space-y-2">
+                <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                  Unit Cost{" "}
+                  <span className="text-xs text-muted-foreground/60">
+                    ($ per full bottle)
+                  </span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                  value={addInvCost || ""}
+                  onChange={(e) =>
+                    setAddInvCost(parseFloat(e.target.value) || 0)
+                  }
+                />
+              </div>
+
+              {addInvFull > 0 || addInvPartial > 0 ? (
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Bottles added:
+                    </span>
+                    <span className="font-mono">
+                      {addInvFull +
+                        (addInvPartial > 0
+                          ? showAddInventory.baseUnitAmount
+                            ? addInvPartial /
+                              (showAddInventory.baseUnitAmount /
+                                showAddInventory.servingSize)
+                            : 0
+                          : 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">
+                      Servings added:
+                    </span>
+                    <span className="font-mono">
+                      {addInvFull *
+                        (showAddInventory.baseUnitAmount /
+                          showAddInventory.servingSize) +
+                        addInvPartial}
+                    </span>
+                  </div>
+                  {addInvCost > 0 && (
+                    <div className="flex justify-between text-sm pt-2 border-t border-white/10">
+                      <span className="text-muted-foreground">Total cost:</span>
+                      <span className="font-mono text-emerald-400">
+                        ${addInvCost.toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              <Button
+                className="w-full"
+                onClick={() => {
+                  if (!addInvFull && !addInvPartial && !addInvCost) {
+                    toast({
+                      variant: "destructive",
+                      title: "Error",
+                      description: "Enter quantity or cost",
+                    });
+                    return;
+                  }
+                  const newStock =
+                    addInvFull * (showAddInventory.baseUnitAmount || 0) +
+                    addInvPartial * (showAddInventory.servingSize || 1);
+                  const newCost = addInvCost > 0 ? addInvCost : 0;
+
+                  // Calculate weighted average
+                  let avgCost = 0;
+                  if (
+                    showAddInventory.currentStock > 0 &&
+                    showAddInventory.orderCost > 0
+                  ) {
+                    const currentCost = showAddInventory.orderCost;
+                    avgCost =
+                      (showAddInventory.currentStock * currentCost +
+                        newStock * newCost) /
+                      (showAddInventory.currentStock + newStock);
+                  } else if (newStock > 0) {
+                    avgCost = newCost;
+                  }
+
+                  setEditingItem({
+                    ...showAddInventory,
+                    currentStock:
+                      (showAddInventory.currentStock || 0) + newStock,
+                    orderCost: avgCost,
+                  });
+                  setShowAddInventory(null);
+                  setAddInvFull(0);
+                  setAddInvPartial(0);
+                  setAddInvCost(0);
+                  toast({ title: "Success", description: "Inventory added" });
+                }}
+              >
+                <Plus size={16} className="mr-2" /> Add Inventory
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Empty state at bottom of component */}
     </div>
   );
 }

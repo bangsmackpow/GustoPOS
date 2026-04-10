@@ -6,7 +6,7 @@ import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
@@ -26,7 +26,7 @@ export default function Login() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ username, password }),
       });
 
       const data = await response.json();
@@ -34,7 +34,8 @@ export default function Login() {
         toast({
           variant: "destructive",
           title: "Too Many Attempts",
-          description: "Too many login attempts. Please try again in 15 minutes.",
+          description:
+            "Too many login attempts. Please try again in 15 minutes.",
         });
       } else if (data.ok) {
         queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
@@ -65,14 +66,19 @@ export default function Login() {
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: resetEmail, pin: resetPin, newPassword: resetNewPassword }),
+        body: JSON.stringify({
+          email: resetEmail,
+          pin: resetPin,
+          newPassword: resetNewPassword,
+        }),
       });
       const data = await response.json();
       if (response.status === 429) {
         toast({
           variant: "destructive",
           title: "Too Many Attempts",
-          description: "Too many reset attempts. Please try again in 15 minutes.",
+          description:
+            "Too many reset attempts. Please try again in 15 minutes.",
         });
       } else if (data.success) {
         toast({
@@ -127,15 +133,15 @@ export default function Login() {
         <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Mail size={14} /> Username / Email
+              <Mail size={14} /> Username
             </label>
             <input
               type="text"
               required
               className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-              placeholder="admin username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              placeholder="GUSTO"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
             />
           </div>
           <div className="space-y-2">
@@ -183,13 +189,15 @@ export default function Login() {
               <h2 className="text-xl font-bold mb-4">Reset Password</h2>
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium mb-1">Email</label>
+                  <label className="block text-xs font-medium mb-1">
+                    Email
+                  </label>
                   <input
                     type="email"
                     required
                     className="w-full bg-secondary/50 border border-white/10 rounded-xl px-3 py-2"
                     value={resetEmail}
-                    onChange={e => setResetEmail(e.target.value)}
+                    onChange={(e) => setResetEmail(e.target.value)}
                   />
                 </div>
                 <div>
@@ -199,17 +207,19 @@ export default function Login() {
                     required
                     className="w-full bg-secondary/50 border border-white/10 rounded-xl px-3 py-2"
                     value={resetPin}
-                    onChange={e => setResetPin(e.target.value)}
+                    onChange={(e) => setResetPin(e.target.value)}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1">New Password</label>
+                  <label className="block text-xs font-medium mb-1">
+                    New Password
+                  </label>
                   <input
                     type="password"
                     required
                     className="w-full bg-secondary/50 border border-white/10 rounded-xl px-3 py-2"
                     value={resetNewPassword}
-                    onChange={e => setResetNewPassword(e.target.value)}
+                    onChange={(e) => setResetNewPassword(e.target.value)}
                   />
                 </div>
                 <Button
@@ -221,7 +231,8 @@ export default function Login() {
                 </Button>
               </form>
               <p className="text-xs text-muted-foreground mt-4">
-                Enter your email, PIN, and new password. Contact your admin if you do not know your PIN.
+                Enter your email, PIN, and new password. Contact your admin if
+                you do not know your PIN.
               </p>
             </div>
           </div>

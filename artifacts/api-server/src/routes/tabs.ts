@@ -441,13 +441,21 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
   const order = await db.transaction(async (tx) => {
     for (const item of recipe) {
       if (item.ingredientId && item.amountInBaseUnit > 0) {
+        // Find if this item has a parent for pooling
+        const [ing] = await tx
+          .select({ parentItemId: inventoryItemsTable.parentItemId })
+          .from(inventoryItemsTable)
+          .where(eq(inventoryItemsTable.id, item.ingredientId));
+        
+        const targetId = ing?.parentItemId || item.ingredientId;
+
         await tx
           .update(inventoryItemsTable)
           .set({
             currentStock:
               sql`${inventoryItemsTable.currentStock} - ${item.amountInBaseUnit}` as any,
           })
-          .where(eq(inventoryItemsTable.id, item.ingredientId));
+          .where(eq(inventoryItemsTable.id, targetId));
       }
     }
 
@@ -507,10 +515,17 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
       if (diff > 0) {
         for (const item of recipe) {
           if (!item.ingredientId) continue;
+          const [ing] = await tx
+            .select({ parentItemId: inventoryItemsTable.parentItemId })
+            .from(inventoryItemsTable)
+            .where(eq(inventoryItemsTable.id, item.ingredientId));
+          
+          const targetId = ing?.parentItemId || item.ingredientId;
+
           const [ingredient] = await tx
             .select()
             .from(inventoryItemsTable)
-            .where(eq(inventoryItemsTable.id, item.ingredientId));
+            .where(eq(inventoryItemsTable.id, targetId));
           const required = Number(item.amountInBaseUnit) * diff;
           if (!ingredient || ingredient.currentStock < required) {
             throw Object.assign(
@@ -527,10 +542,17 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
         if (!item.ingredientId) continue;
         const adjustment = Number(item.amountInBaseUnit) * diff;
         // Prevent negative inventory
+        const [ing] = await tx
+          .select({ parentItemId: inventoryItemsTable.parentItemId })
+          .from(inventoryItemsTable)
+          .where(eq(inventoryItemsTable.id, item.ingredientId));
+        
+        const targetId = ing?.parentItemId || item.ingredientId;
+
         const [ingredient] = await tx
           .select()
           .from(inventoryItemsTable)
-          .where(eq(inventoryItemsTable.id, item.ingredientId));
+          .where(eq(inventoryItemsTable.id, targetId));
         const newStock = (ingredient?.currentStock ?? 0) - adjustment;
         if (newStock < 0) {
           throw Object.assign(new Error("Insufficient stock for ingredient"), {
@@ -542,7 +564,7 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
           .set({
             currentStock: newStock,
           })
-          .where(eq(inventoryItemsTable.id, item.ingredientId));
+          .where(eq(inventoryItemsTable.id, targetId));
       }
     }
 
@@ -581,10 +603,17 @@ router.delete("/orders/:id", async (req: Request, res: Response) => {
   await db.transaction(async (tx) => {
     for (const item of recipe) {
       if (!item.ingredientId) continue;
+      const [ing] = await tx
+        .select({ parentItemId: inventoryItemsTable.parentItemId })
+        .from(inventoryItemsTable)
+        .where(eq(inventoryItemsTable.id, item.ingredientId));
+      
+      const targetId = ing?.parentItemId || item.ingredientId;
+
       const [ingredient] = await tx
         .select()
         .from(inventoryItemsTable)
-        .where(eq(inventoryItemsTable.id, item.ingredientId));
+        .where(eq(inventoryItemsTable.id, targetId));
       const addBack = Number(item.amountInBaseUnit) * order.quantity;
       const newStock = (ingredient?.currentStock ?? 0) + addBack;
       if (newStock < 0) {
@@ -600,7 +629,7 @@ router.delete("/orders/:id", async (req: Request, res: Response) => {
         .set({
           currentStock: newStock,
         })
-        .where(eq(inventoryItemsTable.id, item.ingredientId));
+        .where(eq(inventoryItemsTable.id, targetId));
     }
 
     await tx

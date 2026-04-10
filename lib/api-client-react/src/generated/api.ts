@@ -27,6 +27,7 @@ import type {
   ClockInResponse,
   ClockOutBody,
   ClockOutResponse,
+  CloseShiftBody,
   CloseTabBody,
   CreateDrinkBody,
   CreateIngredientBody,
@@ -2364,11 +2365,14 @@ export const getCloseShiftUrl = (id: string) => {
 
 export const closeShift = async (
   id: string,
+  closeShiftBody: CloseShiftBody,
   options?: RequestInit,
 ): Promise<Shift> => {
   return customFetch<Shift>(getCloseShiftUrl(id), {
     ...options,
     method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(closeShiftBody),
   });
 };
 
@@ -2379,14 +2383,14 @@ export const getCloseShiftMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof closeShift>>,
     TError,
-    { id: string },
+    { id: string; data: BodyType<CloseShiftBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof closeShift>>,
   TError,
-  { id: string },
+  { id: string; data: BodyType<CloseShiftBody> },
   TContext
 > => {
   const mutationKey = ["closeShift"];
@@ -2400,11 +2404,11 @@ export const getCloseShiftMutationOptions = <
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof closeShift>>,
-    { id: string }
+    { id: string; data: BodyType<CloseShiftBody> }
   > = (props) => {
-    const { id } = props ?? {};
+    const { id, data } = props ?? {};
 
-    return closeShift(id, requestOptions);
+    return closeShift(id, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2413,7 +2417,7 @@ export const getCloseShiftMutationOptions = <
 export type CloseShiftMutationResult = NonNullable<
   Awaited<ReturnType<typeof closeShift>>
 >;
-
+export type CloseShiftMutationBody = BodyType<CloseShiftBody>;
 export type CloseShiftMutationError = ErrorType<unknown>;
 
 /**
@@ -2426,14 +2430,14 @@ export const useCloseShift = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof closeShift>>,
     TError,
-    { id: string },
+    { id: string; data: BodyType<CloseShiftBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof closeShift>>,
   TError,
-  { id: string },
+  { id: string; data: BodyType<CloseShiftBody> },
   TContext
 > => {
   return useMutation(getCloseShiftMutationOptions(options));

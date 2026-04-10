@@ -70,7 +70,6 @@ router.post("/ingredients", async (req: Request, res: Response) => {
         lowStockThreshold: parsed.data.lowStockThreshold ?? 1,
         unitsPerCase: parsed.data.unitsPerCase ?? 1,
         isOnMenu: parsed.data.isOnMenu ?? false,
-        tareWeightG: parsed.data.tareWeightG ?? null,
         fullBottleWeightG: parsed.data.fullBottleWeightG ?? null,
       })
       .returning();
@@ -129,7 +128,6 @@ router.patch("/ingredients/:id", async (req: Request, res: Response) => {
     if (data.unitsPerCase != null)
       updateData.unitsPerCase = Number(data.unitsPerCase);
     if (data.isOnMenu != null) updateData.isOnMenu = data.isOnMenu;
-    if (data.tareWeightG != null) updateData.tareWeightG = data.tareWeightG;
     if (data.fullBottleWeightG != null)
       updateData.fullBottleWeightG = data.fullBottleWeightG;
 

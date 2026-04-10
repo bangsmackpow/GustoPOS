@@ -13,8 +13,10 @@ export interface InventoryItem {
   servingSize?: number;
   servingUnit?: string;
   alcoholDensity?: number;
-  tareWeightG?: number;
+  glassWeightG?: number;
   fullBottleWeightG?: number;
+  sellSingleServing: boolean;
+  singleServingPrice?: number;
   bulkCost?: number;
   markupFactor: number;
   isOnMenu: boolean;

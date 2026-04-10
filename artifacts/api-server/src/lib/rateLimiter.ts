@@ -1,3 +1,5 @@
+import rateLimit from "express-rate-limit";
+
 // Generic limiter for sensitive endpoints (reset password, admin seed, etc)
 export const sensitiveLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -6,7 +8,6 @@ export const sensitiveLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-import rateLimit from "express-rate-limit";
 
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

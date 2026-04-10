@@ -62,8 +62,9 @@ export const GetUsersResponse = zod.array(GetUsersResponseItem);
 export const CreateUserBody = zod.object({
   firstName: zod.string(),
   lastName: zod.string().optional(),
+  username: zod.string().nullish(),
   email: zod.string().nullish(),
-  role: zod.enum(["admin", "manager", "head_bartender", "bartender", "server"]),
+  role: zod.enum(["admin", "employee"]),
   language: zod.enum(["en", "es"]),
   pin: zod.string(),
   password: zod.string().nullish(),
@@ -100,10 +101,9 @@ export const UpdateUserParams = zod.object({
 export const UpdateUserBody = zod.object({
   firstName: zod.string().nullish(),
   lastName: zod.string().nullish(),
+  username: zod.string().nullish(),
   email: zod.string().nullish(),
-  role: zod
-    .enum(["admin", "manager", "head_bartender", "bartender", "server"])
-    .optional(),
+  role: zod.enum(["admin", "employee"]).optional(),
   language: zod.enum(["en", "es"]).optional(),
   pin: zod.string().nullish(),
   password: zod.string().nullish(),
@@ -147,7 +147,8 @@ export const GetIngredientsResponseItem = zod.object({
   baseUnit: zod.enum(["ml", "g", "unit"]),
   baseUnitAmount: zod.number(),
   servingSize: zod.number(),
-  tareWeightG: zod.number().nullish(),
+  sellSingleServing: zod.boolean().optional(),
+  singleServingPrice: zod.number().nullish(),
   fullBottleWeightG: zod.number().nullish(),
   currentStock: zod.number(),
   orderCost: zod.number(),
@@ -170,7 +171,8 @@ export const CreateIngredientBody = zod.object({
   baseUnit: zod.enum(["ml", "g", "unit"]),
   baseUnitAmount: zod.number(),
   servingSize: zod.number(),
-  tareWeightG: zod.number().nullish(),
+  sellSingleServing: zod.boolean().optional(),
+  singleServingPrice: zod.number().nullish(),
   fullBottleWeightG: zod.number().nullish(),
   currentStock: zod.number(),
   orderCost: zod.number().optional(),
@@ -195,7 +197,8 @@ export const GetIngredientResponse = zod.object({
   baseUnit: zod.enum(["ml", "g", "unit"]),
   baseUnitAmount: zod.number(),
   servingSize: zod.number(),
-  tareWeightG: zod.number().nullish(),
+  sellSingleServing: zod.boolean().optional(),
+  singleServingPrice: zod.number().nullish(),
   fullBottleWeightG: zod.number().nullish(),
   currentStock: zod.number(),
   orderCost: zod.number(),
@@ -221,7 +224,8 @@ export const UpdateIngredientBody = zod.object({
   baseUnit: zod.string().nullish(),
   baseUnitAmount: zod.number().nullish(),
   servingSize: zod.number().nullish(),
-  tareWeightG: zod.number().nullish(),
+  sellSingleServing: zod.boolean().nullish(),
+  singleServingPrice: zod.number().nullish(),
   fullBottleWeightG: zod.number().nullish(),
   currentStock: zod.number().nullish(),
   orderCost: zod.number().nullish(),
@@ -239,7 +243,8 @@ export const UpdateIngredientResponse = zod.object({
   baseUnit: zod.enum(["ml", "g", "unit"]),
   baseUnitAmount: zod.number(),
   servingSize: zod.number(),
-  tareWeightG: zod.number().nullish(),
+  sellSingleServing: zod.boolean().optional(),
+  singleServingPrice: zod.number().nullish(),
   fullBottleWeightG: zod.number().nullish(),
   currentStock: zod.number(),
   orderCost: zod.number(),
@@ -264,6 +269,8 @@ export const DeleteIngredientResponse = zod.object({
 /**
  * @summary List all drinks on the menu
  */
+export const getDrinksResponseSourceTypeDefault = `standard`;
+
 export const GetDrinksResponseItem = zod.object({
   id: zod.string(),
   name: zod.string(),
@@ -271,6 +278,7 @@ export const GetDrinksResponseItem = zod.object({
   description: zod.string().nullish(),
   descriptionEs: zod.string().nullish(),
   category: zod.string(),
+  sourceType: zod.string().default(getDrinksResponseSourceTypeDefault),
   costPerDrink: zod.number(),
   suggestedPrice: zod.number(),
   actualPrice: zod.number().nullable(),
@@ -320,6 +328,8 @@ export const GetDrinkParams = zod.object({
   id: zod.coerce.string(),
 });
 
+export const getDrinkResponseSourceTypeDefault = `standard`;
+
 export const GetDrinkResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
@@ -327,6 +337,7 @@ export const GetDrinkResponse = zod.object({
   description: zod.string().nullish(),
   descriptionEs: zod.string().nullish(),
   category: zod.string(),
+  sourceType: zod.string().default(getDrinkResponseSourceTypeDefault),
   costPerDrink: zod.number(),
   suggestedPrice: zod.number(),
   actualPrice: zod.number().nullable(),
@@ -372,6 +383,8 @@ export const UpdateDrinkBody = zod.object({
     .optional(),
 });
 
+export const updateDrinkResponseSourceTypeDefault = `standard`;
+
 export const UpdateDrinkResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
@@ -379,6 +392,7 @@ export const UpdateDrinkResponse = zod.object({
   description: zod.string().nullish(),
   descriptionEs: zod.string().nullish(),
   category: zod.string(),
+  sourceType: zod.string().default(updateDrinkResponseSourceTypeDefault),
   costPerDrink: zod.number(),
   suggestedPrice: zod.number(),
   actualPrice: zod.number().nullable(),
@@ -613,6 +627,9 @@ export const GetShiftsResponseItem = zod.object({
   status: zod.enum(["active", "closed"]),
   openedByUserId: zod.string(),
   openedByUserName: zod.string().nullish(),
+  expectedCashMxn: zod.number().nullish(),
+  actualCashMxn: zod.number().nullish(),
+  cashVarianceMxn: zod.number().nullish(),
 });
 export const GetShiftsResponse = zod.array(GetShiftsResponseItem);
 
@@ -637,6 +654,9 @@ export const GetActiveShiftResponse = zod.object({
       status: zod.enum(["active", "closed"]),
       openedByUserId: zod.string(),
       openedByUserName: zod.string().nullish(),
+      expectedCashMxn: zod.number().nullish(),
+      actualCashMxn: zod.number().nullish(),
+      cashVarianceMxn: zod.number().nullish(),
     })
     .optional(),
 });
@@ -648,6 +668,11 @@ export const CloseShiftParams = zod.object({
   id: zod.coerce.string(),
 });
 
+export const CloseShiftBody = zod.object({
+  force: zod.boolean().optional(),
+  actualCashMxn: zod.number().optional(),
+});
+
 export const CloseShiftResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
@@ -656,6 +681,9 @@ export const CloseShiftResponse = zod.object({
   status: zod.enum(["active", "closed"]),
   openedByUserId: zod.string(),
   openedByUserName: zod.string().nullish(),
+  expectedCashMxn: zod.number().nullish(),
+  actualCashMxn: zod.number().nullish(),
+  cashVarianceMxn: zod.number().nullish(),
 });
 
 /**
@@ -674,6 +702,9 @@ export const GetEndOfNightReportResponse = zod.object({
     status: zod.enum(["active", "closed"]),
     openedByUserId: zod.string(),
     openedByUserName: zod.string().nullish(),
+    expectedCashMxn: zod.number().nullish(),
+    actualCashMxn: zod.number().nullish(),
+    cashVarianceMxn: zod.number().nullish(),
   }),
   totalSalesMxn: zod.number(),
   totalSalesUsd: zod.number(),

@@ -65,73 +65,73 @@ ON CONFLICT (id) DO UPDATE SET
 -- ==========================================
 -- 2. DRINK MENU (50 Items)
 -- ==========================================
-INSERT INTO drinks (id, name, name_es, description, description_es, category, markup_factor, actual_price)
+INSERT INTO drinks (id, name, name_es, description, description_es, category, markup_factor, actual_price, source_type)
 VALUES 
   -- Margaritas
-  ('drk-marg-classic', 'Classic Margarita', 'Margarita Clásica', 'Tequila, lime, triple sec, agave.', 'Tequila, limón, triple sec, agave.', 'cocktail', 3.0, 140.00),
-  ('drk-marg-spicy', 'Spicy Margarita', 'Margarita Picante', 'Tequila, lime, jalapeño, Ancho Reyes.', 'Tequila, limón, jalapeño, Ancho Reyes.', 'cocktail', 3.0, 155.00),
-  ('drk-marg-jamaica', 'Hibiscus Margarita', 'Margarita de Jamaica', 'Tequila with fresh hibiscus water.', 'Tequila con agua fresca de jamaica.', 'cocktail', 3.0, 145.00),
-  ('drk-marg-tamarind', 'Tamarind Margarita', 'Margarita de Tamarindo', 'Tequila, tamarind pulp, chili rim.', 'Tequila, pulpa de tamarindo, escarchado de chile.', 'cocktail', 3.0, 145.00),
-  ('drk-marg-cadillac', 'Cadillac Margarita', 'Margarita Cadillac', 'Premium reposado tequila and Controy.', 'Tequila reposado premium y Controy.', 'cocktail', 3.0, 190.00),
-  ('drk-marg-mango', 'Mango Margarita', 'Margarita de Mango', 'Fresh mango and tequila.', 'Mango fresco y tequila.', 'cocktail', 3.0, 145.00),
+  ('drk-marg-classic', 'Classic Margarita', 'Margarita Clásica', 'Tequila, lime, triple sec, agave.', 'Tequila, limón, triple sec, agave.', 'cocktail', 3.0, 140.00, 'standard'),
+  ('drk-marg-spicy', 'Spicy Margarita', 'Margarita Picante', 'Tequila, lime, jalapeño, Ancho Reyes.', 'Tequila, limón, jalapeño, Ancho Reyes.', 'cocktail', 3.0, 155.00, 'standard'),
+  ('drk-marg-jamaica', 'Hibiscus Margarita', 'Margarita de Jamaica', 'Tequila with fresh hibiscus water.', 'Tequila con agua fresca de jamaica.', 'cocktail', 3.0, 145.00, 'standard'),
+  ('drk-marg-tamarind', 'Tamarind Margarita', 'Margarita de Tamarindo', 'Tequila, tamarind pulp, chili rim.', 'Tequila, pulpa de tamarindo, escarchado de chile.', 'cocktail', 3.0, 145.00, 'standard'),
+  ('drk-marg-cadillac', 'Cadillac Margarita', 'Margarita Cadillac', 'Premium reposado tequila and Controy.', 'Tequila reposado premium y Controy.', 'cocktail', 3.0, 190.00, 'standard'),
+  ('drk-marg-mango', 'Mango Margarita', 'Margarita de Mango', 'Fresh mango and tequila.', 'Mango fresco y tequila.', 'cocktail', 3.0, 145.00, 'standard'),
   
   -- Mexican Classics
-  ('drk-paloma', 'Classic Paloma', 'Paloma Clásica', 'Tequila, lime, grapefruit soda.', 'Tequila, limón, refresco de toronja.', 'cocktail', 3.0, 130.00),
-  ('drk-cantarito', 'Cantarito PV', 'Cantarito Vallartense', 'Tequila, orange, lime, grapefruit juice, Squirt.', 'Tequila, naranja, limón, jugo de toronja, Squirt.', 'cocktail', 3.0, 180.00),
-  ('drk-vampiro', 'Vampiro', 'Vampiro', 'Tequila, sangrita, lime, grapefruit soda.', 'Tequila, sangrita, limón, refresco de toronja.', 'cocktail', 3.0, 140.00),
-  ('drk-charro-negro', 'Charro Negro', 'Charro Negro', 'Tequila, coke, lime.', 'Tequila, coca, limón.', 'cocktail', 3.0, 120.00),
-  ('drk-mex-mule', 'Mexican Mule', 'Mule Mexicano', 'Tequila, ginger beer, lime.', 'Tequila, cerveza de jengibre, limón.', 'cocktail', 3.0, 150.00),
-  ('drk-teq-tonic', 'Tequila & Tonic', 'Tequila con Tonic', 'Tequila blanco and tonic water.', 'Tequila blanco y agua quina.', 'cocktail', 3.0, 125.00),
+  ('drk-paloma', 'Classic Paloma', 'Paloma Clásica', 'Tequila, lime, grapefruit soda.', 'Tequila, limón, refresco de toronja.', 'cocktail', 3.0, 130.00, 'standard'),
+  ('drk-cantarito', 'Cantarito PV', 'Cantarito Vallartense', 'Tequila, orange, lime, grapefruit juice, Squirt.', 'Tequila, naranja, limón, jugo de toronja, Squirt.', 'cocktail', 3.0, 180.00, 'standard'),
+  ('drk-vampiro', 'Vampiro', 'Vampiro', 'Tequila, sangrita, lime, grapefruit soda.', 'Tequila, sangrita, limón, refresco de toronja.', 'cocktail', 3.0, 140.00, 'standard'),
+  ('drk-charro-negro', 'Charro Negro', 'Charro Negro', 'Tequila, coke, lime.', 'Tequila, coca, limón.', 'cocktail', 3.0, 120.00, 'standard'),
+  ('drk-mex-mule', 'Mexican Mule', 'Mule Mexicano', 'Tequila, ginger beer, lime.', 'Tequila, cerveza de jengibre, limón.', 'cocktail', 3.0, 150.00, 'standard'),
+  ('drk-teq-tonic', 'Tequila & Tonic', 'Tequila con Tonic', 'Tequila blanco and tonic water.', 'Tequila blanco y agua quina.', 'cocktail', 3.0, 125.00, 'standard'),
   
   -- Raicilla Specialties (Local PV)
-  ('drk-rai-sour', 'Raicilla Sour', 'Raicilla Sour', 'The spirit of Vallarta with lime and agave.', 'El espíritu de Vallarta con limón y agave.', 'cocktail', 3.5, 165.00),
-  ('drk-rai-mule', 'Vallarta Mule', 'Mule de Vallarta', 'Raicilla, ginger beer, mint.', 'Raicilla, cerveza de jengibre, menta.', 'cocktail', 3.5, 175.00),
-  ('drk-rai-passion', 'Piel Canela', 'Piel Canela', 'Raicilla, passion fruit, cinnamon.', 'Raicilla, maracuyá, canela.', 'cocktail', 3.5, 180.00),
-  ('drk-rai-neat', 'Raicilla Neat (Divisadero)', 'Raicilla Directa', 'Pure local raicilla pour.', 'Raicilla local pura.', 'shot', 3.0, 120.00),
+  ('drk-rai-sour', 'Raicilla Sour', 'Raicilla Sour', 'El espíritu de Vallarta con limón y agave.', 'El espíritu de Vallarta con limón y agave.', 'cocktail', 3.5, 165.00, 'standard'),
+  ('drk-rai-mule', 'Vallarta Mule', 'Mule de Vallarta', 'Raicilla, cerveza de jengibre, menta.', 'Raicilla, cerveza de jengibre, menta.', 'cocktail', 3.5, 175.00, 'standard'),
+  ('drk-rai-passion', 'Piel Canela', 'Piel Canela', 'Raicilla, passion fruit, cinnamon.', 'Raicilla, maracuyá, canela.', 'cocktail', 3.5, 180.00, 'standard'),
+  ('drk-rai-neat', 'Raicilla Neat (Divisadero)', 'Raicilla Directa', 'Raicilla local pura.', 'Raicilla local pura.', 'shot', 3.0, 120.00, 'standard'),
   
   -- Mezcal
-  ('drk-mez-negroni', 'Mezcal Negroni', 'Negroni de Mezcal', 'Mezcal, campari, sweet vermouth.', 'Mezcal, campari, vermut dulce.', 'cocktail', 3.5, 185.00),
-  ('drk-mez-mule', 'Smoky Mule', 'Mule Ahumado', 'Mezcal, ginger beer, lime.', 'Mezcal, cerveza de jengibre, limón.', 'cocktail', 3.0, 160.00),
-  ('drk-mez-shot', 'Mezcal 400 Conejos', 'Mezcal 400 Conejos', 'Shot of artisanal mezcal.', 'Caballito de mezcal artesanal.', 'shot', 3.0, 110.00),
+  ('drk-mez-negroni', 'Mezcal Negroni', 'Negroni de Mezcal', 'Mezcal, campari, sweet vermouth.', 'Mezcal, campari, vermut dulce.', 'cocktail', 3.5, 185.00, 'standard'),
+  ('drk-mez-mule', 'Smoky Mule', 'Mule Ahumado', 'Mezcal, ginger beer, lime.', 'Mezcal, cerveza de jengibre, limón.', 'cocktail', 3.0, 160.00, 'standard'),
+  ('drk-mez-shot', 'Mezcal 400 Conejos', 'Mezcal 400 Conejos', 'Shot of artisanal mezcal.', 'Caballito de mezcal artesanal.', 'shot', 3.0, 110.00, 'standard'),
   
   -- Other Cocktails
-  ('drk-mojito', 'Classic Mojito', 'Mojito Clásico', 'Rum, mint, lime, sugar, soda.', 'Ron, menta, limón, azúcar, soda.', 'cocktail', 3.0, 135.00),
-  ('drk-daiquiri', 'Lime Daiquiri', 'Daiquirí de Limón', 'Rum, lime, simple syrup.', 'Ron, limón, jarabe.', 'cocktail', 3.0, 125.00),
-  ('drk-gin-tonic', 'Gin & Tonic (Tanqueray)', 'Gin & Tonic', 'Gin, tonic, cucumber.', 'Ginebra, tonic, pepino.', 'cocktail', 3.0, 140.00),
-  ('drk-vod-soda', 'Vodka Soda', 'Vodka con Soda', 'Vodka, sparkling water, lime.', 'Vodka, agua mineral, limón.', 'cocktail', 3.0, 110.00),
-  ('drk-screwdriver', 'Screwdriver', 'Desarmador', 'Vodka and fresh orange juice.', 'Vodka y jugo de naranja fresco.', 'cocktail', 3.0, 115.00),
-  ('drk-cuba-libre', 'Cuba Libre', 'Cuba Libre', 'Bacardi, coke, lime.', 'Bacardi, coca, limón.', 'cocktail', 3.0, 110.00),
-  ('drk-black-russian', 'Black Russian', 'Ruso Negro', 'Vodka and Kahlua.', 'Vodka y Kahlúa.', 'cocktail', 3.0, 130.00),
-  ('drk-white-russian', 'White Russian', 'Ruso Blanco', 'Vodka, Kahlua, cream.', 'Vodka, Kahlúa, crema.', 'cocktail', 3.0, 140.00),
-  ('drk-old-fashioned', 'Old Fashioned', 'Old Fashioned', 'Whiskey, bitters, orange peel.', 'Whiskey, amargos, cáscara de naranja.', 'cocktail', 3.0, 170.00),
-  ('drk-whiskey-sour', 'Whiskey Sour', 'Whiskey Sour', 'Jameson, lime, sugar.', 'Jameson, limón, azúcar.', 'cocktail', 3.0, 155.00),
+  ('drk-mojito', 'Classic Mojito', 'Mojito Clásico', 'Rum, mint, lime, sugar, soda.', 'Ron, menta, limón, azúcar, soda.', 'cocktail', 3.0, 135.00, 'standard'),
+  ('drk-daiquiri', 'Lime Daiquiri', 'Daiquirí de Limón', 'Rum, lime, simple syrup.', 'Ron, limón, jarabe.', 'cocktail', 3.0, 125.00, 'standard'),
+  ('drk-gin-tonic', 'Gin & Tonic (Tanqueray)', 'Gin & Tonic', 'Gin, tonic, cucumber.', 'Ginebra, tonic, pepino.', 'cocktail', 3.0, 140.00, 'standard'),
+  ('drk-vod-soda', 'Vodka Soda', 'Vodka con Soda', 'Vodka, sparkling water, lime.', 'Vodka, agua mineral, limón.', 'cocktail', 3.0, 110.00, 'standard'),
+  ('drk-screwdriver', 'Screwdriver', 'Desarmador', 'Vodka and fresh orange juice.', 'Vodka y jugo de naranja fresco.', 'cocktail', 3.0, 115.00, 'standard'),
+  ('drk-cuba-libre', 'Cuba Libre', 'Cuba Libre', 'Bacardi, coke, lime.', 'Bacardi, coca, limón.', 'cocktail', 3.0, 110.00, 'standard'),
+  ('drk-black-russian', 'Black Russian', 'Ruso Negro', 'Vodka and Kahlua.', 'Vodka y Kahlúa.', 'cocktail', 3.0, 130.00, 'standard'),
+  ('drk-white-russian', 'White Russian', 'Ruso Blanco', 'Vodka, Kahlua, cream.', 'Vodka, Kahlúa, crema.', 'cocktail', 3.0, 140.00, 'standard'),
+  ('drk-old-fashioned', 'Old Fashioned', 'Old Fashioned', 'Whiskey, bitters, orange peel.', 'Whiskey, amargos, cáscara de naranja.', 'cocktail', 3.0, 170.00, 'standard'),
+  ('drk-whiskey-sour', 'Whiskey Sour', 'Whiskey Sour', 'Jameson, lime, sugar.', 'Jameson, limón, azúcar.', 'cocktail', 3.0, 155.00, 'standard'),
   
   -- Shots & Specialty
-  ('drk-teq-dj70', 'Don Julio 70 (Shot)', 'Don Julio 70', 'Clear añejo tequila shot.', 'Shot de tequila añejo cristalino.', 'shot', 3.0, 180.00),
-  ('drk-teq-dj1942', 'Don Julio 1942 (Shot)', 'Don Julio 1942', 'Extra premium tequila shot.', 'Shot de tequila extra premium.', 'shot', 2.0, 450.00),
-  ('drk-teq-herra', 'Herradura Repo (Shot)', 'Herradura Repo', 'Reposado tequila shot.', 'Shot de tequila reposado.', 'shot', 3.0, 130.00),
-  ('drk-b52', 'B-52 Shot', 'B-52', 'Kahlua, Baileys, Grand Marnier.', 'Kahlúa, Baileys, Grand Marnier.', 'shot', 3.0, 120.00),
-  ('drk-baby-mango', 'Baby Mango', 'Baby Mango', 'Vodka, mango, chamoy.', 'Vodka, mango, chamoy.', 'shot', 3.0, 95.00),
+  ('drk-teq-dj70', 'Don Julio 70 (Shot)', 'Don Julio 70', 'Clear añejo tequila shot.', 'Shot de tequila añejo cristalino.', 'shot', 3.0, 180.00, 'standard'),
+  ('drk-teq-dj1942', 'Don Julio 1942 (Shot)', 'Don Julio 1942', 'Extra premium tequila shot.', 'Shot de tequila extra premium.', 'shot', 2.0, 450.00, 'standard'),
+  ('drk-teq-herra', 'Herradura Repo (Shot)', 'Herradura Repo', 'Reposado tequila shot.', 'Shot de tequila reposado.', 'shot', 3.0, 130.00, 'standard'),
+  ('drk-b52', 'B-52 Shot', 'B-52', 'Kahlua, Baileys, Grand Marnier.', 'Kahlúa, Baileys, Grand Marnier.', 'shot', 3.0, 120.00, 'standard'),
+  ('drk-baby-mango', 'Baby Mango', 'Baby Mango', 'Vodka, mango, chamoy.', 'Vodka, mango, chamoy.', 'shot', 3.0, 95.00, 'standard'),
   
   -- Beers & Beer Mixes
-  ('drk-beer-pacifico', 'Pacifico', 'Pacífico', 'Chilled Pacifico bottle.', 'Cerveza Pacífico bien fría.', 'beer', 2.5, 55.00),
-  ('drk-beer-corona', 'Corona', 'Corona', 'Chilled Corona bottle.', 'Cerveza Corona bien fría.', 'beer', 2.5, 50.00),
-  ('drk-beer-victoria', 'Victoria', 'Victoria', 'Chilled Victoria bottle.', 'Cerveza Victoria bien fría.', 'beer', 2.5, 50.00),
-  ('drk-beer-modelo-esp', 'Modelo Especial', 'Modelo Especial', 'Chilled Modelo bottle.', 'Cerveza Modelo Especial.', 'beer', 2.5, 60.00),
-  ('drk-beer-modelo-neg', 'Negra Modelo', 'Negra Modelo', 'Chilled dark Modelo.', 'Cerveza Negra Modelo.', 'beer', 2.5, 65.00),
-  ('drk-michelada', 'Michelada (Add-on)', 'Michelada', 'Lime, salt, and mixed sauces.', 'Limón, sal y salsas mixtas.', 'beer', 3.0, 35.00),
-  ('drk-chelada', 'Chelada (Add-on)', 'Chelada', 'Lime and salt only.', 'Limón y sal.', 'beer', 3.0, 25.00),
-  ('drk-ojorojo', 'Ojo Rojo', 'Ojo Rojo', 'Clamato mix for beer.', 'Mezcla de Clamato para cerveza.', 'beer', 3.0, 45.00),
+  ('drk-beer-pacifico', 'Pacifico', 'Pacífico', 'Chilled Pacifico bottle.', 'Cerveza Pacífico bien fría.', 'beer', 2.5, 55.00, 'standard'),
+  ('drk-beer-corona', 'Corona', 'Corona', 'Chilled Corona bottle.', 'Cerveza Corona bien fría.', 'beer', 2.5, 50.00, 'standard'),
+  ('drk-beer-victoria', 'Victoria', 'Victoria', 'Chilled Victoria bottle.', 'Cerveza Victoria bien fría.', 'beer', 2.5, 50.00, 'standard'),
+  ('drk-beer-modelo-esp', 'Modelo Especial', 'Modelo Especial', 'Chilled Modelo bottle.', 'Cerveza Modelo Especial.', 'beer', 2.5, 60.00, 'standard'),
+  ('drk-beer-modelo-neg', 'Negra Modelo', 'Negra Modelo', 'Chilled dark Modelo.', 'Cerveza Negra Modelo.', 'beer', 2.5, 65.00, 'standard'),
+  ('drk-michelada', 'Michelada (Add-on)', 'Michelada', 'Limón, sal y salsas mixtas.', 'Limón, sal y salsas mixtas.', 'beer', 3.0, 35.00, 'standard'),
+  ('drk-chelada', 'Chelada (Add-on)', 'Chelada', 'Limón y sal.', 'Limón y sal.', 'beer', 3.0, 25.00, 'standard'),
+  ('drk-ojorojo', 'Ojo Rojo', 'Ojo Rojo', 'Mezcla de Clamato para cerveza.', 'Mezcla de Clamato para cerveza.', 'beer', 3.0, 45.00, 'standard'),
   
   -- Non-Alcoholic
-  ('drk-lemonade', 'Fresh Lemonade', 'Limonada Natural', 'Fresh squeezed lime juice.', 'Limonada de limón recién exprimido.', 'non_alcoholic', 3.0, 45.00),
-  ('drk-jamaica-water', 'Hibiscus Water', 'Agua de Jamaica', 'Chilled hibiscus tea water.', 'Agua fresca de jamaica.', 'non_alcoholic', 3.0, 40.00),
-  ('drk-horchata', 'Horchata', 'Horchata', 'Traditional rice milk drink.', 'Agua tradicional de arroz.', 'non_alcoholic', 3.0, 45.00),
-  ('drk-coke', 'Coca-Cola', 'Coca-Cola', 'Glass bottle Coke.', 'Coca-Cola de botella.', 'non_alcoholic', 2.5, 35.00),
-  ('drk-squirt-can', 'Squirt', 'Squirt', 'Grapefruit soda.', 'Refresco de toronja.', 'non_alcoholic', 2.5, 35.00),
-  ('drk-sparkling', 'Mineral Water', 'Agua Mineral', 'Topochico or Peñafiel.', 'Agua mineral Topochico o Peñafiel.', 'non_alcoholic', 2.5, 40.00),
-  ('drk-coffee', 'Coffee', 'Café', 'Hot black coffee.', 'Café americano caliente.', 'non_alcoholic', 3.0, 35.00),
-  ('drk-espresso', 'Espresso', 'Espresso', 'Italian style espresso.', 'Café espresso estilo italiano.', 'non_alcoholic', 3.0, 45.00)
+  ('drk-lemonade', 'Fresh Lemonade', 'Limonada Natural', 'Limonada de limón recién exprimido.', 'Limonada de limón recién exprimido.', 'non_alcoholic', 3.0, 45.00, 'standard'),
+  ('drk-jamaica-water', 'Hibiscus Water', 'Agua de Jamaica', 'Agua fresca de jamaica.', 'Agua fresca de jamaica.', 'non_alcoholic', 3.0, 40.00, 'standard'),
+  ('drk-horchata', 'Horchata', 'Horchata', 'Agua tradicional de arroz.', 'Agua tradicional de arroz.', 'non_alcoholic', 3.0, 45.00, 'standard'),
+  ('drk-coke', 'Coca-Cola', 'Coca-Cola', 'Coca-Cola de botella.', 'Coca-Cola de botella.', 'non_alcoholic', 2.5, 35.00, 'standard'),
+  ('drk-squirt-can', 'Squirt', 'Squirt', 'Refresco de toronja.', 'Refresco de toronja.', 'non_alcoholic', 2.5, 35.00, 'standard'),
+  ('drk-sparkling', 'Mineral Water', 'Agua Mineral', 'Agua mineral Topochico o Peñafiel.', 'Agua mineral Topochico o Peñafiel.', 'non_alcoholic', 2.5, 40.00, 'standard'),
+  ('drk-coffee', 'Coffee', 'Café', 'Café americano caliente.', 'Café americano caliente.', 'non_alcoholic', 3.0, 35.00, 'standard'),
+  ('drk-espresso', 'Espresso', 'Espresso', 'Café espresso estilo italiano.', 'Café espresso estilo italiano.', 'non_alcoholic', 3.0, 45.00, 'standard')
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   name_es = EXCLUDED.name_es,
@@ -140,46 +140,46 @@ ON CONFLICT (id) DO UPDATE SET
 -- ==========================================
 -- 3. RECIPES (Sample Logic)
 -- ==========================================
-INSERT INTO recipe_ingredients (drink_id, ingredient_id, amount_in_base_unit)
+INSERT INTO recipe_ingredients (id, drink_id, ingredient_id, amount_in_base_unit)
 VALUES
   -- Classic Margarita
-  ('drk-marg-classic', 'teq-herradura-repo', 60),
-  ('drk-marg-classic', 'liq-triple-sec', 30),
-  ('drk-marg-classic', 'mix-lime-juice', 30),
-  ('drk-marg-classic', 'mix-agave-syrup', 15),
+  ('ri-marg-teq', 'drk-marg-classic', 'teq-herradura-repo', 60),
+  ('ri-marg-triple', 'drk-marg-classic', 'liq-triple-sec', 30),
+  ('ri-marg-lime', 'drk-marg-classic', 'mix-lime-juice', 30),
+  ('ri-marg-agave', 'drk-marg-classic', 'mix-agave-syrup', 15),
   
   -- Spicy Margarita
-  ('drk-marg-spicy', 'teq-espolon-blanco', 60),
-  ('drk-marg-spicy', 'liq-ancho-reyes', 15),
-  ('drk-marg-spicy', 'mix-lime-juice', 30),
-  ('drk-marg-spicy', 'mix-agave-syrup', 15),
+  ('ri-spicy-teq', 'drk-marg-spicy', 'teq-espolon-blanco', 60),
+  ('ri-spicy-ancho', 'drk-marg-spicy', 'liq-ancho-reyes', 15),
+  ('ri-spicy-lime', 'drk-marg-spicy', 'mix-lime-juice', 30),
+  ('ri-spicy-agave', 'drk-marg-spicy', 'mix-agave-syrup', 15),
   
   -- Paloma
-  ('drk-paloma', 'teq-casamigos-blanco', 60),
-  ('drk-paloma', 'mix-lime-juice', 15),
-  ('drk-paloma', 'mix-squirt', 150),
+  ('ri-paloma-teq', 'drk-paloma', 'teq-casamigos-blanco', 60),
+  ('ri-paloma-lime', 'drk-paloma', 'mix-lime-juice', 15),
+  ('ri-paloma-squirt', 'drk-paloma', 'mix-squirt', 150),
   
   -- Raicilla Sour
-  ('drk-rai-sour', 'rai-divisadero', 60),
-  ('drk-rai-sour', 'mix-lime-juice', 30),
-  ('drk-rai-sour', 'mix-agave-syrup', 20),
+  ('ri-rai-teq', 'drk-rai-sour', 'rai-divisadero', 60),
+  ('ri-rai-lime', 'drk-rai-sour', 'mix-lime-juice', 30),
+  ('ri-rai-agave', 'drk-rai-sour', 'mix-agave-syrup', 20),
   
   -- Cantarito
-  ('drk-cantarito', 'teq-espolon-blanco', 60),
-  ('drk-cantarito', 'mix-orange-juice', 45),
-  ('drk-cantarito', 'mix-lime-juice', 15),
-  ('drk-cantarito', 'mix-squirt', 120),
+  ('ri-cant-teq', 'drk-cantarito', 'teq-espolon-blanco', 60),
+  ('ri-cant-orange', 'drk-cantarito', 'mix-orange-juice', 45),
+  ('ri-cant-lime', 'drk-cantarito', 'mix-lime-juice', 15),
+  ('ri-cant-squirt', 'drk-cantarito', 'mix-squirt', 120),
   
   -- Mexican Mule
-  ('drk-mex-mule', 'teq-casamigos-blanco', 60),
-  ('drk-mex-mule', 'mix-ginger-beer', 150),
-  ('drk-mex-mule', 'mix-lime-juice', 15),
+  ('ri-mule-teq', 'drk-mex-mule', 'teq-casamigos-blanco', 60),
+  ('ri-mule-ginger', 'drk-mex-mule', 'mix-ginger-beer', 150),
+  ('ri-mule-lime', 'drk-mex-mule', 'mix-lime-juice', 15),
   
   -- Smirnoff Screwdriver
-  ('drk-screwdriver', 'vod-smirnoff', 60),
-  ('drk-screwdriver', 'mix-orange-juice', 150),
+  ('ri-screw-vod', 'drk-screwdriver', 'vod-smirnoff', 60),
+  ('ri-screw-orange', 'drk-screwdriver', 'mix-orange-juice', 150),
   
   -- Pacifico (Uses 1 bottle)
-  ('drk-beer-pacifico', 'beer-pacifico', 1),
-  ('drk-beer-modelo-esp', 'beer-modelo-esp', 1)
+  ('ri-beer-pac', 'drk-beer-pacifico', 'beer-pacifico', 1),
+  ('ri-beer-esp', 'drk-beer-modelo-esp', 'beer-modelo-esp', 1)
 ON CONFLICT (drink_id, ingredient_id) DO NOTHING;

@@ -11,7 +11,6 @@ function formatSettings(s: typeof settingsTable.$inferSelect) {
     baseCurrency: "MXN" as const,
     usdToMxnRate: Number(s.usdToMxnRate),
     cadToMxnRate: Number(s.cadToMxnRate),
-    defaultMarkupFactor: Number(s.defaultMarkupFactor),
     barName: s.barName,
     barIcon: s.barIcon,
     inventoryAlertEmail: s.inventoryAlertEmail ?? null,
@@ -66,8 +65,6 @@ router.patch("/", requireRole("admin"), async (req: Request, res: Response) => {
       updateData.usdToMxnRate = Number(data.usdToMxnRate);
     if (data.cadToMxnRate != null)
       updateData.cadToMxnRate = Number(data.cadToMxnRate);
-    if (data.defaultMarkupFactor != null)
-      updateData.defaultMarkupFactor = Number(data.defaultMarkupFactor);
     if (data.barName != null) updateData.barName = data.barName;
     if (data.barIcon != null) updateData.barIcon = data.barIcon;
 

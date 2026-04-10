@@ -7,6 +7,7 @@ import {
 } from "@workspace/db";
 import { eq, desc, lt } from "drizzle-orm";
 import { logEvent } from "../lib/auditLog";
+import { requireRole } from "../middlewares/authMiddleware";
 
 const router: IRouter = Router();
 
@@ -16,11 +17,11 @@ function calculateFromWeight(
   item: typeof inventoryItemsTable.$inferSelect,
   weightG: number,
 ) {
-  if (!item.tareWeightG || !item.fullBottleWeightG) {
+  if (!item.glassWeightG || !item.fullBottleWeightG) {
     return { remainingBaseUnits: 0 };
   }
-  const liquidWeight = weightG - item.tareWeightG;
-  const fullLiquidWeight = item.fullBottleWeightG - item.tareWeightG;
+  const liquidWeight = weightG - item.glassWeightG;
+  const fullLiquidWeight = item.fullBottleWeightG - item.glassWeightG;
   const remainingBaseUnits =
     fullLiquidWeight > 0
       ? (liquidWeight / fullLiquidWeight) * item.baseUnitAmount
@@ -128,7 +129,6 @@ router.post("/items", async (req: Request, res: Response) => {
     if (data.glassWeightG)
       insertValues.glassWeightG = Number(data.glassWeightG);
     if (data.density) insertValues.density = Number(data.density);
-    if (data.tareWeightG) insertValues.tareWeightG = Number(data.tareWeightG);
     if (data.fullBottleWeightG)
       insertValues.fullBottleWeightG = Number(data.fullBottleWeightG);
     if (data.currentBulk !== undefined) insertValues.currentBulk = currentBulk;
@@ -141,6 +141,10 @@ router.post("/items", async (req: Request, res: Response) => {
     if (data.unitsPerCase)
       insertValues.unitsPerCase = Number(data.unitsPerCase);
     if (data.isOnMenu !== undefined) insertValues.isOnMenu = !!data.isOnMenu;
+    if (data.sellSingleServing !== undefined)
+      insertValues.sellSingleServing = !!data.sellSingleServing;
+    if (data.singleServingPrice !== undefined)
+      insertValues.singleServingPrice = Number(data.singleServingPrice);
     if (data.parentItemId) insertValues.parentItemId = data.parentItemId;
     if (data.alcoholDensity !== undefined)
       insertValues.alcoholDensity = Number(data.alcoholDensity);
@@ -153,6 +157,37 @@ router.post("/items", async (req: Request, res: Response) => {
       .returning();
 
     console.log("[POST /items] Successfully created item:", item.id);
+
+    // Create linked drinks if flagged
+    if (item.isOnMenu) {
+      const drinkData = {
+        name: item.nameEs || item.name,
+        nameEs: item.nameEs ?? null,
+        category: item.type,
+        actualPrice: 0,
+        isAvailable: true,
+        isOnMenu: true,
+        sourceType: "inventory_single",
+      };
+      await db.insert(drinksTable).values({ id: item.id, ...drinkData });
+    }
+
+    if (item.sellSingleServing) {
+      const singleDrinkId = `${item.id}-single`;
+      const singleDrinkData = {
+        name: `${item.nameEs || item.name} (Shot)`,
+        nameEs: item.nameEs ? `${item.nameEs} (Trago)` : null,
+        category: item.type,
+        actualPrice: item.singleServingPrice || 0,
+        isAvailable: true,
+        isOnMenu: true,
+        sourceType: "inventory_single",
+      };
+      await db
+        .insert(drinksTable)
+        .values({ id: singleDrinkId, ...singleDrinkData });
+    }
+
     res.json(item);
   } catch (err: any) {
     console.error("[POST /items] Error:", err.message);
@@ -266,10 +301,6 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
         ? Number(data.glassWeightG)
         : null;
     if (data.density !== undefined) updateData.density = Number(data.density);
-    if (data.tareWeightG !== undefined)
-      updateData.tareWeightG = data.tareWeightG
-        ? Number(data.tareWeightG)
-        : null;
     if (data.fullBottleWeightG !== undefined)
       updateData.fullBottleWeightG = data.fullBottleWeightG
         ? Number(data.fullBottleWeightG)
@@ -286,6 +317,12 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
     if (data.unitsPerCase !== undefined)
       updateData.unitsPerCase = Number(data.unitsPerCase);
     if (data.isOnMenu !== undefined) updateData.isOnMenu = !!data.isOnMenu;
+    if (data.sellSingleServing !== undefined)
+      updateData.sellSingleServing = !!data.sellSingleServing;
+    if (data.singleServingPrice !== undefined)
+      updateData.singleServingPrice = data.singleServingPrice
+        ? Number(data.singleServingPrice)
+        : null;
     if (data.parentItemId !== undefined)
       updateData.parentItemId = data.parentItemId || null;
     if (data.alcoholDensity !== undefined)
@@ -356,6 +393,44 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       }
     }
 
+    // Handle sellSingleServing setup in full update
+    if (
+      data.sellSingleServing !== undefined ||
+      data.singleServingPrice !== undefined
+    ) {
+      const singleDrinkId = `${item.id}-single`;
+      if (item.sellSingleServing) {
+        const [existingSingleDrink] = await db
+          .select()
+          .from(drinksTable)
+          .where(eq(drinksTable.id, singleDrinkId))
+          .limit(1);
+
+        const singleDrinkData = {
+          name: `${item.nameEs || item.name} (Shot)`,
+          nameEs: item.nameEs ? `${item.nameEs} (Trago)` : null,
+          category: item.type,
+          actualPrice: item.singleServingPrice || 0,
+          isAvailable: true,
+          isOnMenu: true,
+          sourceType: "inventory_single",
+        };
+
+        if (existingSingleDrink) {
+          await db
+            .update(drinksTable)
+            .set({ ...singleDrinkData, updatedAt: new Date() })
+            .where(eq(drinksTable.id, existingSingleDrink.id));
+        } else {
+          await db
+            .insert(drinksTable)
+            .values({ id: singleDrinkId, ...singleDrinkData });
+        }
+      } else {
+        await db.delete(drinksTable).where(eq(drinksTable.id, singleDrinkId));
+      }
+    }
+
     return res.json(item);
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
@@ -386,21 +461,25 @@ router.delete("/items/:id", async (req: Request, res: Response) => {
 });
 
 // DELETE /api/inventory/trash/clear
-router.delete("/trash/clear", async (req: Request, res: Response) => {
-  try {
-    console.log("[DELETE /trash/clear] Starting...");
-    const result = await db
-      .delete(inventoryItemsTable)
-      .where(eq(inventoryItemsTable.isDeleted, true))
-      .returning();
+router.delete(
+  "/trash/clear",
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    try {
+      console.log("[DELETE /trash/clear] Starting...");
+      const result = await db
+        .delete(inventoryItemsTable)
+        .where(eq(inventoryItemsTable.isDeleted, true))
+        .returning();
 
-    console.log("[DELETE /trash/clear] Deleted count:", result.length);
-    return res.json({ ok: true, deletedCount: result.length });
-  } catch (err: any) {
-    console.error("[DELETE /trash/clear] Error:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
+      console.log("[DELETE /trash/clear] Deleted count:", result.length);
+      return res.json({ success: true, deletedCount: result.length });
+    } catch (err: any) {
+      console.error("[DELETE /trash/clear] Error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+  },
+);
 
 // GET /api/inventory/trash/count
 router.get("/trash/count", async (_req: Request, res: Response) => {

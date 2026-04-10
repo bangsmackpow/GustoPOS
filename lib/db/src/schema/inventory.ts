@@ -23,11 +23,8 @@ export const inventoryItemsTable = sqliteTable("inventory_items", {
 
   servingSize: real("serving_size").notNull().default(0), 
   servingUnit: text("serving_unit"), 
-  pourSize: real("pour_size").notNull().default(0), 
   bottleSizeMl: real("bottle_size_ml"), 
 
-  alcoholDensity: real("alcohol_density").default(0.955),
-  tareWeightG: real("tare_weight_g"), 
   glassWeightG: real("glass_weight_g"), 
   fullBottleWeightG: real("full_bottle_weight_g"), 
   density: real("density").notNull().default(0.94), 
@@ -36,6 +33,8 @@ export const inventoryItemsTable = sqliteTable("inventory_items", {
   orderCost: real("order_cost").notNull().default(0), 
   markupFactor: real("markup_factor").default(3.0),
   isOnMenu: integer("is_on_menu", { mode: "boolean" }).notNull().default(true),
+  sellSingleServing: integer("sell_single_serving", { mode: "boolean" }).notNull().default(false),
+  singleServingPrice: real("single_serving_price"),
   isDeleted: integer("is_deleted", { mode: "boolean" }).notNull().default(false),
 
   lowStockMethod: text("low_stock_method").default("manual"), 

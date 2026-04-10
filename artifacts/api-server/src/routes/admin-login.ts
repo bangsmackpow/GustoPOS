@@ -15,26 +15,26 @@ export default function adminLoginRouter(): express.Router {
       return res.status(403).json({ ok: false, error: "admin login disabled" });
     }
 
-    const email = req.body?.email;
+    const username = req.body?.username;
     const password = req.body?.password;
 
-    if (!email || !password) {
-      return res.status(400).json({ ok: false, error: "Email and password are required" });
+    if (!username || !password) {
+      return res.status(400).json({ ok: false, error: "Username and password are required" });
     }
 
     try {
-      console.log(`[AdminLogin] Login attempt for: ${email}`);
+      console.log(`[AdminLogin] Login attempt for: ${username}`);
       
       // Query database for user
       const [dbUser] = await db.select().from(usersTable).where(
         and(
-          eq(usersTable.email, email),
+          eq(usersTable.username, username),
           eq(usersTable.isActive, true)
         )
       );
 
       if (!dbUser || !dbUser.password) {
-        console.warn(`[AdminLogin] No matching active user found for: ${email}`);
+        console.warn(`[AdminLogin] No matching active user found for: ${username}`);
         return res.status(401).json({ ok: false, error: "Invalid credentials" });
       }
 
@@ -52,14 +52,14 @@ export default function adminLoginRouter(): express.Router {
       }
 
       if (!passwordMatches) {
-        console.warn(`[AdminLogin] Invalid password for: ${email}`);
+        console.warn(`[AdminLogin] Invalid password for: ${username}`);
         return res.status(401).json({ ok: false, error: "Invalid credentials" });
       }
 
       // Check if user has management permissions
-      const hasAccess = ["admin", "manager", "head_bartender"].includes(dbUser.role);
+      const hasAccess = ["admin", "employee"].includes(dbUser.role);
       if (!hasAccess) {
-        console.warn(`[AdminLogin] User ${email} has insufficient role: ${dbUser.role}`);
+        console.warn(`[AdminLogin] User ${username} has insufficient role: ${dbUser.role}`);
         return res.status(403).json({ ok: false, error: "Insufficient permissions" });
       }
 
@@ -71,10 +71,10 @@ export default function adminLoginRouter(): express.Router {
             .update(usersTable)
             .set({ password: hashedPassword })
             .where(eq(usersTable.id, dbUser.id));
-          console.log(`[AdminLogin] Auto-migrated plaintext password to bcrypt for user: ${email}`);
+          console.log(`[AdminLogin] Auto-migrated plaintext password to bcrypt for user: ${username}`);
         } catch (upgradeErr: any) {
           console.warn(
-            `[AdminLogin] Failed to upgrade password hash for ${email}:`,
+            `[AdminLogin] Failed to upgrade password hash for ${username}:`,
             upgradeErr.message,
           );
           // Continue with login even if upgrade fails
@@ -84,7 +84,7 @@ export default function adminLoginRouter(): express.Router {
       const sessionData: SessionData = {
         user: {
           id: dbUser.id,
-          email: dbUser.email,
+          username: dbUser.username || "",
           firstName: dbUser.firstName,
           lastName: dbUser.lastName,
           role: dbUser.role,
@@ -107,7 +107,7 @@ export default function adminLoginRouter(): express.Router {
         maxAge: SESSION_TTL,
       });
 
-      console.log(`[AdminLogin] Success! Token issued for: ${email}`);
+      console.log(`[AdminLogin] Success! Token issued for: ${username}`);
       return res.status(200).json({ ok: true, user: sessionData.user });
 
     } catch (err: any) {

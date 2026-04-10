@@ -5,11 +5,19 @@ export const SESSION_COOKIE = "sid";
 export const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
 export const SESSION_ACTIVITY_TIMEOUT = 60 * 60 * 1000; // 1 hour of inactivity
 
-const JWT_SECRET =
-  process.env.ADMIN_PASSWORD || "gustopos-default-secret-change-me";
+const JWT_SECRET: string = (() => {
+  const secret = process.env.ADMIN_PASSWORD;
+  if (!secret) {
+    throw new Error(
+      "ADMIN_PASSWORD environment variable is required for JWT session security",
+    );
+  }
+  return secret;
+})();
 
 export interface SessionUser {
   id: string;
+  username?: string | null;
   email?: string | null;
   firstName?: string | null;
   lastName?: string | null;

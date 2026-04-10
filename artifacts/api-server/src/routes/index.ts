@@ -9,7 +9,7 @@ import drinksRouter from "./drinks";
 import tabsRouter from "./tabs";
 import shiftsRouter from "./shifts";
 import settingsRouter from "./settings";
-import pinLoginRouter, { pinVerifyRouter } from "./pin-login";
+import pinLoginRouter from "./pin-login";
 import adminLoginRouter from "./admin-login";
 import bulkImportRouter from "./bulk-import";
 import adminRouter from "./admin";
@@ -28,7 +28,6 @@ router.use(healthRouter);
 router.use(authRouter);
 // Public login routes (must be before /admin prefixed routes)
 router.use(pinLoginRouter());
-router.use(pinVerifyRouter());
 router.use(adminLoginRouter());
 // Admin-only routes
 router.use("/users", requireRole("admin"), usersRouter);

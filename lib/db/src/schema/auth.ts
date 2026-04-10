@@ -4,12 +4,13 @@ import crypto from "crypto";
 
 export const usersTable = sqliteTable("users", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  username: text("username").unique(), // Primary login for Beta
   email: text("email").unique(),
   password: text("password"),
   firstName: text("first_name"),
   lastName: text("last_name"),
   profileImageUrl: text("profile_image_url"),
-  role: text("role").notNull().default("bartender"), // admin, manager, head_bartender, bartender, server
+  role: text("role").notNull().default("employee"), // admin, employee (simplified horizontal structure)
   language: text("language").notNull().default("es"), // en, es
   pin: text("pin").notNull().default("0000"),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),

@@ -122,6 +122,43 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     console.log("External dependencies already installed, skipping...");
   }
 
+  // Step 5: Copy Migrations, Seeds, and Frontend
+  console.log("Copying database assets...");
+  try {
+    const migrationsSrc = path.resolve(rootDir, "lib/db/migrations");
+    const migrationsDest = path.join(distDir, "migrations");
+    await mkdir(migrationsDest, { recursive: true });
+    await cp(migrationsSrc, migrationsDest, {
+      recursive: true,
+      dereference: true,
+    });
+    console.log("  Copied migrations");
+  } catch (err) {
+    console.warn("  Failed to copy migrations:", err.message);
+  }
+
+  try {
+    const seedsSrc = path.resolve(rootDir, "db/seeds");
+    const seedsDest = path.join(distDir, "seeds");
+    await mkdir(seedsDest, { recursive: true });
+    await cp(seedsSrc, seedsDest, { recursive: true, dereference: true });
+    console.log("  Copied seeds");
+  } catch (err) {
+    console.warn("  Failed to copy seeds:", err.message);
+  }
+
+  // Copy frontend public folder for desktop app
+  try {
+    const publicSrc = path.resolve(rootDir, "artifacts/gusto-pos/dist/public");
+    const publicDest = path.join(distDir, "public");
+    // Clean destination first to remove stale files
+    await rm(publicDest, { recursive: true, force: true });
+    await cp(publicSrc, publicDest, { recursive: true, dereference: true });
+    console.log("  Copied frontend public files");
+  } catch (err) {
+    console.warn("  Failed to copy frontend public files:", err.message);
+  }
+
   console.log("API server build complete");
 }
 

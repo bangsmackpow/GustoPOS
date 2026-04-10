@@ -10,13 +10,57 @@ let mainWindow: BrowserWindow | null = null;
 const API_PORT = 3000;
 const API_URL = `http://localhost:${API_PORT}`;
 
+// Setup logging infrastructure
+const LOG_DIR = path.join(app.getPath("home"), "Library", "Logs", "GustoPOS");
+const LOG_FILE = path.join(
+  LOG_DIR,
+  `app-${new Date().toISOString().split("T")[0]}.log`,
+);
+
+function ensureLogDirectory(): void {
+  try {
+    if (!fs.existsSync(LOG_DIR)) {
+      fs.mkdirSync(LOG_DIR, { recursive: true });
+    }
+  } catch (err) {
+    console.error("[Logging] Failed to create log directory:", err);
+  }
+}
+
+function logToFile(level: string, message: string): void {
+  try {
+    const timestamp = new Date().toISOString();
+    const logEntry = `[${timestamp}] [${level}] ${message}\n`;
+    fs.appendFileSync(LOG_FILE, logEntry);
+  } catch (err) {
+    console.error("[Logging] Failed to write to log file:", err);
+  }
+}
+
+// Enhanced console logging that also writes to file
+function logInfo(message: string): void {
+  console.log(message);
+  logToFile("INFO", message);
+}
+
+function logError(message: string): void {
+  console.error(message);
+  logToFile("ERROR", message);
+}
+
+// Initialize logging on startup
+ensureLogDirectory();
+logInfo("[Desktop] GustoPOS starting up...");
+logInfo(`[Desktop] Log file: ${LOG_FILE}`);
+
 // Suppress error dialogs during startup
 process.on("uncaughtException", (error) => {
-  console.error("[Uncaught Exception]", error);
+  logError(`[Uncaught Exception] ${error.message}`);
+  logError(error.stack || "");
 });
 
 process.on("unhandledRejection", (reason) => {
-  console.error("[Unhandled Rejection]", reason);
+  logError(`[Unhandled Rejection] ${reason}`);
 });
 
 function loadEnvFile(envPath: string): Record<string, string> {
@@ -44,11 +88,11 @@ function findEnvFile(): Record<string, string> {
   for (const p of searchPaths) {
     const env = loadEnvFile(p);
     if (Object.keys(env).length > 0) {
-      console.log("Loaded env file from:", p);
+      logInfo(`[Desktop] Loaded env file from: ${p}`);
       return env;
     }
   }
-  console.log("No stack.env found, using defaults");
+  logInfo("[Desktop] No stack.env found, using defaults");
   return {};
 }
 
@@ -70,62 +114,114 @@ function _findOpenPort(port: number): Promise<number> {
 
 async function startApi(): Promise<void> {
   const isDev = !app.isPackaged;
+  const workspaceRoot = isDev ? path.resolve(app.getAppPath(), "..", "..") : "";
 
   // In production, artifacts are in Resources folder
   // In dev mode, point to the workspace build output
   const apiPath = isDev
-    ? path.resolve(process.cwd(), "artifacts/api-server/dist/index.cjs")
+    ? path.join(workspaceRoot, "artifacts/api-server/dist/index.cjs")
     : path.join(process.resourcesPath, "api/index.cjs");
 
   const dbPath = path.join(app.getPath("userData"), "gusto.db");
 
+  logInfo(`[Desktop] API Path: ${apiPath}`);
+  logInfo(`[Desktop] Database Path: ${dbPath}`);
+  logInfo(`[Desktop] Is Packaged: ${app.isPackaged}`);
+  logInfo(`[Desktop] Resources Path: ${process.resourcesPath}`);
+  logInfo(`[Desktop] User Data Path: ${app.getPath("userData")}`);
+
+  // Check if API file exists
+  if (!fs.existsSync(apiPath)) {
+    const error = `API server file not found: ${apiPath}`;
+    logError(`[Desktop] ${error}`);
+    apiStartupError = error;
+    return;
+  }
+
   // Ensure the database directory exists
   const dbDir = path.dirname(dbPath);
   if (!fs.existsSync(dbDir)) {
-    console.log(`Creating database directory: ${dbDir}`);
+    logInfo(`[Desktop] Creating database directory: ${dbDir}`);
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
   // Ensure data storage directory exists
   const dataDir = path.join(app.getPath("userData"), "data");
   if (!fs.existsSync(dataDir)) {
-    console.log(`Creating data directory: ${dataDir}`);
+    logInfo(`[Desktop] Creating data directory: ${dataDir}`);
     fs.mkdirSync(dataDir, { recursive: true });
   }
 
   // Ensure reports directory exists on desktop
   const reportsDir = path.join(app.getPath("desktop"), "GUSTO REPORTS");
   if (!fs.existsSync(reportsDir)) {
-    console.log(`Creating reports directory: ${reportsDir}`);
+    logInfo(`[Desktop] Creating reports directory: ${reportsDir}`);
     fs.mkdirSync(reportsDir, { recursive: true });
   }
 
   // Don't create an empty database file - let SQLite create it
   // An empty file is not a valid SQLite database and causes "Failed query" errors
   if (!fs.existsSync(dbPath)) {
-    console.log(`Database file will be created by SQLite: ${dbPath}`);
+    logInfo(`[Desktop] Database file will be created by SQLite: ${dbPath}`);
   }
-
-  console.log("Starting API at:", apiPath);
-  console.log("Database at:", dbPath);
 
   // pnpm hoists packages to .pnpm/node_modules/, not the root node_modules/
   // In dev mode, we need to use the workspace root's node_modules
   const apiNodeModules = isDev
-    ? path.resolve(process.cwd(), "node_modules/.pnpm/node_modules")
+    ? path.join(workspaceRoot, "node_modules/.pnpm/node_modules")
     : path.join(process.resourcesPath, "api/node_modules");
 
   // Also include the dist/node_modules for external deps (like @libsql)
   const distNodeModules = isDev
-    ? path.resolve(process.cwd(), "artifacts/api-server/dist/node_modules")
+    ? path.join(workspaceRoot, "artifacts/api-server/dist/node_modules")
     : path.join(process.resourcesPath, "api/node_modules");
 
   // Load admin credentials from stack.env
   // In dev mode, use stack.env at project root
   // In prod mode, search in Resources, app dir, userData
   const envFileVars = isDev
-    ? loadEnvFile(path.resolve(process.cwd(), "stack.env"))
+    ? loadEnvFile(path.join(workspaceRoot, "stack.env"))
     : findEnvFile();
+
+  // Log all paths for debugging
+  logInfo(
+    `[Desktop] NODE_PATH will be: ${distNodeModules}${path.delimiter}${apiNodeModules}`,
+  );
+  logInfo(
+    `[Desktop] Migrations Path: ${isDev ? path.join(workspaceRoot, "lib/db/migrations") : path.join(process.resourcesPath, "api/migrations")}`,
+  );
+  logInfo(
+    `[Desktop] Seeds Path: ${isDev ? path.join(workspaceRoot, "db/seeds") : path.join(process.resourcesPath, "api/seeds")}`,
+  );
+  logInfo(
+    `[Desktop] Static Path: ${isDev ? path.join(workspaceRoot, "artifacts/gusto-pos/dist/public") : path.join(process.resourcesPath, "api/public")}`,
+  );
+
+  // Check if migrations exist
+  const migrationsPath = isDev
+    ? path.join(workspaceRoot, "lib/db/migrations")
+    : path.join(process.resourcesPath, "api/migrations");
+  if (!fs.existsSync(migrationsPath)) {
+    logError(`[Desktop] Migrations directory not found: ${migrationsPath}`);
+  } else {
+    const migrationFiles = fs
+      .readdirSync(migrationsPath)
+      .filter((f) => f.endsWith(".sql"));
+    logInfo(`[Desktop] Found ${migrationFiles.length} migration files`);
+  }
+
+  // Check if static files exist
+  const staticPath = isDev
+    ? path.join(workspaceRoot, "artifacts/gusto-pos/dist/public")
+    : path.join(process.resourcesPath, "api/public");
+  if (!fs.existsSync(staticPath)) {
+    logError(`[Desktop] Static files directory not found: ${staticPath}`);
+  } else {
+    const indexHtml = path.join(staticPath, "index.html");
+    logInfo(
+      `[Desktop] Static files exist: ${fs.existsSync(indexHtml) ? "Yes" : "No index.html found"}`,
+    );
+  }
 
   try {
     apiProcess = spawn(process.execPath, [apiPath], {
@@ -146,15 +242,13 @@ async function startApi(): Promise<void> {
         // Ensure migrations can be found
         // In dev mode: use workspace lib/db/migrations
         // In prod mode: use the bundled api/migrations in Resources
-        MIGRATIONS_PATH: isDev
-          ? path.resolve(process.cwd(), "lib/db/migrations")
-          : path.join(process.resourcesPath, "api/migrations"),
+        MIGRATIONS_PATH: migrationsPath,
         SEEDS_PATH: isDev
-          ? path.resolve(process.cwd(), "db/seeds")
+          ? path.join(workspaceRoot, "db/seeds")
           : path.join(process.resourcesPath, "api/seeds"),
-        STATIC_PATH: isDev
-          ? path.resolve(process.cwd(), "artifacts/gusto-pos/dist/public")
-          : path.join(process.resourcesPath, "api/public"),
+        STATIC_PATH: staticPath,
+        // Add log directory for API to use
+        LOG_DIR: LOG_DIR,
       },
       stdio: ["pipe", "pipe", "pipe"],
     });
@@ -162,46 +256,176 @@ async function startApi(): Promise<void> {
     // Log API stdout and stderr
     apiProcess.stdout?.on("data", (data) => {
       const message = data.toString().trim();
-      console.log(`[API] ${message}`);
+      logInfo(`[API] ${message}`);
       // Detect successful admin initialization
       if (
         message.includes("[Initialize] ✓ Admin user") ||
         message.includes("[Initialize] ✓ Database initialization completed")
       ) {
         _adminInitialized = true;
-        console.log("[Desktop] Admin user initialization confirmed!");
+        logInfo("[Desktop] Admin user initialization confirmed!");
       }
       // Detect critical failures
       if (message.includes("[Initialize] ✗ CRITICAL")) {
         apiStartupError = message;
-        console.error(`[Desktop] Critical initialization error: ${message}`);
+        logError(`[Desktop] Critical initialization error: ${message}`);
       }
     });
 
     apiProcess.stderr?.on("data", (data) => {
-      console.error(`[API ERROR] ${data.toString().trim()}`);
+      const errorMsg = data.toString().trim();
+      logError(`[API ERROR] ${errorMsg}`);
+      // Store first error for display
+      if (!apiStartupError) {
+        apiStartupError = errorMsg;
+      }
     });
 
     apiProcess.on("error", (err) => {
-      console.error("Failed to start API process:", err);
-      apiStartupError = `Failed to start API: ${err.message}`;
+      const errorMsg = `Failed to start API process: ${err.message}`;
+      logError(`[Desktop] ${errorMsg}`);
+      apiStartupError = errorMsg;
     });
 
     apiProcess.on("exit", (code, signal) => {
-      console.log(`API process exited with code ${code} (signal: ${signal})`);
+      logInfo(
+        `[Desktop] API process exited with code ${code} (signal: ${signal})`,
+      );
       if (code !== 0 && code !== null) {
         apiStartupError = `API process exited with code ${code}`;
       }
     });
+
+    logInfo("[Desktop] API process spawned successfully");
   } catch (err: any) {
-    console.error("Error starting API process:", err);
-    apiStartupError = `Failed to start API: ${err.message}`;
+    const errorMsg = `Failed to start API: ${err.message}`;
+    logError(`[Desktop] ${errorMsg}`);
+    apiStartupError = errorMsg;
   }
 }
 
 let apiStartupError: string | null = null;
 let _adminInitialized = false;
 const API_STARTUP_TIMEOUT = 30000; // 30 seconds max wait for API
+
+function getErrorHtml(
+  title: string,
+  error: string,
+  troubleshooting: string[],
+): string {
+  return `
+    <html>
+      <head>
+        <title>GustoPOS - ${title}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body {
+            background: #09090b;
+            color: #f5f5f7;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 2rem;
+          }
+          .container {
+            max-width: 700px;
+            text-align: left;
+            background: #18181b;
+            border-radius: 16px;
+            padding: 2.5rem;
+            border: 1px solid #27272a;
+          }
+          .logo {
+            color: #f59e0b;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-align: center;
+          }
+          h2 {
+            color: #ef4444;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+          }
+          .error-box {
+            background: #27272a;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-family: "SF Mono", Monaco, monospace;
+            font-size: 0.875rem;
+            color: #a1a1aa;
+            border-left: 3px solid #ef4444;
+          }
+          h3 {
+            color: #71717a;
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+          }
+          ul {
+            list-style: none;
+            padding: 0;
+          }
+          li {
+            color: #a1a1aa;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            padding-left: 1.25rem;
+            position: relative;
+          }
+          li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #f59e0b;
+          }
+          .footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #27272a;
+            text-align: center;
+          }
+          .log-info {
+            color: #52525b;
+            font-size: 0.75rem;
+          }
+          button {
+            background: #f59e0b;
+            color: #000;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 1rem;
+          }
+          button:hover {
+            background: #fbbf24;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="logo">GustoPOS</div>
+          <h2>${title}</h2>
+          <div class="error-box">${error}</div>
+          <h3>Troubleshooting Steps</h3>
+          <ul>
+            ${troubleshooting.map((step) => `<li>${step}</li>`).join("")}
+          </ul>
+          <div class="footer">
+            <div class="log-info">Log file: ${LOG_FILE}</div>
+            <button onclick="location.reload()">Retry</button>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
 
 async function createWindow() {
   mainWindow = new BrowserWindow({
@@ -212,7 +436,8 @@ async function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    backgroundColor: "#09090b", // Matches GustoPOS theme
+    backgroundColor: "#09090b",
+    show: false, // Don't show until content is ready
   });
 
   // Open DevTools in dev mode or when not packaged (for debugging)
@@ -225,51 +450,57 @@ async function createWindow() {
   const checkApi = async () => {
     // Check if API startup failed
     if (apiStartupError) {
-      mainWindow?.loadURL(`data:text/html,
-        <html>
-          <head><title>GustoPOS - API Error</title></head>
-          <body style="background:#09090b;color:#f5f5f7;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:2rem;">
-            <div style="max-width:600px;text-align:center;">
-              <h1 style="color:#f59e0b;font-size:2rem;margin-bottom:1rem;">GustoPOS</h1>
-              <h2 style="color:#ef4444;margin-bottom:1rem;">API Initialization Failed</h2>
-              <p style="color:#a1a1aa;margin-bottom:1.5rem;">Error: ${apiStartupError}</p>
-              <p style="color:#71717a;font-size:0.875rem;">Check the console for more details.</p>
-            </div>
-          </body>
-        </html>
-      `);
+      logError(`[Desktop] API startup error detected: ${apiStartupError}`);
+      const dbPath = app.getPath("userData");
+      const html = getErrorHtml("API Initialization Failed", apiStartupError, [
+        "Check that your database file is not corrupted",
+        `Try deleting the database folder at: ${dbPath}`,
+        "Then restart the application (a new database will be created)",
+        "Ensure all app files are properly installed",
+        "Check the log file for more details",
+      ]);
+      mainWindow?.loadURL(
+        `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+      );
+      mainWindow?.show();
       return;
     }
 
     // Timeout check
     if (Date.now() - startTime > API_STARTUP_TIMEOUT) {
-      mainWindow?.loadURL(`data:text/html,
-        <html>
-          <head><title>GustoPOS - Timeout</title></head>
-          <body style="background:#09090b;color:#f5f5f7;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;padding:2rem;">
-            <div style="max-width:600px;text-align:center;">
-              <h1 style="color:#f59e0b;font-size:2rem;margin-bottom:1rem;">GustoPOS</h1>
-              <h2 style="color:#ef4444;margin-bottom:1rem;">API Server Timeout</h2>
-              <p style="color:#a1a1aa;margin-bottom:1.5rem;">The API server did not start within ${API_STARTUP_TIMEOUT / 1000} seconds.</p>
-              <p style="color:#71717a;font-size:0.875rem;">Check the console for more details.</p>
-            </div>
-          </body>
-        </html>
-      `);
+      logError("[Desktop] API startup timeout");
+      const html = getErrorHtml(
+        "API Server Timeout",
+        `The API server did not start within ${API_STARTUP_TIMEOUT / 1000} seconds.`,
+        [
+          "The application may be taking longer than expected to start",
+          "Check the log file for initialization errors",
+          "Try restarting the application",
+          "If the problem persists, reinstall the application",
+        ],
+      );
+      mainWindow?.loadURL(
+        `data:text/html;charset=utf-8,${encodeURIComponent(html)}`,
+      );
+      mainWindow?.show();
       return;
     }
 
     try {
+      logInfo(`[Desktop] Checking API health at ${API_URL}/api/healthz...`);
       const response = await fetch(`${API_URL}/api/healthz`);
       if (response.ok) {
-        console.log("API is ready, loading application...");
-        mainWindow?.loadURL(API_URL);
+        logInfo("[Desktop] API is ready, loading application...");
+        await mainWindow?.loadURL(API_URL);
+        mainWindow?.show();
       } else {
-        console.log(`API check: ${response.status} ${response.statusText}`);
+        logInfo(
+          `[Desktop] API check: ${response.status} ${response.statusText}`,
+        );
         setTimeout(checkApi, 500);
       }
     } catch (err: any) {
-      console.log(`API check failed: ${err.message}`);
+      logInfo(`[Desktop] API check failed: ${err.message}`);
       setTimeout(checkApi, 500);
     }
   };
@@ -282,7 +513,9 @@ async function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  logInfo("[Desktop] App ready, starting API...");
   await startApi();
+  logInfo("[Desktop] Creating window...");
   createWindow();
 });
 
@@ -299,6 +532,7 @@ app.on("activate", () => {
 });
 
 app.on("will-quit", () => {
+  logInfo("[Desktop] App quitting, killing API process...");
   if (apiProcess) {
     apiProcess.kill();
   }

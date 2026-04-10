@@ -40,6 +40,7 @@ export const drinksTable = sqliteTable("drinks", {
   taxRate: real("tax_rate").notNull().default(0),
   actualPrice: real("actual_price").notNull().default(0),
   markupFactor: real("markup_factor").notNull().default(3.0),
+  sourceType: text("source_type").notNull().default("standard"),
   isAvailable: integer("is_available", { mode: "boolean" })
     .notNull()
     .default(true),
@@ -80,6 +81,9 @@ export const shiftsTable = sqliteTable("shifts", {
     .notNull()
     .default(sql`(unixepoch())`),
   closedAt: integer("closed_at", { mode: "timestamp" }),
+  expectedCashMxn: real("expected_cash_mxn"),
+  actualCashMxn: real("actual_cash_mxn"),
+  cashVarianceMxn: real("cash_variance_mxn"),
 });
 
 export const tabsTable = sqliteTable("tabs", {
@@ -149,6 +153,7 @@ export const settingsTable = sqliteTable("settings", {
   baseCurrency: text("base_currency").notNull().default("MXN"),
   usdToMxnRate: real("usd_to_mxn_rate").notNull().default(17.5),
   cadToMxnRate: real("cad_to_mxn_rate").notNull().default(12.8),
+  /** @deprecated Use relative markup in UI instead */
   defaultMarkupFactor: real("default_markup_factor").notNull().default(3.0),
   smtpHost: text("smtp_host"),
   smtpPort: integer("smtp_port"),
@@ -286,7 +291,10 @@ export const eventLogsTable = sqliteTable("event_logs", {
     .default(sql`(unixepoch())`),
 });
 
+// DEPRECATED: These types are kept for backward compatibility but should not be used
+// @deprecated since v0.3.0 - use InventoryItem types from inventory.ts instead
 export type Ingredient = typeof _ingredientsTable.$inferSelect;
+// @deprecated since v0.3.0 - use InventoryItem types from inventory.ts instead
 export type InsertIngredient = typeof _ingredientsTable.$inferInsert;
 
 export type Drink = typeof drinksTable.$inferSelect;

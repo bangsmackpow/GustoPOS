@@ -11,7 +11,8 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/.generated/**",
       "**/generated/**",
-      "**/*.mjs"
+      "**/*.mjs",
+      "test-db.js",
     ],
   },
   js.configs.recommended,
@@ -28,16 +29,22 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/no-explicit-any": "off", // Too many to fix right now
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
       "@typescript-eslint/no-namespace": "off", // Used for Express augmentation
       "@typescript-eslint/no-empty-object-type": "off", // Used for Express augmentation
     },
   },
   // React-specific configuration
   {
-    files: ["artifacts/gusto-pos/**/*.{ts,tsx}", "artifacts/mockup-sandbox/**/*.{ts,tsx}"],
+    files: [
+      "artifacts/gusto-pos/**/*.{ts,tsx}",
+      "artifacts/mockup-sandbox/**/*.{ts,tsx}",
+    ],
     plugins: {
-      "react": reactPlugin,
+      react: reactPlugin,
       "react-hooks": reactHooksPlugin,
     },
     settings: {
@@ -50,8 +57,11 @@ export default tseslint.config(
       ...reactHooksPlugin.configs.recommended.rules,
       "react/react-in-jsx-scope": "off",
       "react/prop-types": "off", // TS handles this
-      "react/no-unknown-property": ["error", { ignore: ["cmdk-input-wrapper"] }],
+      "react/no-unknown-property": [
+        "error",
+        { ignore: ["cmdk-input-wrapper"] },
+      ],
       "react-hooks/exhaustive-deps": "warn",
     },
-  }
+  },
 );

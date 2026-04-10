@@ -23,6 +23,7 @@ async function hashPin(pin: string): Promise<string> {
 function formatUser(u: typeof usersTable.$inferSelect) {
   return {
     id: u.id,
+    username: u.username,
     email: u.email,
     firstName: u.firstName,
     lastName: u.lastName,
@@ -45,31 +46,48 @@ router.get("/", async (req: Request, res: Response) => {
 
 router.post("/", async (req: Request, res: Response) => {
   try {
-    const parsed = CreateUserBody.safeParse(req.body);
-    if (!parsed.success) {
-      console.warn("[createUser] Validation failed:", parsed.error.format());
-      return res.status(400).json({
-        error: "Invalid request body",
-        details: parsed.error.format(),
-      });
+    // Manual validation for better error messages
+    const {
+      firstName,
+      lastName,
+      username,
+      email,
+      role,
+      language,
+      pin,
+      password,
+    } = req.body;
+
+    if (!firstName || typeof firstName !== "string") {
+      return res.status(400).json({ error: "First name is required" });
+    }
+    if (!role || !["admin", "employee"].includes(role)) {
+      return res
+        .status(400)
+        .json({ error: "Valid role is required (admin, employee)" });
+    }
+    if (!language || !["en", "es"].includes(language)) {
+      return res
+        .status(400)
+        .json({ error: "Valid language is required (en, es)" });
     }
 
-    const data = parsed.data;
-
-    if (data.pin && !isValidPin(data.pin)) {
+    // Validate PIN if provided
+    if (pin && !isValidPin(pin)) {
       return res.status(400).json({
         error: "PIN must be 4 digits and not all the same (e.g., 0000, 1111)",
       });
     }
 
     const insertData: typeof usersTable.$inferInsert = {
-      firstName: data.firstName,
-      lastName: data.lastName || "",
-      email: data.email || null,
-      role: data.role,
-      language: data.language || "en",
-      pin: data.pin ? await hashPin(data.pin) : await hashPin("0000"),
-      password: data.password || null,
+      firstName: firstName,
+      lastName: lastName || "",
+      username: username || null,
+      email: email || null,
+      role: role,
+      language: language || "en",
+      pin: pin ? await hashPin(pin) : await hashPin("0000"),
+      password: password || null,
       isActive: true,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -86,7 +104,9 @@ router.post("/", async (req: Request, res: Response) => {
         .status(409)
         .json({ error: "A user with that email already exists" });
     }
-    return res.status(500).json({ error: "Internal server error" });
+    return res
+      .status(500)
+      .json({ error: err.message || "Internal server error" });
   }
 });
 
@@ -108,6 +128,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
 
     if (data.firstName !== undefined) updateData.firstName = data.firstName;
     if (data.lastName !== undefined) updateData.lastName = data.lastName;
+    if (data.username !== undefined) updateData.username = data.username;
     if (data.email !== undefined) updateData.email = data.email;
     if (data.role !== undefined) updateData.role = data.role as any;
     if (data.language !== undefined) updateData.language = data.language as any;

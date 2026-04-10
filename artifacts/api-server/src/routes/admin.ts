@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import fs from "fs";
+import path from "path";
 import { initializeDatabase } from "@workspace/db";
 import {
   createBackup,
@@ -17,15 +18,29 @@ router.post(
   "/reset-database",
   async (req: Request, res: Response): Promise<void> => {
     try {
-      const dbPath = process.env.DATABASE_URL?.replace(/^file:\/{1,3}/, "");
-      if (!dbPath || !fs.existsSync(dbPath)) {
+      // Get database path directly from environment
+      const dbPath =
+        process.env.DATABASE_URL?.replace(/^file:\/{1,3}/, "") || "./gusto.db";
+      const absoluteDbPath = path.isAbsolute(dbPath)
+        ? dbPath
+        : path.resolve(process.cwd(), dbPath);
+
+      if (!fs.existsSync(absoluteDbPath)) {
         res.status(400).json({ error: "Database file not found" });
         return;
       }
 
-      fs.unlinkSync(dbPath);
-      console.log(`[Reset] Deleted database file: ${dbPath}`);
+      // Delete the database file (connection will be recreated on next access)
+      fs.unlinkSync(absoluteDbPath);
+      console.log(`[Reset] Deleted database file: ${absoluteDbPath}`);
 
+      // Also delete WAL files if they exist
+      const walPath = absoluteDbPath + "-wal";
+      const shmPath = absoluteDbPath + "-shm";
+      if (fs.existsSync(walPath)) fs.unlinkSync(walPath);
+      if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath);
+
+      // Re-initialize the database
       await initializeDatabase();
       console.log("[Reset] Database re-initialized successfully");
 

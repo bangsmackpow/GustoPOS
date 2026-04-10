@@ -207,6 +207,7 @@ export default function Settings() {
     barIcon: "Wine",
     usdToMxnRate: 0,
     cadToMxnRate: 0,
+    defaultMarkupFactor: 0,
     smtpHost: "",
     smtpPort: 587,
     smtpUser: "",
@@ -261,7 +262,6 @@ export default function Settings() {
     type: "cruise" as const,
     impact: "medium" as const,
     startTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-    endTime: "",
     description: "",
   });
 
@@ -297,6 +297,7 @@ export default function Settings() {
         barIcon: settings.barIcon || "Wine",
         usdToMxnRate: settings.usdToMxnRate,
         cadToMxnRate: settings.cadToMxnRate,
+        defaultMarkupFactor: settings.defaultMarkupFactor,
         smtpHost: settings.smtpHost || "",
         smtpPort: settings.smtpPort || 587,
         smtpUser: settings.smtpUser || "",
@@ -871,28 +872,6 @@ export default function Settings() {
   const handleSaveStaff = () => {
     if (!editingStaff) return;
 
-    if (!editingStaff.firstName?.trim()) {
-      toast({
-        variant: "destructive",
-        title: getTranslation("error", language),
-        description: "First name is required",
-      });
-      return;
-    }
-
-    if (!editingStaff.role) {
-      toast({
-        variant: "destructive",
-        title: getTranslation("error", language),
-        description: "Role is required",
-      });
-      return;
-    }
-
-    if (!editingStaff.language) {
-      editingStaff.language = "en";
-    }
-
     const { password, ...rest } = editingStaff;
 
     if (editingStaff.id) {
@@ -956,7 +935,6 @@ export default function Settings() {
             type: "cruise" as const,
             impact: "medium" as const,
             startTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-            endTime: "",
             description: "",
           });
           refetchRushes();
@@ -1045,284 +1023,6 @@ export default function Settings() {
         <p className="text-muted-foreground mt-1">Configure your POS system</p>
       </div>
 
-      {/* Rush Events */}
-      <section className="glass rounded-3xl p-6 space-y-6">
-        <div className="flex justify-between items-center border-b border-white/5 pb-2">
-          <h3 className="text-lg font-medium text-primary flex items-center gap-2">
-            <Zap size={18} /> Rush Events
-          </h3>
-          <Button size="sm" onClick={() => setShowAddRush(true)}>
-            <Plus size={16} className="mr-2" /> Schedule Rush
-          </Button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-white/5 text-muted-foreground text-sm">
-                <th className="p-3 font-medium">Event</th>
-                <th className="p-3 font-medium">Type</th>
-                <th className="p-3 font-medium">Impact</th>
-                <th className="p-3 font-medium">Start Time</th>
-                <th className="p-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {rushes?.map((rush: any) => (
-                <tr
-                  key={rush.id}
-                  className="hover:bg-white/5 transition-colors"
-                >
-                  <td className="p-3 font-medium text-sm">{rush.title}</td>
-                  <td className="p-3">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 capitalize">
-                      {rush.type?.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={
-                        "text-xs font-medium px-2 py-1 rounded-full " +
-                        (rush.impact === "high"
-                          ? "bg-red-500/20 text-red-400"
-                          : rush.impact === "medium"
-                            ? "bg-yellow-500/20 text-yellow-400"
-                            : "bg-emerald-500/20 text-emerald-400")
-                      }
-                    >
-                      {rush.impact}
-                    </span>
-                  </td>
-                  <td className="p-3 text-sm text-muted-foreground">
-                    {rush.startTime
-                      ? format(new Date(rush.startTime), "PPp")
-                      : "—"}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteRush(rush)}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      {/* Audit Logs */}
-      <section className="glass rounded-3xl p-6 space-y-6">
-        <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
-          <Shield size={18} /> Audit Logs
-        </h3>
-        <div className="flex gap-2 mb-4">
-          {["all", "tab", "inventory", "user"].map((filter) => {
-            const isActive = auditFilter === filter;
-            return (
-              <button
-                key={filter}
-                onClick={() => {
-                  setAuditFilter(
-                    filter as "all" | "tab" | "inventory" | "user",
-                  );
-                  setAuditOffset(0);
-                  fetchAuditLogs(0, filter);
-                }}
-                className={
-                  "px-4 py-2 rounded-lg font-medium text-sm transition-colors " +
-                  (isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary border border-white/10 hover:bg-white/5")
-                }
-              >
-                {filter === "all"
-                  ? "All Events"
-                  : filter.charAt(0).toUpperCase() + filter.slice(1)}
-              </button>
-            );
-          })}
-        </div>
-
-        {auditLoading ? (
-          <div className="text-center py-8 text-muted-foreground">
-            Loading...
-          </div>
-        ) : auditLogs.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            No audit logs found
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-white/5 text-muted-foreground text-xs">
-                  <th className="p-3 font-medium">Timestamp</th>
-                  <th className="p-3 font-medium">User</th>
-                  <th className="p-3 font-medium">Action</th>
-                  <th className="p-3 font-medium">Entity</th>
-                  <th className="p-3 font-medium">Changes</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {auditLogs.map((log, idx) => (
-                  <tr key={idx} className="hover:bg-white/5 transition-colors">
-                    <td className="p-3 whitespace-nowrap text-muted-foreground">
-                      {log.createdAt
-                        ? new Date(log.createdAt).toLocaleString()
-                        : "—"}
-                    </td>
-                    <td className="p-3 text-sm font-medium">
-                      {log.userName || log.userId}
-                    </td>
-                    <td className="p-3">
-                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/20 text-primary">
-                        {log.action?.replace(/_/g, " ")}
-                      </span>
-                    </td>
-                    <td className="p-3 text-sm">
-                      {log.entityType} / {log.entityId?.slice(0, 8)}...
-                    </td>
-                    <td className="p-3 text-xs">
-                      {log.reason && (
-                        <span className="text-muted-foreground">
-                          {log.reason}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {auditLogs.length > 0 && (
-          <div className="flex justify-between items-center mt-4">
-            <button
-              onClick={() => {
-                const newOffset = Math.max(0, auditOffset - 50);
-                setAuditOffset(newOffset);
-                fetchAuditLogs(newOffset, auditFilter);
-              }}
-              disabled={auditOffset === 0}
-              className="px-4 py-2 rounded-lg bg-secondary border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-colors"
-            >
-              Previous
-            </button>
-            <span className="text-sm text-muted-foreground">
-              Offset: {auditOffset}
-            </span>
-            <button
-              onClick={() => {
-                const newOffset = auditOffset + 50;
-                setAuditOffset(newOffset);
-                fetchAuditLogs(newOffset, auditFilter);
-              }}
-              disabled={auditLogs.length < 50}
-              className="px-4 py-2 rounded-lg bg-secondary border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-colors"
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </section>
-
-      {/* Staff Management */}
-      <section className="glass rounded-3xl p-6 space-y-6">
-        <div className="flex justify-between items-center border-b border-white/5 pb-2">
-          <h3 className="text-lg font-medium text-primary flex items-center gap-2">
-            <Users size={18} /> Staff Management
-          </h3>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              onClick={() =>
-                setEditingStaff({
-                  firstName: "",
-                  lastName: "",
-                  username: "",
-                  email: "",
-                  role: "employee",
-                  language: "en",
-                  pin: "",
-                })
-              }
-            >
-              <Plus size={16} className="mr-2" /> Add Staff
-            </Button>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-white/5 text-muted-foreground text-sm">
-                <th className="p-3 font-medium">Name</th>
-                <th className="p-3 font-medium">Username</th>
-                <th className="p-3 font-medium">Role</th>
-                <th className="p-3 font-medium">PIN</th>
-                <th className="p-3 font-medium">Status</th>
-                <th className="p-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {users?.map((user: any) => (
-                <tr
-                  key={user.id}
-                  className="hover:bg-white/5 transition-colors"
-                >
-                  <td className="p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-                        {user.firstName?.[0]}
-                        {user.lastName?.[0]}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">
-                          {user.firstName} {user.lastName}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="p-3 text-sm text-muted-foreground">
-                    {user.username || user.email || "—"}
-                  </td>
-                  <td className="p-3">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 capitalize">
-                      {user.role?.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="p-3 font-mono text-sm">{user.pin || "—"}</td>
-                  <td className="p-3">
-                    <span
-                      className={
-                        "text-xs font-medium px-2 py-1 rounded-full " +
-                        (user.isActive
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-secondary text-muted-foreground")
-                      }
-                    >
-                      {user.isActive ? "Active" : "Archived"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingStaff(user)}
-                    >
-                      <Edit2 size={16} />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-
       {/* Branding & Config */}
       <section className="glass rounded-3xl p-6 space-y-6">
         <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
@@ -1395,6 +1095,23 @@ export default function Settings() {
                   setFormData({
                     ...formData,
                     cadToMxnRate: parseFloat(e.target.value) || 0,
+                  })
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-muted-foreground mb-2 uppercase">
+                Default Markup Factor
+              </label>
+              <input
+                type="number"
+                step="0.1"
+                className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                value={formData.defaultMarkupFactor || ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    defaultMarkupFactor: parseFloat(e.target.value) || 0,
                   })
                 }
               />
@@ -1524,6 +1241,99 @@ export default function Settings() {
       {/* SMTP / Notifications - DISABLED for offline-first deployment */}
       {/* Email notifications not available in local/offline mode */}
 
+      {/* Staff Management */}
+      <section className="glass rounded-3xl p-6 space-y-6">
+        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+          <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+            <Users size={18} /> Staff Management
+          </h3>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() =>
+                setEditingStaff({
+                  firstName: "",
+                  lastName: "",
+                  username: "",
+                  email: "",
+                  role: "employee",
+                  pin: "",
+                  isActive: true,
+                })
+              }
+            >
+              <Plus size={16} className="mr-2" /> Add Staff
+            </Button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-white/5 text-muted-foreground text-sm">
+                <th className="p-3 font-medium">Name</th>
+                <th className="p-3 font-medium">Username</th>
+                <th className="p-3 font-medium">Role</th>
+                <th className="p-3 font-medium">PIN</th>
+                <th className="p-3 font-medium">Status</th>
+                <th className="p-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {users?.map((user: any) => (
+                <tr
+                  key={user.id}
+                  className="hover:bg-white/5 transition-colors"
+                >
+                  <td className="p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                        {user.firstName?.[0]}
+                        {user.lastName?.[0]}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">
+                          {user.firstName} {user.lastName}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-3 text-sm text-muted-foreground">
+                    {user.username || user.email || "—"}
+                  </td>
+                  <td className="p-3">
+                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 capitalize">
+                      {user.role?.replace("_", " ")}
+                    </span>
+                  </td>
+                  <td className="p-3 font-mono text-sm">{user.pin || "—"}</td>
+                  <td className="p-3">
+                    <span
+                      className={
+                        "text-xs font-medium px-2 py-1 rounded-full " +
+                        (user.isActive
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : "bg-secondary text-muted-foreground")
+                      }
+                    >
+                      {user.isActive ? "Active" : "Archived"}
+                    </span>
+                  </td>
+                  <td className="p-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingStaff(user)}
+                    >
+                      <Edit2 size={16} />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       {/* Data Management */}
       <section className="glass rounded-3xl p-6 space-y-6">
         <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -1578,6 +1388,74 @@ export default function Settings() {
               {isResetting ? "Resetting..." : "Delete all data"}
             </span>
           </Button>
+        </div>
+      </section>
+
+      {/* Rush Events */}
+      <section className="glass rounded-3xl p-6 space-y-6">
+        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+          <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+            <Zap size={18} /> Rush Events
+          </h3>
+          <Button size="sm" onClick={() => setShowAddRush(true)}>
+            <Plus size={16} className="mr-2" /> Schedule Rush
+          </Button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-white/5 text-muted-foreground text-sm">
+                <th className="p-3 font-medium">Event</th>
+                <th className="p-3 font-medium">Type</th>
+                <th className="p-3 font-medium">Impact</th>
+                <th className="p-3 font-medium">Start Time</th>
+                <th className="p-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {rushes?.map((rush: any) => (
+                <tr
+                  key={rush.id}
+                  className="hover:bg-white/5 transition-colors"
+                >
+                  <td className="p-3 font-medium text-sm">{rush.title}</td>
+                  <td className="p-3">
+                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 capitalize">
+                      {rush.type?.replace("_", " ")}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <span
+                      className={
+                        "text-xs font-medium px-2 py-1 rounded-full " +
+                        (rush.impact === "high"
+                          ? "bg-red-500/20 text-red-400"
+                          : rush.impact === "medium"
+                            ? "bg-yellow-500/20 text-yellow-400"
+                            : "bg-emerald-500/20 text-emerald-400")
+                      }
+                    >
+                      {rush.impact}
+                    </span>
+                  </td>
+                  <td className="p-3 text-sm text-muted-foreground">
+                    {rush.startTime
+                      ? format(new Date(rush.startTime), "PPp")
+                      : "—"}
+                  </td>
+                  <td className="p-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteRush(rush)}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -1684,8 +1562,7 @@ export default function Settings() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">
-                    {getTranslation("first_name", language)}{" "}
-                    <span className="text-red-500">*</span>
+                    {getTranslation("first_name", language)}
                   </label>
                   <input
                     className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
@@ -1824,8 +1701,7 @@ export default function Settings() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">
-                    {getTranslation("role", language)}{" "}
-                    <span className="text-red-500">*</span>
+                    {getTranslation("role", language)}
                   </label>
                   <select
                     className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
@@ -2261,6 +2137,124 @@ export default function Settings() {
           </div>
         </div>
       )}
+
+      {/* Delete All Data Confirmation Modal */}
+      {/* Audit Logs */}
+      <section className="glass rounded-3xl p-6 space-y-6">
+        <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
+          <Shield size={18} /> Audit Logs
+        </h3>
+        <div className="flex gap-2 mb-4">
+          {["all", "tab", "inventory", "user"].map((filter) => {
+            const isActive = auditFilter === filter;
+            return (
+              <button
+                key={filter}
+                onClick={() => {
+                  setAuditFilter(
+                    filter as "all" | "tab" | "inventory" | "user",
+                  );
+                  setAuditOffset(0);
+                  fetchAuditLogs(0, filter);
+                }}
+                className={
+                  "px-4 py-2 rounded-lg font-medium text-sm transition-colors " +
+                  (isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary border border-white/10 hover:bg-white/5")
+                }
+              >
+                {filter === "all"
+                  ? "All Events"
+                  : filter.charAt(0).toUpperCase() + filter.slice(1)}
+              </button>
+            );
+          })}
+        </div>
+
+        {auditLoading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading...
+          </div>
+        ) : auditLogs.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No audit logs found
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/5 text-muted-foreground text-xs">
+                  <th className="p-3 font-medium">Timestamp</th>
+                  <th className="p-3 font-medium">User</th>
+                  <th className="p-3 font-medium">Action</th>
+                  <th className="p-3 font-medium">Entity</th>
+                  <th className="p-3 font-medium">Changes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {auditLogs.map((log, idx) => (
+                  <tr key={idx} className="hover:bg-white/5 transition-colors">
+                    <td className="p-3 whitespace-nowrap text-muted-foreground">
+                      {log.createdAt
+                        ? new Date(log.createdAt).toLocaleString()
+                        : "—"}
+                    </td>
+                    <td className="p-3 text-sm font-medium">
+                      {log.userName || log.userId}
+                    </td>
+                    <td className="p-3">
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-primary/20 text-primary">
+                        {log.action?.replace(/_/g, " ")}
+                      </span>
+                    </td>
+                    <td className="p-3 text-sm">
+                      {log.entityType} / {log.entityId?.slice(0, 8)}...
+                    </td>
+                    <td className="p-3 text-xs">
+                      {log.reason && (
+                        <span className="text-muted-foreground">
+                          {log.reason}
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {auditLogs.length > 0 && (
+          <div className="flex justify-between items-center mt-4">
+            <button
+              onClick={() => {
+                const newOffset = Math.max(0, auditOffset - 50);
+                setAuditOffset(newOffset);
+                fetchAuditLogs(newOffset, auditFilter);
+              }}
+              disabled={auditOffset === 0}
+              className="px-4 py-2 rounded-lg bg-secondary border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-colors"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-muted-foreground">
+              Offset: {auditOffset}
+            </span>
+            <button
+              onClick={() => {
+                const newOffset = auditOffset + 50;
+                setAuditOffset(newOffset);
+                fetchAuditLogs(newOffset, auditFilter);
+              }}
+              disabled={auditLogs.length < 50}
+              className="px-4 py-2 rounded-lg bg-secondary border border-white/10 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/5 transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </section>
 
       {/* Delete Data Modal */}
       {showDeleteDataModal && (

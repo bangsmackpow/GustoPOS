@@ -569,6 +569,16 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                force:
+                  type: boolean
+                actualCashMxn:
+                  type: number
       responses:
         "200":
           description: Closed shift
@@ -1079,11 +1089,13 @@ components:
           type: string
         lastName:
           type: string
+        username:
+          type: ["string", "null"]
         email:
           type: ["string", "null"]
         role:
           type: string
-          enum: [admin, manager, head_bartender, bartender, server]
+          enum: [admin, employee]
         language:
           type: string
           enum: [en, es]
@@ -1104,11 +1116,13 @@ components:
           type: ["string", "null"]
         lastName:
           type: ["string", "null"]
+        username:
+          type: ["string", "null"]
         email:
           type: ["string", "null"]
         role:
           type: string
-          enum: [admin, manager, head_bartender, bartender, server]
+          enum: [admin, employee]
         language:
           type: string
           enum: [en, es]
@@ -1140,7 +1154,9 @@ components:
           type: number
         servingSize:
           type: number
-        tareWeightG:
+        sellSingleServing:
+          type: boolean
+        singleServingPrice:
           type: ["number", "null"]
         fullBottleWeightG:
           type: ["number", "null"]
@@ -1194,7 +1210,9 @@ components:
           type: number
         servingSize:
           type: number
-        tareWeightG:
+        sellSingleServing:
+          type: boolean
+        singleServingPrice:
           type: ["number", "null"]
         fullBottleWeightG:
           type: ["number", "null"]
@@ -1232,7 +1250,9 @@ components:
           type: ["number", "null"]
         servingSize:
           type: ["number", "null"]
-        tareWeightG:
+        sellSingleServing:
+          type: ["boolean", "null"]
+        singleServingPrice:
           type: ["number", "null"]
         fullBottleWeightG:
           type: ["number", "null"]
@@ -1280,6 +1300,9 @@ components:
           type: ["string", "null"]
         category:
           type: string
+        sourceType:
+          type: string
+          default: standard
         costPerDrink:
           type: number
         suggestedPrice:
@@ -1597,6 +1620,12 @@ components:
           type: string
         openedByUserName:
           type: ["string", "null"]
+        expectedCashMxn:
+          type: ["number", "null"]
+        actualCashMxn:
+          type: ["number", "null"]
+        cashVarianceMxn:
+          type: ["number", "null"]
       required:
         - id
         - name

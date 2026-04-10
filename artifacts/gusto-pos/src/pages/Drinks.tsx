@@ -16,11 +16,16 @@ import {
   ArrowDown,
   Trash2,
   Search,
-  ChevronRight,
   Menu,
   Copy as CopyIcon,
+  ChefHat,
+  Beaker,
+  Wine,
+  ChevronRight,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+
+const OZ_TO_ML = 44.36;
 
 const DRINK_CATEGORIES = [
   { value: "all", label: "All", labelEs: "Todos" },
@@ -334,7 +339,6 @@ export default function Drinks() {
                   name: "",
                   nameEs: "",
                   category: "cocktail",
-                  markupFactor: 3,
                   actualPrice: null,
                   recipe: [],
                   isAvailable: true,
@@ -452,11 +456,21 @@ export default function Drinks() {
                               )}
                             </button>
                           </td>
-                          <td className="p-4 font-medium">
-                            <div>
-                              {language === "es" && drink.nameEs
-                                ? drink.nameEs
-                                : drink.name}
+                          <td className="p-4">
+                            <div className="flex items-center gap-2">
+                              {drink.sourceType === "inventory_single" ? (
+                                <Wine size={14} className="text-primary" />
+                              ) : (
+                                <ChefHat
+                                  size={14}
+                                  className="text-muted-foreground"
+                                />
+                              )}
+                              <span>
+                                {language === "es" && drink.nameEs
+                                  ? drink.nameEs
+                                  : drink.name}
+                              </span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">
                               {drink.recipe
@@ -477,7 +491,7 @@ export default function Drinks() {
                             <div className="flex flex-col">
                               <span>{formatMoney(marginDollars)}</span>
                               <span className="text-xs text-muted-foreground">
-                                {marginPercent.toFixed(0)}%
+                                {marginPercent.toFixed(0)}% Margin
                               </span>
                             </div>
                           </td>
@@ -557,13 +571,26 @@ export default function Drinks() {
           isSaving={saveDrink.isPending}
           onSave={(data) => {
             const { costPerDrink: _c, suggestedPrice: _s, ...rest } = data;
+
+            // Convert OZ back to ML for storage before sending to API
+            const convertedRecipe = (rest.recipe || []).map((r: any) => {
+              const ing = ingredients?.find(
+                (i: any) => i.id === r.ingredientId,
+              );
+              let amount = r.amountInBaseUnit || 0;
+              if (ing && ing.baseUnit === "ml") {
+                amount = amount * OZ_TO_ML;
+              }
+              return {
+                ingredientId: r.ingredientId,
+                amountInBaseUnit: amount,
+              };
+            });
+
             const saveData = {
               ...rest,
               nameEs: rest.nameEs || rest.name,
-              recipe: (rest.recipe || []).map((r: any) => ({
-                ingredientId: r.ingredientId,
-                amountInBaseUnit: r.amountInBaseUnit || 0,
-              })),
+              recipe: convertedRecipe,
             };
             saveDrink.mutate(
               { id: editingDrink.id, data: saveData },
@@ -624,7 +651,19 @@ function DrinkModal({
   isSaving: boolean;
 }) {
   const { toast } = useToast();
-  const [editing, setEditing] = useState(drink);
+  // On initialization, convert DB ML values to OZ for display
+  const [editing, setEditing] = useState(() => {
+    const displayRecipe = (drink.recipe || []).map((r: any) => {
+      const ing = ingredients.find((i: any) => i.id === r.ingredientId);
+      let amount = r.amountInBaseUnit || 0;
+      if (ing && ing.baseUnit === "ml" && amount > 5) {
+        // Threshold to avoid double conversion of already converted small values if any
+        amount = parseFloat((amount / OZ_TO_ML).toFixed(2));
+      }
+      return { ...r, amountInBaseUnit: amount };
+    });
+    return { ...drink, recipe: displayRecipe };
+  });
 
   const handleSave = () => {
     if (!editing.name.trim()) {
@@ -680,7 +719,7 @@ function DrinkModal({
       if (ing) {
         newRecipe[idx].ingredientName =
           language === "es" && ing.nameEs ? ing.nameEs : ing.name;
-        newRecipe[idx].amountInBaseUnit = ing.pourSize || 1.5;
+        newRecipe[idx].amountInBaseUnit = ing.servingSize || 1.5;
       }
     }
 
@@ -770,136 +809,179 @@ function DrinkModal({
               <option value="other">{getTranslation("other", language)}</option>
             </select>
           </div>
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
             <label className="text-sm font-medium text-muted-foreground">
               {getTranslation("actual_price_label", language)}
             </label>
-            <input
-              type="number"
-              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-              value={editing.actualPrice ?? ""}
-              onChange={(e) =>
-                setEditing({
-                  ...editing,
-                  actualPrice: e.target.value
-                    ? parseFloat(e.target.value)
-                    : null,
-                })
-              }
-              placeholder={editing.suggestedPrice?.toFixed(2)}
-            />
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                $
+              </span>
+              <input
+                type="number"
+                className="w-full bg-secondary border border-white/10 rounded-xl pl-8 pr-4 py-3 text-lg font-bold text-emerald-400"
+                value={editing.actualPrice ?? ""}
+                onChange={(e) =>
+                  setEditing({
+                    ...editing,
+                    actualPrice: e.target.value
+                      ? parseFloat(e.target.value)
+                      : null,
+                  })
+                }
+                placeholder="0.00"
+              />
+            </div>
           </div>
         </div>
 
         <div className="mb-6">
           <h3 className="font-medium text-lg flex items-center gap-2 mb-4">
             {getTranslation("recipe_ingredients", language)}
+            {editing.sourceType === "inventory_single" && (
+              <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                {getTranslation("pooled", language) || "Linked to Inventory"}
+              </span>
+            )}
           </h3>
 
-          <div className="space-y-3 mb-4">
-            {(editing.recipe || []).map((item: any, idx: number) => (
-              <div
-                key={idx}
-                className="flex flex-col gap-2 p-3 rounded-xl bg-white/5 border border-white/5 animate-in fade-in slide-in-from-left-2"
-              >
-                <div className="flex gap-2 items-center">
-                  <select
-                    className="flex-1 bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
-                    value={item.subtype || ""}
-                    onChange={(e) =>
-                      updateRecipeItem(idx, { subtype: e.target.value })
-                    }
+          {editing.sourceType === "inventory_single" ? (
+            <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 italic text-sm text-muted-foreground">
+              {getTranslation("pooled_recipe_notice", language) ||
+                "This drink is a direct pour from inventory. Recipe is managed automatically via serving sizes."}
+              <div className="mt-2 flex gap-4">
+                {(editing.recipe || []).map((r: any, i: number) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 not-italic text-foreground"
                   >
-                    <option value="">
-                      {getTranslation("select_subtype", language)}
-                    </option>
-                    {subtypes.map((sub) => (
-                      <option key={sub} value={sub}>
-                        {getTranslation(sub, language) || sub}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    className="flex-1 bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
-                    value={item.ingredientId || ""}
-                    onChange={(e) =>
-                      updateRecipeItem(idx, { ingredientId: e.target.value })
-                    }
-                    disabled={!item.subtype}
-                  >
-                    <option value="">
-                      {getTranslation("select_ingredient", language)}
-                    </option>
-                    {getIngredientsBySubtype(item.subtype).map((ing: any) => (
-                      <option key={ing.id} value={ing.id}>
-                        {language === "es" && ing.nameEs
-                          ? ing.nameEs
-                          : ing.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="relative w-28">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      className="w-full bg-secondary border border-white/10 rounded-xl pl-3 pr-8 py-2 text-foreground text-sm"
-                      value={item.amountInBaseUnit || 0}
-                      onChange={(e) =>
-                        updateRecipeItem(idx, {
-                          amountInBaseUnit: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                    />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase font-bold">
-                      oz
-                    </span>
+                    <Wine size={14} className="text-primary" />
+                    <span>{r.ingredientName}</span>
+                    <span className="font-bold">{r.amountInBaseUnit} oz</span>
                   </div>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-destructive shrink-0"
-                    onClick={() => removeRecipeItem(idx)}
-                  >
-                    <X size={16} />
-                  </Button>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3 mb-4">
+                {(editing.recipe || []).map((item: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="flex flex-col gap-2 p-3 rounded-xl bg-white/5 border border-white/5 animate-in fade-in slide-in-from-left-2"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <select
+                        className="flex-1 bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
+                        value={item.subtype || ""}
+                        onChange={(e) =>
+                          updateRecipeItem(idx, { subtype: e.target.value })
+                        }
+                      >
+                        <option value="">
+                          {getTranslation("select_subtype", language)}
+                        </option>
+                        {subtypes.map((sub) => (
+                          <option key={sub} value={sub}>
+                            {getTranslation(sub, language) || sub}
+                          </option>
+                        ))}
+                      </select>
 
-          <Button
-            variant="outline"
-            className="w-full border-dashed border-white/20 hover:bg-white/5 h-12"
-            onClick={addRecipeItem}
-          >
-            <Plus size={16} className="mr-2" />{" "}
-            {getTranslation("add_ingredient", language)}
-          </Button>
+                      <select
+                        className="flex-1 bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
+                        value={item.ingredientId || ""}
+                        onChange={(e) =>
+                          updateRecipeItem(idx, {
+                            ingredientId: e.target.value,
+                          })
+                        }
+                        disabled={!item.subtype}
+                      >
+                        <option value="">
+                          {getTranslation("select_ingredient", language)}
+                        </option>
+                        {getIngredientsBySubtype(item.subtype).map(
+                          (ing: any) => (
+                            <option key={ing.id} value={ing.id}>
+                              {language === "es" && ing.nameEs
+                                ? ing.nameEs
+                                : ing.name}
+                            </option>
+                          ),
+                        )}
+                      </select>
+
+                      <div className="relative w-28">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          className="w-full bg-secondary border border-white/10 rounded-xl pl-3 pr-8 py-2 text-foreground text-sm"
+                          value={item.amountInBaseUnit || 0}
+                          onChange={(e) =>
+                            updateRecipeItem(idx, {
+                              amountInBaseUnit: parseFloat(e.target.value) || 0,
+                            })
+                          }
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground uppercase font-bold">
+                          oz
+                        </span>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={() => removeRecipeItem(idx)}
+                      >
+                        <X size={16} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                variant="outline"
+                className="w-full border-dashed border-white/20 hover:bg-white/5 h-12"
+                onClick={addRecipeItem}
+              >
+                <Plus size={16} className="mr-2" />{" "}
+                {getTranslation("add_ingredient", language)}
+              </Button>
+            </>
+          )}
         </div>
 
-        <div className="bg-primary/5 rounded-2xl p-4 mb-8 border border-primary/10">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">
+        <div className="bg-primary/5 rounded-2xl p-6 mb-8 border border-primary/10 grid grid-cols-2 gap-6">
+          <div className="space-y-1">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
               {getTranslation("estimated_cost_label", language)}
             </span>
-            <span className="font-bold text-primary">
+            <div className="text-2xl font-display text-destructive">
               {formatMoney(editing.costPerDrink || 0)}
-            </span>
+            </div>
           </div>
-          <div className="flex justify-between items-center text-sm mt-1">
-            <span className="text-muted-foreground">
-              {getTranslation("markup_label", language).replace(
-                "{factor}",
-                editing.markupFactor,
-              )}
+          <div className="space-y-1 text-right">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              {getTranslation("analytics", language) || "Analytics"}
             </span>
-            <span className="font-bold">
-              {formatMoney((editing.costPerDrink || 0) * editing.markupFactor)}
-            </span>
+            <div className="flex flex-col items-end">
+              <span
+                className={`text-xl font-bold ${editing.actualPrice && editing.costPerDrink && editing.actualPrice > editing.costPerDrink ? "text-emerald-400" : "text-red-400"}`}
+              >
+                {editing.actualPrice && editing.costPerDrink
+                  ? `${(((editing.actualPrice - editing.costPerDrink) / editing.costPerDrink) * 100).toFixed(0)}% Markup`
+                  : "--% Markup"}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {editing.actualPrice && editing.costPerDrink
+                  ? `${(((editing.actualPrice - editing.costPerDrink) / editing.actualPrice) * 100).toFixed(0)}% Margin`
+                  : "--% Margin"}
+              </span>
+            </div>
           </div>
         </div>
 

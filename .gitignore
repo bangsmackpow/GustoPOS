@@ -87,6 +87,7 @@ stack.env
 *.db-journal
 *.db-shm
 *.db-wal
+app_launch.log
 
 # Session/IDE artifacts
 *.swp

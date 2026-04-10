@@ -127,10 +127,3 @@ export default function pinLoginRouter(): express.Router {
 
   return router;
 }
-
-// Export a verify router for future PIN verification endpoints
-export function pinVerifyRouter(): express.Router {
-  const router = express.Router();
-  // Reserved for future use: verify PIN without login, etc.
-  return router;
-}

@@ -141,6 +141,7 @@ router.get("/shifts/active", async (req: Request, res: Response) => {
 
 router.post("/shifts/:id/close", async (req: Request, res: Response) => {
   const force = req.body?.force === true;
+  const actualCashMxn = typeof req.body?.actualCashMxn === "number" ? req.body.actualCashMxn : 0;
 
   // Check for open tabs before allowing shift close
   const openTabs = await db
@@ -164,9 +165,29 @@ router.post("/shifts/:id/close", async (req: Request, res: Response) => {
     });
   }
 
+  const allShiftTabs = await db
+    .select()
+    .from(tabsTable)
+    .where(
+      and(
+        eq(tabsTable.shiftId, req.params.id as string),
+        eq(tabsTable.status, "closed")
+      )
+    );
+  const expectedCashMxn = allShiftTabs
+    .filter((t) => t.paymentMethod === "cash")
+    .reduce((sum, t) => sum + Number(t.totalMxn), 0);
+  const cashVarianceMxn = actualCashMxn - expectedCashMxn;
+
   const [shift] = await db
     .update(shiftsTable)
-    .set({ status: "closed", closedAt: new Date() })
+    .set({ 
+      status: "closed", 
+      closedAt: new Date(),
+      expectedCashMxn,
+      actualCashMxn,
+      cashVarianceMxn
+    })
     .where(eq(shiftsTable.id, req.params.id as string))
     .returning();
   if (!shift) {

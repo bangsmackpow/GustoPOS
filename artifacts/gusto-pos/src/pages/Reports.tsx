@@ -55,6 +55,8 @@ export default function Reports() {
   const [auditHistory, setAuditHistory] = useState<any>(null);
   const [varianceSummary, setVarianceSummary] = useState<any>(null);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [showCloseModal, setShowCloseModal] = useState(false);
+  const [actualCash, setActualCash] = useState("");
 
   // Find currently active shift
   const activeShift = shifts?.find((s) => s.status === "active");
@@ -74,14 +76,14 @@ export default function Reports() {
     startShift.mutate({ data: { name, openedByUserId: activeStaff.id } });
   };
 
-  const handleCloseShift = async () => {
+  const executeCloseShift = async () => {
     if (!activeShift) return;
-    if (!confirm(getTranslation("confirm_close_shift", language))) return;
 
     try {
       const res = await fetch(`/api/shifts/${activeShift.id}/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actualCashMxn: Number(actualCash) }),
       });
 
       const data = await res.json();
@@ -96,6 +98,7 @@ export default function Reports() {
       }
 
       // Success - invalidate queries
+      setShowCloseModal(false);
       window.location.reload();
     } catch (err: any) {
       // Error already handled above if it's an open tabs error
@@ -223,7 +226,7 @@ export default function Reports() {
               <Button
                 variant="destructive"
                 className="h-14 px-8 rounded-2xl gap-2 shadow-lg shadow-destructive/20"
-                onClick={handleCloseShift}
+                onClick={() => setShowCloseModal(true)}
               >
                 <StopCircle size={20} />{" "}
                 {getTranslation("close_shift", language)}
@@ -385,6 +388,29 @@ export default function Reports() {
                       ).toFixed(0)}
                     </p>
                   </div>
+
+                  {report.shift?.cashVarianceMxn !== null && report.shift?.cashVarianceMxn !== undefined && (
+                    <div className="glass p-6 rounded-3xl border border-white/5">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${
+                        report.shift.cashVarianceMxn >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-destructive/20 text-destructive"
+                      }`}>
+                        <DollarSign size={20} />
+                      </div>
+                      <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">
+                        Cash Variance
+                      </p>
+                      <div className="mt-1">
+                        <p className={`text-3xl font-display font-bold ${
+                          report.shift.cashVarianceMxn >= 0 ? "text-emerald-400" : "text-destructive"
+                        }`}>
+                          {report.shift.cashVarianceMxn >= 0 ? "+" : ""}${report.shift.cashVarianceMxn.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">
+                          Expected: ${report.shift.expectedCashMxn?.toLocaleString() ?? 0}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Profit Insights */}
@@ -1405,6 +1431,53 @@ export default function Reports() {
               >
                 Go to Dashboard
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Close Shift Modal */}
+      {showCloseModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90 backdrop-blur-xl">
+          <div className="glass p-8 rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-2xl">
+            <h2 className="text-3xl font-display font-bold mb-4 flex items-center gap-3">
+              <StopCircle className="text-destructive" />
+              {getTranslation("close_shift", language)}
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              Enter the exact amount of cash physically in the drawer to calculate variance.
+            </p>
+            
+            <div className="mb-8">
+              <label className="text-sm font-medium text-muted-foreground mb-2 block uppercase tracking-wider">
+                Actual Drawer Cash
+              </label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <input
+                  type="number"
+                  value={actualCash}
+                  onChange={(e) => setActualCash(e.target.value)}
+                  className="w-full bg-secondary border border-white/10 rounded-2xl pl-8 pr-4 py-4 text-2xl font-display font-bold text-foreground focus:ring-primary focus:border-primary transition-all"
+                  placeholder="0.00"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={executeCloseShift}
+                className="w-full h-14 bg-destructive text-destructive-foreground rounded-2xl font-bold text-lg hover:brightness-110 transition-all active:scale-95"
+              >
+                Confirm Close
+              </button>
+              <button
+                onClick={() => setShowCloseModal(false)}
+                className="w-full h-14 bg-transparent text-muted-foreground rounded-2xl font-medium text-lg hover:text-foreground transition-all"
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

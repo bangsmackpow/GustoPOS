@@ -185,6 +185,24 @@ SELECT 1;
 
 ---
 
+### 5. Duplicate Column Name in Migrations
+
+**Error**: `SQLITE_ERROR: duplicate column name: parent_item_id`
+
+**Cause**: A column is defined in the initial migration (`0000_*.sql`) via `CREATE TABLE`, but also attempted to be added via `ALTER TABLE` in a subsequent migration.
+
+**Fix**: Remove the `ALTER TABLE ... ADD COLUMN` statement from the later migration. The column already exists in the initial schema.
+
+**Example**: `parent_item_id` was in both `0000_redundant_prodigy.sql` (line 269) and `0001_add_inventory_columns.sql`. Removed from 0001.
+
+**To fix existing installations**: Delete the corrupted database and reinstall:
+
+```bash
+rm -f ~/Library/Application\ Support/@workspace/desktop-app/gusto.db
+```
+
+---
+
 ## Build Configuration
 
 ### Required Dependencies in `artifacts/api-server/build.mjs`

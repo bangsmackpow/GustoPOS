@@ -92,10 +92,7 @@ export type CreateUserBodyRole =
 
 export const CreateUserBodyRole = {
   admin: "admin",
-  manager: "manager",
-  head_bartender: "head_bartender",
-  bartender: "bartender",
-  server: "server",
+  employee: "employee",
 } as const;
 
 export type CreateUserBodyLanguage =
@@ -110,6 +107,8 @@ export interface CreateUserBody {
   firstName: string;
   lastName?: string;
   /** @nullable */
+  username?: string | null;
+  /** @nullable */
   email?: string | null;
   role: CreateUserBodyRole;
   language: CreateUserBodyLanguage;
@@ -123,10 +122,7 @@ export type UpdateUserBodyRole =
 
 export const UpdateUserBodyRole = {
   admin: "admin",
-  manager: "manager",
-  head_bartender: "head_bartender",
-  bartender: "bartender",
-  server: "server",
+  employee: "employee",
 } as const;
 
 export type UpdateUserBodyLanguage =
@@ -142,6 +138,8 @@ export interface UpdateUserBody {
   firstName?: string | null;
   /** @nullable */
   lastName?: string | null;
+  /** @nullable */
+  username?: string | null;
   /** @nullable */
   email?: string | null;
   role?: UpdateUserBodyRole;
@@ -184,8 +182,9 @@ export interface Ingredient {
   baseUnit: IngredientBaseUnit;
   baseUnitAmount: number;
   servingSize: number;
+  sellSingleServing?: boolean;
   /** @nullable */
-  tareWeightG?: number | null;
+  singleServingPrice?: number | null;
   /** @nullable */
   fullBottleWeightG?: number | null;
   currentStock: number;
@@ -226,8 +225,9 @@ export interface CreateIngredientBody {
   baseUnit: CreateIngredientBodyBaseUnit;
   baseUnitAmount: number;
   servingSize: number;
+  sellSingleServing?: boolean;
   /** @nullable */
-  tareWeightG?: number | null;
+  singleServingPrice?: number | null;
   /** @nullable */
   fullBottleWeightG?: number | null;
   currentStock: number;
@@ -253,7 +253,9 @@ export interface UpdateIngredientBody {
   /** @nullable */
   servingSize?: number | null;
   /** @nullable */
-  tareWeightG?: number | null;
+  sellSingleServing?: boolean | null;
+  /** @nullable */
+  singleServingPrice?: number | null;
   /** @nullable */
   fullBottleWeightG?: number | null;
   /** @nullable */
@@ -288,6 +290,7 @@ export interface Drink {
   /** @nullable */
   descriptionEs?: string | null;
   category: string;
+  sourceType?: string;
   costPerDrink: number;
   suggestedPrice: number;
   /** @nullable */
@@ -542,6 +545,12 @@ export interface Shift {
   openedByUserId: string;
   /** @nullable */
   openedByUserName?: string | null;
+  /** @nullable */
+  expectedCashMxn?: number | null;
+  /** @nullable */
+  actualCashMxn?: number | null;
+  /** @nullable */
+  cashVarianceMxn?: number | null;
 }
 
 export interface ShiftOrNull {
@@ -924,3 +933,8 @@ export const GetTabsStatus = {
   closed: "closed",
   all: "all",
 } as const;
+
+export type CloseShiftBody = {
+  force?: boolean;
+  actualCashMxn?: number;
+};

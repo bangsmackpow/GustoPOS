@@ -10,7 +10,6 @@ import { eq } from "drizzle-orm";
 
 const IngredientRowSchema = z.object({
   name: z.string().min(1, "Name is required").trim(),
-  nameEs: z.string().optional().nullable(),
   type: z
     .string()
     .default("spirit")
@@ -19,29 +18,18 @@ const IngredientRowSchema = z.object({
   baseUnit: z.string().default("ml"),
   baseUnitAmount: z.coerce.number().positive().default(750),
   bulkUnit: z.string().optional().nullable(),
-  bulkSize: z.coerce.number().optional().nullable(),
-  partialUnit: z.string().optional().nullable(),
   servingSize: z.coerce.number().positive().default(44.36),
   servingUnit: z.string().optional().nullable(),
-  pourSize: z.coerce.number().optional().nullable(),
   bottleSizeMl: z.coerce.number().optional().nullable(),
-  alcoholDensity: z.coerce.number().optional().nullable(),
-  density: z.coerce.number().optional().nullable(),
-  tareWeightG: z.coerce.number().optional().nullable(),
-  glassWeightG: z.coerce.number().optional().nullable(),
   fullBottleWeightG: z.coerce.number().optional().nullable(),
   orderCost: z.coerce.number().nonnegative().default(0),
-  markupFactor: z.coerce.number().positive().default(3.0),
   currentStock: z.coerce.number().nonnegative().default(0),
-  currentBulk: z.coerce.number().nonnegative().default(0),
   currentPartial: z.coerce.number().nonnegative().default(0),
-  lowStockMethod: z.string().optional().nullable(),
-  lowStockManualThreshold: z.coerce.number().optional().nullable(),
-  lowStockPercent: z.coerce.number().optional().nullable(),
-  lowStockUsageDays: z.coerce.number().optional().nullable(),
   lowStockThreshold: z.coerce.number().nonnegative().default(1),
   unitsPerCase: z.coerce.number().positive().default(1),
   isOnMenu: z.boolean().optional().default(false),
+  sellSingleServing: z.boolean().optional().default(false),
+  singleServingPrice: z.coerce.number().optional().nullable(),
   // Aliases for source fields
   unitSize: z.coerce.number().optional(),
   size: z.coerce.number().optional(),
@@ -61,6 +49,7 @@ const DrinkRowSchema = z.object({
   category: z.string().default("cocktail"),
   markupFactor: z.coerce.number().positive().default(3.0),
   actualPrice: z.coerce.number().optional().nullable(),
+  sourceType: z.string().default("standard"),
   recipe: z
     .array(
       z.object({
@@ -144,6 +133,9 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
       let skippedCount = 0;
       let errorCount = 0;
 
+      // Track parents for auto-pooling within this session
+      const nameToParentId = new Map<string, string>();
+
       for (const { data: item } of validRows) {
         const name = item.name;
         const type = item.type;
@@ -155,45 +147,56 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
           item.baseUnitAmount || item.unitSize || item.size || 750;
         const servingSize = item.servingSize || 44.36;
         const servingUnit = item.servingUnit || null;
-        const pourSize = item.pourSize || null;
         const bottleSizeMl = item.bottleSizeMl || null;
-        const alcoholDensity = item.alcoholDensity
-          ? Number(item.alcoholDensity)
-          : 0.955;
-        const density = item.density ? Number(item.density) : 0.94;
-        const tareWeightG = item.tareWeightG ? Number(item.tareWeightG) : null;
-        const glassWeightG = item.glassWeightG
-          ? Number(item.glassWeightG)
-          : null;
-        const fullBottleWeightG = item.fullBottleWeightG
-          ? Number(item.fullBottleWeightG)
+        const fullBottleWeightG = item.fullBottleWeightG || null;
+        // Calculate glassWeightG from fullBottleWeightG if provided
+        const density = 0.94; // Default density
+        const glassWeightG = fullBottleWeightG
+          ? fullBottleWeightG - baseUnitAmount * density
           : null;
         const currentStock = item.currentStock || item.stock || item.qty || 0;
-        const currentBulk = item.currentBulk || 0;
         const currentPartial = item.currentPartial || 0;
         const orderCost = item.orderCost || item.cost || item.bulkCost || 0;
-        const markupFactor = item.markupFactor || 3.0;
-        const lowStockMethod = item.lowStockMethod || "manual";
-        const lowStockManualThreshold = item.lowStockManualThreshold || null;
-        const lowStockPercent = item.lowStockPercent || null;
-        const lowStockUsageDays = item.lowStockUsageDays || null;
         const lowStockThreshold =
-          item.lowStockManualThreshold ||
-          item.lowStockThreshold ||
-          item.min ||
-          item.minimumStock ||
-          1;
+          item.lowStockThreshold || item.min || item.minimumStock || 1;
         const unitsPerCase = item.unitsPerCase || 1;
         const isOnMenu = item.isOnMenu ? 1 : 0;
+        const singleServingPrice = item.singleServingPrice || null;
+        const sellSingleServing =
+          singleServingPrice && singleServingPrice > 0 ? 1 : 0;
         const bulkUnit = item.bulkUnit || null;
-        const bulkSize = item.bulkSize ? Number(item.bulkSize) : null;
-        const partialUnit = item.partialUnit || null;
 
         try {
+          // AUTO-POOLING logic: ONLY for Spirits and Mixers
+          let parentItemId: string | null = null;
+          const isPooledType = type === "spirit" || type === "mixer";
+
+          if (isPooledType) {
+            if (nameToParentId.has(name)) {
+              parentItemId = nameToParentId.get(name)!;
+            } else {
+              // Check DB for an existing top-level item with this name
+              const [dbParent] = await tx
+                .select()
+                .from(inventoryItemsTable)
+                .where(eq(inventoryItemsTable.name, name))
+                .limit(1);
+
+              if (dbParent) {
+                // If it's already a variation, find its parent
+                parentItemId = dbParent.parentItemId || dbParent.id;
+                nameToParentId.set(name, parentItemId);
+              }
+            }
+          }
+
+          // Search criteria for "existing" depends on strategy
+          // For spirits/mixers, we might want to check name + size if we allow multiple variations in DB
           const [existing] = await tx
             .select()
             .from(inventoryItemsTable)
-            .where(eq(inventoryItemsTable.name, name));
+            .where(eq(inventoryItemsTable.name, name))
+            .limit(1);
 
           if (existing) {
             if (strategy === "skip") {
@@ -202,39 +205,29 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
             }
 
             if (strategy === "merge") {
-              // Merge: only update empty/missing fields, keep existing values
               await tx
                 .update(inventoryItemsTable)
                 .set({
-                  nameEs: item.nameEs || existing.nameEs,
                   type: existing.type,
                   subtype: subtype || existing.subtype,
                   baseUnit: existing.baseUnit,
                   baseUnitAmount: existing.baseUnitAmount,
                   bulkUnit: bulkUnit || existing.bulkUnit,
-                  bulkSize: bulkSize || existing.bulkSize,
-                  partialUnit: partialUnit || existing.partialUnit,
                   servingSize: existing.servingSize,
                   servingUnit: servingUnit || existing.servingUnit,
-                  pourSize: pourSize || existing.pourSize,
                   bottleSizeMl: bottleSizeMl || existing.bottleSizeMl,
-                  alcoholDensity: existing.alcoholDensity,
-                  density: existing.density,
-                  tareWeightG: existing.tareWeightG,
-                  glassWeightG: glassWeightG || existing.glassWeightG,
                   fullBottleWeightG:
                     fullBottleWeightG || existing.fullBottleWeightG,
+                  glassWeightG: glassWeightG || existing.glassWeightG,
                   orderCost: existing.orderCost,
-                  markupFactor: existing.markupFactor,
                   currentStock: existing.currentStock,
-                  currentBulk: existing.currentBulk,
                   currentPartial: existing.currentPartial,
-                  lowStockMethod: existing.lowStockMethod,
-                  lowStockManualThreshold: existing.lowStockManualThreshold,
-                  lowStockPercent: existing.lowStockPercent,
-                  lowStockUsageDays: existing.lowStockUsageDays,
+                  lowStockThreshold: existing.lowStockThreshold,
                   unitsPerCase: existing.unitsPerCase,
                   isOnMenu: existing.isOnMenu,
+                  sellSingleServing: !!existing.sellSingleServing,
+                  singleServingPrice: existing.singleServingPrice,
+                  parentItemId: existing.parentItemId,
                   updatedAt: new Date(),
                 })
                 .where(eq(inventoryItemsTable.id, existing.id));
@@ -244,74 +237,140 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 .update(inventoryItemsTable)
                 .set({
                   name,
-                  nameEs: item.nameEs || existing.nameEs || null,
                   type,
                   subtype,
                   baseUnit,
                   baseUnitAmount,
                   bulkUnit,
-                  bulkSize,
-                  partialUnit,
                   servingSize,
                   servingUnit,
-                  pourSize,
                   bottleSizeMl,
-                  alcoholDensity,
-                  density,
-                  tareWeightG,
-                  glassWeightG,
                   fullBottleWeightG,
+                  glassWeightG,
                   orderCost,
-                  markupFactor,
                   currentStock,
-                  currentBulk,
                   currentPartial,
-                  lowStockMethod,
-                  lowStockManualThreshold,
-                  lowStockPercent,
-                  lowStockUsageDays,
                   lowStockThreshold,
                   unitsPerCase,
                   isOnMenu: !!isOnMenu,
+                  sellSingleServing: !!sellSingleServing,
+                  singleServingPrice,
+                  parentItemId: parentItemId || existing.parentItemId,
                   updatedAt: new Date(),
                 })
                 .where(eq(inventoryItemsTable.id, existing.id));
             }
+
+            // Sync drinks for existing item update
+            if (isOnMenu) {
+              const drinkData = {
+                name: name,
+                category: type,
+                actualPrice: 0,
+                isAvailable: true,
+                isOnMenu: true,
+                sourceType: "inventory_single",
+                updatedAt: new Date(),
+              };
+              const [existingDrink] = await tx
+                .select()
+                .from(drinksTable)
+                .where(eq(drinksTable.id, existing.id));
+              if (existingDrink) {
+                await tx
+                  .update(drinksTable)
+                  .set(drinkData)
+                  .where(eq(drinksTable.id, existing.id));
+              } else {
+                await tx
+                  .insert(drinksTable)
+                  .values({ id: existing.id, ...drinkData });
+              }
+            }
+
+            if (sellSingleServing) {
+              const singleDrinkId = `${existing.id}-single`;
+              const singleDrinkData = {
+                name: `${name} (Shot)`,
+                category: type,
+                actualPrice: singleServingPrice || 0,
+                isAvailable: true,
+                isOnMenu: true,
+                sourceType: "inventory_single",
+                updatedAt: new Date(),
+              };
+              const [existingSingle] = await tx
+                .select()
+                .from(drinksTable)
+                .where(eq(drinksTable.id, singleDrinkId));
+              if (existingSingle) {
+                await tx
+                  .update(drinksTable)
+                  .set(singleDrinkData)
+                  .where(eq(drinksTable.id, singleDrinkId));
+              } else {
+                await tx
+                  .insert(drinksTable)
+                  .values({ id: singleDrinkId, ...singleDrinkData });
+              }
+            }
           } else {
             // Insert new item
-            await tx.insert(inventoryItemsTable).values({
-              name,
-              nameEs: item.nameEs || null,
-              type,
-              subtype,
-              baseUnit,
-              baseUnitAmount,
-              bulkUnit,
-              bulkSize,
-              partialUnit,
-              servingSize,
-              servingUnit,
-              pourSize,
-              bottleSizeMl,
-              alcoholDensity,
-              density,
-              tareWeightG,
-              glassWeightG,
-              fullBottleWeightG,
-              orderCost,
-              markupFactor,
-              currentStock,
-              currentBulk,
-              currentPartial,
-              lowStockMethod,
-              lowStockManualThreshold,
-              lowStockPercent,
-              lowStockUsageDays,
-              lowStockThreshold,
-              unitsPerCase,
-              isOnMenu: !!isOnMenu,
-              updatedAt: new Date(),
-            });
+            const [inserted] = await tx
+              .insert(inventoryItemsTable)
+              .values({
+                name,
+                type,
+                subtype,
+                baseUnit,
+                baseUnitAmount,
+                bulkUnit,
+                servingSize,
+                servingUnit,
+                bottleSizeMl,
+                fullBottleWeightG,
+                glassWeightG,
+                orderCost,
+                currentStock,
+                currentPartial,
+                lowStockThreshold,
+                unitsPerCase,
+                isOnMenu: !!isOnMenu,
+                sellSingleServing: !!sellSingleServing,
+                singleServingPrice,
+                parentItemId,
+                updatedAt: new Date(),
+              } as any)
+              .returning();
+
+            // Create drinks for new item
+            if (isOnMenu) {
+              await tx.insert(drinksTable).values({
+                id: inserted.id,
+                name: name,
+                category: type,
+                actualPrice: 0,
+                isAvailable: true,
+                isOnMenu: true,
+                sourceType: "inventory_single",
+              });
+            }
+
+            if (sellSingleServing) {
+              await tx.insert(drinksTable).values({
+                id: `${inserted.id}-single`,
+                name: `${name} (Shot)`,
+                category: type,
+                actualPrice: singleServingPrice || 0,
+                isAvailable: true,
+                isOnMenu: true,
+                sourceType: "inventory_single",
+              });
+            }
+
+            if (isPooledType && !parentItemId) {
+              nameToParentId.set(name, inserted.id);
+            }
           }
           processedCount++;
         } catch (itemErr: any) {
@@ -406,10 +465,10 @@ router.post("/bulk-drinks", async (req: Request, res: Response) => {
               description: item.description || null,
               descriptionEs: item.descriptionEs || null,
               category: item.category || "cocktail",
-              markupFactor: Number(item.markupFactor) || 3.0,
               actualPrice: item.actualPrice
                 ? Number(item.actualPrice)
                 : undefined,
+              sourceType: item.sourceType || "standard",
               updatedAt: new Date(),
             })
             .where(eq(drinksTable.id, existing.id))
@@ -427,6 +486,7 @@ router.post("/bulk-drinks", async (req: Request, res: Response) => {
               actualPrice: item.actualPrice
                 ? Number(item.actualPrice)
                 : undefined,
+              sourceType: item.sourceType || "standard",
             } as typeof drinksTable.$inferInsert)
             .returning();
         }
