@@ -153,7 +153,7 @@ router.patch("/tabs/:id/apply-code", async (req: Request, res: Response) => {
       .update(promoCodesTable)
       .set({
         currentUses: sql`${promoCodesTable.currentUses} + 1`,
-        updatedAt: new Date(),
+        updatedAt: Math.floor(Date.now() / 1000),
       })
       .where(eq(promoCodesTable.id, promo.id));
 

@@ -21,6 +21,7 @@ import {
   User,
   Globe,
   Search,
+  ChevronLeft,
 } from "lucide-react";
 import { usePosStore } from "@/store";
 import { getTranslation } from "@/lib/utils";
@@ -72,6 +73,7 @@ const ICON_MAP: Record<string, any> = {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location, setLocation] = useLocation();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const {
     language,
     setLanguage,
@@ -229,6 +231,27 @@ export function Layout({ children }: { children: React.ReactNode }) {
     }
   }, [isError, isSuccess, auth?.isAuthenticated, location, setLocation]);
 
+  // Sync authenticated user to activeStaff in store when auth succeeds
+  // This ensures PinPad-logged-in and Login-logged-in users both populate activeStaff
+  useEffect(() => {
+    if (isSuccess && auth?.isAuthenticated && auth?.user) {
+      // Map AuthUser to StaffUser format for the store
+      const staffUser = {
+        id: auth.user.id,
+        email: auth.user.email ?? null,
+        username: auth.user.email ?? null,
+        firstName: auth.user.firstName ?? "",
+        lastName: auth.user.lastName ?? "",
+        role: auth.user.role,
+        language: auth.user.language,
+        profileImageUrl: auth.user.profileImageUrl ?? null,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+      setActiveStaff(staffUser);
+    }
+  }, [isSuccess, auth?.isAuthenticated, auth?.user]);
+
   // Only show loading on initial load, NOT on background refetches
   // isFetching triggers on every staleTime:0 refetch which would block UI perpetually
   if (isLoading && location !== "/login") {
@@ -277,25 +300,47 @@ export function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen bg-background overflow-hidden text-foreground">
       {/* Sidebar */}
-      <aside className="w-24 lg:w-64 glass flex flex-col border-r border-white/5 z-20">
-        <div className="h-24 flex items-center justify-center lg:justify-start lg:px-8 border-b border-white/5">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-amber-300 flex items-center justify-center shadow-lg shadow-primary/20">
+      <aside
+        className={`glass flex flex-col border-r border-white/5 z-20 transition-all duration-300 ${
+          sidebarCollapsed ? "w-16" : "w-24 lg:w-64"
+        }`}
+      >
+        <div className="h-24 flex items-center justify-center border-b border-white/5">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-amber-300 flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
             <BarIcon className="text-primary-foreground w-7 h-7" />
           </div>
-          <span className="ml-4 font-display font-bold text-xl hidden lg:block tracking-tight">
+          <span
+            className={`ml-4 font-display font-bold text-xl tracking-tight transition-opacity duration-300 ${
+              sidebarCollapsed ? "hidden" : "hidden lg:block"
+            }`}
+          >
             {settings?.barName || "Gusto"}
             <span className="text-primary">POS</span>
           </span>
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className={`ml-auto p-1.5 rounded-lg hover:bg-white/10 transition-colors ${
+              sidebarCollapsed ? "hidden lg:flex" : "flex"
+            }`}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <ChevronLeft
+              size={18}
+              className={`transition-transform duration-300 ${
+                sidebarCollapsed ? "rotate-180" : ""
+              }`}
+            />
+          </button>
         </div>
 
-        <nav className="flex-1 px-4 py-8 space-y-2">
+        <nav className="flex-1 px-2 py-8 space-y-1">
           {NAV_ITEMS.map((item) => {
             const isActive = location === item.path;
             const Icon = item.icon;
             return (
               <Link key={item.path} href={item.path}>
                 <button
-                  className={`w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 rounded-xl transition-all duration-200 group relative ${
+                  className={`w-full flex items-center justify-center lg:justify-start px-2 lg:px-4 py-3 rounded-xl transition-all duration-200 group relative ${
                     isActive
                       ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                       : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
@@ -309,13 +354,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         : "group-hover:scale-110 transition-transform"
                     }
                   />
-                  <span className="ml-3 font-medium hidden lg:block">
+                  <span
+                    className={`ml-3 font-medium transition-opacity duration-300 ${
+                      sidebarCollapsed ? "hidden" : "hidden lg:block"
+                    }`}
+                  >
                     {language === "en" ? item.labelEn : item.labelEs}
                   </span>
                   {isActive && (
                     <motion.div
                       layoutId="activeNav"
-                      className="absolute left-0 w-1 h-6 bg-white rounded-full hidden lg:block"
+                      className={`absolute bg-white rounded-full transition-all duration-300 ${
+                        sidebarCollapsed
+                          ? "left-1 w-0.5 h-5"
+                          : "left-0 w-1 h-6 hidden lg:block"
+                      }`}
                     />
                   )}
                 </button>
@@ -324,23 +377,31 @@ export function Layout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        <div className="p-4 border-t border-white/5 space-y-2">
+        <div className="p-2 border-t border-white/5 space-y-1">
           <button
             onClick={() => setLanguage(language === "en" ? "es" : "en")}
-            className="w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
+            className="w-full flex items-center justify-center lg:justify-start px-2 lg:px-4 py-3 rounded-xl text-muted-foreground hover:bg-white/5 hover:text-foreground transition-colors"
           >
             <Globe size={20} />
-            <span className="ml-3 font-medium hidden lg:block uppercase">
+            <span
+              className={`ml-3 font-medium uppercase transition-opacity duration-300 ${
+                sidebarCollapsed ? "hidden" : "hidden lg:block"
+              }`}
+            >
               {language}
             </span>
           </button>
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center lg:justify-start px-0 lg:px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+            className="w-full flex items-center justify-center lg:justify-start px-2 lg:px-4 py-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
           >
             <LogOut size={20} />
-            <span className="ml-3 font-medium hidden lg:block">
+            <span
+              className={`ml-3 font-medium transition-opacity duration-300 ${
+                sidebarCollapsed ? "hidden" : "hidden lg:block"
+              }`}
+            >
               {getTranslation("logout", language)}
             </span>
           </button>
@@ -348,7 +409,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
+      <main
+        className={`flex-1 flex flex-col relative overflow-hidden transition-all duration-300 ${
+          sidebarCollapsed ? "ml-0" : ""
+        }`}
+      >
         {/* Header */}
         <header className="h-24 glass border-b border-white/5 flex items-center justify-between px-8 z-10">
           <div className="flex items-center gap-4">
@@ -435,7 +500,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               {getTranslation("logout", language)}
             </h2>
             <p className="text-muted-foreground text-lg mb-8">
-              There are deleted items in the inventory trash. Would you like to **clear the trash** before logging out?
+              There are deleted items in the inventory trash. Would you like to
+              **clear the trash** before logging out?
             </p>
             <div className="space-y-3">
               <button

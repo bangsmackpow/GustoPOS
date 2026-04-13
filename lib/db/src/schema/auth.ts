@@ -3,7 +3,9 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import crypto from "crypto";
 
 export const usersTable = sqliteTable("users", {
-  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   username: text("username").unique(), // Primary login for Beta
   email: text("email").unique(),
   password: text("password"),
@@ -13,9 +15,13 @@ export const usersTable = sqliteTable("users", {
   role: text("role").notNull().default("employee"), // admin, employee (simplified horizontal structure)
   language: text("language").notNull().default("es"), // en, es
   pin: text("pin").notNull().default("0000"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  isActive: integer("is_active").notNull().default(1),
+  createdAt: integer("created_at")
+    .notNull()
+    .default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at")
+    .notNull()
+    .default(sql`(unixepoch())`),
 });
 
 export type UpsertUser = typeof usersTable.$inferInsert;

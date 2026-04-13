@@ -5,6 +5,7 @@ import usersRouter from "./users";
 import ingredientsRouter from "./ingredients";
 import inventoryRouter from "./inventory";
 import inventoryAuditsRouter from "./inventory-audits";
+import auditSessionsRouter from "./audit-sessions";
 import drinksRouter from "./drinks";
 import tabsRouter from "./tabs";
 import shiftsRouter from "./shifts";
@@ -20,6 +21,8 @@ import analyticsRouter from "./analytics";
 import taxRatesRouter from "./tax-rates";
 import staffShiftsRouter from "./staff-shifts";
 import staffPerformanceRouter from "./staff-performance";
+import periodsRouter from "./periods";
+import exportRouter from "./export";
 import { requireRole } from "../middlewares/authMiddleware";
 
 const router: IRouter = Router();
@@ -38,6 +41,7 @@ router.use("/settings", settingsRouter); // Read is open, write is guarded in ro
 router.use(ingredientsRouter);
 router.use("/inventory", inventoryRouter);
 router.use("/inventory-audits", inventoryAuditsRouter);
+router.use("/inventory/audit-sessions", auditSessionsRouter);
 router.use(drinksRouter);
 router.use(tabsRouter);
 router.use(shiftsRouter);
@@ -47,6 +51,8 @@ router.use(analyticsRouter);
 router.use("/tax-rates", taxRatesRouter);
 router.use("/staff-shifts", staffShiftsRouter);
 router.use("/staff-performance", staffPerformanceRouter);
+router.use("/periods", periodsRouter);
+router.use("/export", requireRole("admin"), exportRouter);
 router.use("/audit-logs", requireRole("admin"), auditLogsRouter);
 (async () => {
   if ((process.env.ADMIN_SEED_ENABLED || "false").toLowerCase() === "true") {

@@ -1,59 +1,246 @@
-# GustoPOS Workspace
+# GustoPOS - Point of Sale System
+
+GustoPOS is a comprehensive bar and restaurant management system built with a **"Thin Client, Smart API"** architecture. It is designed for reliability in low-connectivity and offline environments, making it ideal for bars, restaurants, and hospitality venues.
+
+---
 
 ## Overview
-GustoPOS is a professional bar management system designed for both high-connectivity cloud environments and low-connectivity "Standalone Hub" environments (like a bar in Puerto Vallarta).
+
+GustoPOS provides complete operational management for hospitality venues:
+
+- **Tab Management**: Open tabs, add orders, process payments, handle splits
+- **Inventory Tracking**: Pool (weight-based) and Collection (unit-based) inventory
+- **Drinks & Recipes**: Menu management with recipe ingredients
+- **Staff Management**: PIN-based login, shift tracking, performance analytics
+- **Reporting**: Sales reports, void analytics, staff performance, COGS tracking
+- **Accounting**: Period closing with cost of goods sold (COGS) calculations
 
 ---
 
-## 🚀 Choose Your Deployment Mode
+## Architecture
 
-### **Mode 1: Airgapped VirtualBox Appliance (Recommended for Standalone)**
-*   **Best for:** Standalone bars with NO internet or very poor connectivity.
-*   **Hardware:** Any laptop (Mac/Windows/Linux) running VirtualBox.
-*   **Features:** Auto-starts on boot, robust Debian base, automated USB updates.
-*   **Guide:** [VirtualBox Quick Start](./airgapped-deployment/VIRTUALBOX_QUICKSTART.md)
+### Technology Stack
 
-### **Mode 2: macOS / Windows Native Desktop App**
-*   **Best for:** Bars wanting a native "app" experience on a single computer.
-*   **Hardware:** Mac (Monterey+) or Windows PC.
-*   **Features:** Lightweight Electron wrapper, local SQLite persistence.
-*   **Guide:** [Desktop App Guide](./artifacts/desktop-app/README.md)
+| Layer                | Technology                  | Purpose                     |
+| -------------------- | --------------------------- | --------------------------- |
+| **Frontend**         | React + Vite + Tailwind CSS | User interface              |
+| **State Management** | TanStack Query              | Server state & caching      |
+| **API Server**       | Express.js                  | REST API endpoints          |
+| **Database**         | SQLite (LibSQL)             | Local-first data storage    |
+| **ORM**              | Drizzle                     | Type-safe database queries  |
+| **Logging**          | Pino                        | Structured JSON logging     |
+| **Desktop**          | Electron                    | Desktop application wrapper |
 
-### **Mode 3: Cloud / VPS Docker (Multi-Device & Mobile)**
-*   **Best for:** Bars with stable internet and staff using phones/tablets.
-*   **Hardware:** A central Linux server or stable local machine with Docker.
-*   **Features:** Multi-device sync, PWA mobile support, real-time reports.
-*   **Guide:** [Docker Deployment Guide](./DEPLOY_DOCKER.md)
+### Package Structure
+
+```
+GustoPOS/
+├── artifacts/               # Application packages
+│   ├── gusto-pos/          # Main React frontend
+│   ├── api-server/          # Express.js API server
+│   ├── desktop-app/         # Electron wrapper
+│   └── mockup-sandbox/     # Design sandbox
+├── lib/                     # Shared library packages
+│   ├── db/                  # Database layer & migrations
+│   ├── api-zod/            # Zod validation schemas
+│   ├── api-client-react/   # TanStack Query hooks
+│   └── api-spec/           # OpenAPI specification
+├── docs/                    # Documentation
+└── airgapped-deployment/   # VirtualBox deployment
+```
+
+### Deployment Options
+
+1. **Desktop App**: Electron wrapper for Mac/Windows (`.dmg`/`.exe`)
+2. **VirtualBox Appliance**: Debian-based VM for airgapped bars
+3. **Docker**: Standard containers for cloud/VPS deployment
 
 ---
 
-## 📦 Core Systems
+## Quick Start
 
-### **Advanced Inventory Tracking**
-Production-grade tracking with ml-precision:
-- ✅ **Methods:** Tare (weight-based), Bulk (weight/volume), and Count (discrete units).
-- ✅ **Alerts:** Manual threshold, Percentage-based, and Usage-based low stock alerts.
-- ✅ **Audit Trail:** Complete history of audits, adjustments, and variances.
+### Prerequisites
 
-### **Staff & Financials**
-- ✅ **Staff Management:** Clock-in/out logic, shift reports, and performance metrics.
-- ✅ **Financials:** Integrated tax rates, split payments, and promo code support.
+- Node.js >= 20
+- pnpm >= 8
 
----
-
-## 🛠 Developer Quick Start
+### Development
 
 ```bash
+# Install dependencies
 pnpm install
-pnpm run dev      # App available at http://localhost:5173
+
+# Start development servers (frontend + API)
+pnpm run dev
 ```
 
-**Build for Appliance:**
+The frontend runs on `http://localhost:5173` and the API on `http://localhost:3000`.
+
+### Production Build
+
 ```bash
-cd airgapped-deployment
-packer build -force packer-virtualbox.pkr.hcl
+# Build all packages
+pnpm run build
+
+# Build desktop application
+pnpm run build:desktop
+```
+
+### Running the API Server
+
+```bash
+ADMIN_PASSWORD=your-password PORT=3000 node ./dist/index.cjs
 ```
 
 ---
 
-**Happy serving! 🍹**
+## Key Features
+
+### Bartender Experience
+
+- **PIN Login**: Quick staff authentication
+- **Real-time Stock Status**: Drink cards show availability (green/yellow/red)
+- **Quantity Selector**: Select 1-20 units per order
+- **Split Bill**: Divide tab among 2-10 people
+
+### Inventory System
+
+- **Pool Tracking**: Weight-based (ml) for spirits, mixers, liquids
+- **Collection Tracking**: Unit-based for beer, merch, packaged goods
+- **Auto-tracking Mode**: Automatically determines tracking type
+- **Inventory Audits**: Record physical counts, track variance over time
+- **Variance Analysis**: Identify consistent overage/underage patterns
+
+### Accounting & Reporting
+
+- **Period Closing**: Daily/weekly/monthly period closes with COGS
+- **Sales Analytics**: Revenue, tips, discounts, voids by date range
+- **Void Analytics**: Track voided orders by reason, staff, and drink
+- **Staff Performance**: Sales, tabs, average ticket, tips per employee
+- **CSV Export**: Export sales, inventory, COGS, audit logs
+
+### System Defaults (Admin-configurable)
+
+- Default alcohol density
+- Default serving size (ml)
+- Default bottle size (ml)
+- Default tracking mode
+- Variance warning threshold
+
+---
+
+## Database Schema
+
+### Core Tables
+
+| Table                | Purpose                                |
+| -------------------- | -------------------------------------- |
+| `users`              | Staff accounts with PIN authentication |
+| `shifts`             | Work shift tracking                    |
+| `tabs`               | Customer tabs/orders                   |
+| `orders`             | Individual drink orders                |
+| `drinks`             | Menu items                             |
+| `recipe_ingredients` | Drink recipes                          |
+| `inventory_items`    | Inventory stock                        |
+| `inventory_audits`   | Audit history                          |
+| `periods`            | Accounting periods                     |
+| `cogs_entries`       | Cost of goods sold entries             |
+
+### Key Relationships
+
+```
+User → Shifts → Tabs → Orders → Drinks → RecipeIngredients → InventoryItems
+```
+
+---
+
+## API Endpoints
+
+### Authentication
+
+- `POST /api/pin-login` - Staff PIN login
+- `POST /api/admin-login` - Admin authentication
+
+### Tabs & Orders
+
+- `POST /api/tabs` - Create tab
+- `POST /api/tabs/:id/orders` - Add order
+- `PATCH /api/tabs/:id/close` - Close tab
+- `DELETE /api/tabs/orders/:id` - Void order (requires manager PIN)
+
+### Inventory
+
+- `GET /api/inventory/items` - List inventory
+- `POST /api/inventory/items` - Add item
+- `POST /api/inventory/items/:id/audit` - Record audit
+- `GET /api/inventory/variance` - Variance analysis
+
+### Reports & Analytics
+
+- `GET /api/shifts/:id/report` - Shift sales report
+- `GET /api/analytics/voids` - Void analytics
+- `GET /api/periods/:id/cogs` - COGS report
+
+### Export
+
+- `GET /api/export/sales` - Sales CSV
+- `GET /api/export/inventory` - Inventory CSV
+- `GET /api/export/cogs` - COGS CSV
+- `GET /api/export/audit-logs` - Audit logs CSV
+
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable         | Description            | Default           |
+| ---------------- | ---------------------- | ----------------- |
+| `ADMIN_PASSWORD` | Admin account password | (required)        |
+| `PORT`           | API server port        | 3000              |
+| `DATABASE_URL`   | Database file path     | `./data/gusto.db` |
+
+### Settings (Database)
+
+- Bar name and icon
+- Currency rates (USD, CAD to MXN)
+- SMTP configuration for email alerts
+- Backup settings (Litestream, USB)
+- System defaults for inventory
+
+---
+
+## Bilingual Support
+
+GustoPOS supports English and Spanish:
+
+- Language toggle on login screen
+- Staff language preference
+- Bilingual drink names and descriptions
+- All UI labels translated
+
+---
+
+## Version History
+
+- **v0.3.0+**: Production-ready with inventory auditing, accounting periods, void tracking
+- **v0.2.0**: Core POS with tabs, orders, inventory
+- **v0.1.0**: Initial release
+
+---
+
+## Documentation
+
+| Document                                   | Description                |
+| ------------------------------------------ | -------------------------- |
+| [USER_GUIDE.md](USER_GUIDE.md)             | End-user operational guide |
+| [ADMIN_GUIDE.md](ADMIN_GUIDE.md)           | Administrator guide        |
+| [ARCHITECTURE.md](ARCHITECTURE.md)         | Technical architecture     |
+| [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | Deployment & operations    |
+| [TESTING_GUIDE.md](TESTING_GUIDE.md)       | Testing procedures         |
+
+---
+
+## License
+
+MIT

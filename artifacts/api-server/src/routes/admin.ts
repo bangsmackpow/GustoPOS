@@ -124,6 +124,36 @@ router.delete(
 );
 
 router.get(
+  "/backups/:id/download",
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const backupId = req.params.id as string;
+      const backups = await listBackups();
+      const backup = backups.find(
+        (b) => b.filename === backupId || b.id === backupId,
+      );
+
+      if (!backup) {
+        res.status(404).json({ error: "Backup not found" });
+        return;
+      }
+
+      if (!fs.existsSync(backup.path)) {
+        res.status(404).json({ error: "Backup file not found" });
+        return;
+      }
+
+      res.download(backup.path, backup.filename);
+    } catch (err: any) {
+      console.error("[Backup] Download error:", err);
+      res
+        .status(500)
+        .json({ error: err.message || "Failed to download backup" });
+    }
+  },
+);
+
+router.get(
   "/backup-settings",
   async (req: Request, res: Response): Promise<void> => {
     try {

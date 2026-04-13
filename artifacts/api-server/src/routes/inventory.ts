@@ -3,9 +3,12 @@ import {
   db,
   inventoryItemsTable,
   inventoryCountsTable,
+  inventoryAuditsTable,
+  auditSessionsTable,
   drinksTable,
+  recipeIngredientsTable,
 } from "@workspace/db";
-import { eq, desc, lt } from "drizzle-orm";
+import { eq, desc, lt, sql } from "drizzle-orm";
 import { logEvent } from "../lib/auditLog";
 import { requireRole } from "../middlewares/authMiddleware";
 
@@ -17,11 +20,11 @@ function calculateFromWeight(
   item: typeof inventoryItemsTable.$inferSelect,
   weightG: number,
 ) {
-  if (!item.glassWeightG || !item.fullBottleWeightG) {
+  if (!item.containerWeightG || !item.fullBottleWeightG) {
     return { remainingBaseUnits: 0 };
   }
-  const liquidWeight = weightG - item.glassWeightG;
-  const fullLiquidWeight = item.fullBottleWeightG - item.glassWeightG;
+  const liquidWeight = weightG - item.containerWeightG;
+  const fullLiquidWeight = item.fullBottleWeightG - item.containerWeightG;
   const remainingBaseUnits =
     fullLiquidWeight > 0
       ? (liquidWeight / fullLiquidWeight) * item.baseUnitAmount
@@ -126,8 +129,8 @@ router.post("/items", async (req: Request, res: Response) => {
     if (data.pourSize) insertValues.pourSize = Number(data.pourSize);
     if (data.bottleSizeMl)
       insertValues.bottleSizeMl = Number(data.bottleSizeMl);
-    if (data.glassWeightG)
-      insertValues.glassWeightG = Number(data.glassWeightG);
+    if (data.containerWeightG)
+      insertValues.containerWeightG = Number(data.containerWeightG);
     if (data.density) insertValues.density = Number(data.density);
     if (data.fullBottleWeightG)
       insertValues.fullBottleWeightG = Number(data.fullBottleWeightG);
@@ -140,9 +143,12 @@ router.post("/items", async (req: Request, res: Response) => {
       insertValues.lowStockThreshold = Number(data.lowStockThreshold);
     if (data.unitsPerCase)
       insertValues.unitsPerCase = Number(data.unitsPerCase);
-    if (data.isOnMenu !== undefined) insertValues.isOnMenu = !!data.isOnMenu;
+    if (data.trackingMode !== undefined)
+      insertValues.trackingMode = data.trackingMode;
+    if (data.isOnMenu !== undefined)
+      insertValues.isOnMenu = data.isOnMenu ? 1 : 0;
     if (data.sellSingleServing !== undefined)
-      insertValues.sellSingleServing = !!data.sellSingleServing;
+      insertValues.sellSingleServing = data.sellSingleServing ? 1 : 0;
     if (data.singleServingPrice !== undefined)
       insertValues.singleServingPrice = Number(data.singleServingPrice);
     if (data.parentItemId) insertValues.parentItemId = data.parentItemId;
@@ -165,11 +171,19 @@ router.post("/items", async (req: Request, res: Response) => {
         nameEs: item.nameEs ?? null,
         category: item.type,
         actualPrice: 0,
-        isAvailable: true,
-        isOnMenu: true,
+        isAvailable: 1,
+        isOnMenu: 1,
         sourceType: "inventory_single",
       };
       await db.insert(drinksTable).values({ id: item.id, ...drinkData });
+
+      // Auto-create recipe ingredient linking to the inventory item itself
+      const servingSize = item.servingSize || 44.36; // Default 1.5oz
+      await db.insert(recipeIngredientsTable).values({
+        drinkId: item.id,
+        ingredientId: item.id,
+        amountInBaseUnit: servingSize,
+      });
     }
 
     if (item.sellSingleServing) {
@@ -179,13 +193,21 @@ router.post("/items", async (req: Request, res: Response) => {
         nameEs: item.nameEs ? `${item.nameEs} (Trago)` : null,
         category: item.type,
         actualPrice: item.singleServingPrice || 0,
-        isAvailable: true,
-        isOnMenu: true,
+        isAvailable: 1,
+        isOnMenu: 1,
         sourceType: "inventory_single",
       };
       await db
         .insert(drinksTable)
         .values({ id: singleDrinkId, ...singleDrinkData });
+
+      // Auto-create recipe for single serving
+      const servingSize = item.servingSize || 44.36;
+      await db.insert(recipeIngredientsTable).values({
+        drinkId: singleDrinkId,
+        ingredientId: item.id,
+        amountInBaseUnit: servingSize,
+      });
     }
 
     res.json(item);
@@ -207,7 +229,10 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
     if (Object.keys(data).length === 1 && data.isOnMenu !== undefined) {
       const [item] = await db
         .update(inventoryItemsTable)
-        .set({ isOnMenu: data.isOnMenu, updatedAt: new Date() })
+        .set({
+          isOnMenu: data.isOnMenu ? 1 : 0,
+          updatedAt: Math.floor(Date.now() / 1000),
+        })
         .where(eq(inventoryItemsTable.id, id))
         .returning();
 
@@ -226,14 +251,14 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
           nameEs: item.nameEs ?? null,
           category: item.type,
           actualPrice: 0,
-          isAvailable: true,
-          isOnMenu: true,
+          isAvailable: 1,
+          isOnMenu: 1,
         };
 
         if (existingDrink) {
           await db
             .update(drinksTable)
-            .set({ ...drinkData, updatedAt: new Date() })
+            .set({ ...drinkData, updatedAt: Math.floor(Date.now() / 1000) })
             .where(eq(drinksTable.id, existingDrink.id));
         } else {
           await db.insert(drinksTable).values({ id, ...drinkData });
@@ -296,9 +321,9 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       updateData.bottleSizeMl = data.bottleSizeMl
         ? Number(data.bottleSizeMl)
         : null;
-    if (data.glassWeightG !== undefined)
-      updateData.glassWeightG = data.glassWeightG
-        ? Number(data.glassWeightG)
+    if (data.containerWeightG !== undefined)
+      updateData.containerWeightG = data.containerWeightG
+        ? Number(data.containerWeightG)
         : null;
     if (data.density !== undefined) updateData.density = Number(data.density);
     if (data.fullBottleWeightG !== undefined)
@@ -316,9 +341,12 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       updateData.lowStockThreshold = Number(data.lowStockThreshold);
     if (data.unitsPerCase !== undefined)
       updateData.unitsPerCase = Number(data.unitsPerCase);
-    if (data.isOnMenu !== undefined) updateData.isOnMenu = !!data.isOnMenu;
+    if (data.trackingMode !== undefined)
+      updateData.trackingMode = data.trackingMode;
+    if (data.isOnMenu !== undefined)
+      updateData.isOnMenu = data.isOnMenu ? 1 : 0;
     if (data.sellSingleServing !== undefined)
-      updateData.sellSingleServing = !!data.sellSingleServing;
+      updateData.sellSingleServing = data.sellSingleServing ? 1 : 0;
     if (data.singleServingPrice !== undefined)
       updateData.singleServingPrice = data.singleServingPrice
         ? Number(data.singleServingPrice)
@@ -376,14 +404,14 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
           nameEs: item.nameEs ?? null,
           category: item.type,
           actualPrice: 0,
-          isAvailable: true,
-          isOnMenu: true,
+          isAvailable: 1,
+          isOnMenu: 1,
         };
 
         if (existingDrink) {
           await db
             .update(drinksTable)
-            .set({ ...drinkData, updatedAt: new Date() })
+            .set({ ...drinkData, updatedAt: Math.floor(Date.now() / 1000) })
             .where(eq(drinksTable.id, existingDrink.id));
         } else {
           await db.insert(drinksTable).values({ id: item.id, ...drinkData });
@@ -411,15 +439,18 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
           nameEs: item.nameEs ? `${item.nameEs} (Trago)` : null,
           category: item.type,
           actualPrice: item.singleServingPrice || 0,
-          isAvailable: true,
-          isOnMenu: true,
+          isAvailable: 1,
+          isOnMenu: 1,
           sourceType: "inventory_single",
         };
 
         if (existingSingleDrink) {
           await db
             .update(drinksTable)
-            .set({ ...singleDrinkData, updatedAt: new Date() })
+            .set({
+              ...singleDrinkData,
+              updatedAt: Math.floor(Date.now() / 1000),
+            })
             .where(eq(drinksTable.id, existingSingleDrink.id));
         } else {
           await db
@@ -445,7 +476,7 @@ router.delete("/items/:id", async (req: Request, res: Response) => {
 
     const [deleted] = await db
       .update(inventoryItemsTable)
-      .set({ isDeleted: true, updatedAt: new Date() })
+      .set({ isDeleted: 1, updatedAt: Math.floor(Date.now() / 1000) })
       .where(eq(inventoryItemsTable.id, id))
       .returning();
 
@@ -469,7 +500,7 @@ router.delete(
       console.log("[DELETE /trash/clear] Starting...");
       const result = await db
         .delete(inventoryItemsTable)
-        .where(eq(inventoryItemsTable.isDeleted, true))
+        .where(eq(inventoryItemsTable.isDeleted, 1))
         .returning();
 
       console.log("[DELETE /trash/clear] Deleted count:", result.length);
@@ -487,7 +518,7 @@ router.get("/trash/count", async (_req: Request, res: Response) => {
     const items = await db
       .select({ id: inventoryItemsTable.id })
       .from(inventoryItemsTable)
-      .where(eq(inventoryItemsTable.isDeleted, true));
+      .where(eq(inventoryItemsTable.isDeleted, 1));
 
     return res.json({ count: items.length });
   } catch (err: any) {
@@ -528,7 +559,7 @@ router.post("/items/:id/weigh", async (req: Request, res: Response) => {
       .update(inventoryItemsTable)
       .set({
         currentStock: remainingBaseUnits,
-        updatedAt: new Date(),
+        updatedAt: Math.floor(Date.now() / 1000),
       })
       .where(eq(inventoryItemsTable.id, item.id))
       .returning();
@@ -557,6 +588,238 @@ router.get("/items/:id/counts", async (req: Request, res: Response) => {
     res.json(counts);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/inventory/items/:id/audit
+// @ts-expect-error - TypeScript incorrectly thinks this route handler doesn't return
+router.post("/items/:id/audit", async (req: Request, res: Response) => {
+  try {
+    const id = getId(req);
+    const {
+      auditEntryMethod,
+      reportedBulk,
+      reportedPartial,
+      reportedTotal: clientReportedTotal,
+      varianceReason,
+      notes,
+      auditedByUserId,
+    } = req.body;
+
+    const [item] = await db
+      .select()
+      .from(inventoryItemsTable)
+      .where(eq(inventoryItemsTable.id, id))
+      .limit(1);
+
+    if (!item) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const baseUnitAmount = Number(item.baseUnitAmount) || 750;
+
+    // Calculate expected total (system stock before audit)
+    const expectedTotal = Number(item.currentStock) || 0;
+
+    // Calculate reported total from bulk + partial
+    // If client provides reportedTotal, use it; otherwise calculate from bulk/partial
+    let reportedTotal: number;
+    if (clientReportedTotal !== undefined && clientReportedTotal !== null) {
+      reportedTotal = Number(clientReportedTotal);
+    } else {
+      const bulk = Number(reportedBulk) || 0;
+      const partial = Number(reportedPartial) || 0;
+      reportedTotal = bulk * baseUnitAmount + partial;
+    }
+
+    // Calculate variance
+    const variance = reportedTotal - expectedTotal;
+
+    // Calculate variance percentage (avoid division by zero)
+    const variancePercent =
+      expectedTotal > 0 ? (variance / expectedTotal) * 100 : 0;
+
+    // Store previous total for reference
+    const previousTotal = expectedTotal;
+
+    const auditValues: any = {
+      itemId: id,
+      auditDate: now,
+      auditEntryMethod: auditEntryMethod || "bulk_partial",
+      reportedTotal,
+      previousTotal: expectedTotal,
+      expectedTotal,
+      systemStock: expectedTotal,
+      physicalCount: reportedTotal,
+      variance,
+      variancePercent,
+      auditReason: varianceReason || "manual",
+      notes: notes ?? null,
+      auditedByUserId: auditedByUserId || "unknown",
+      auditedAt: now,
+      countedAt: now,
+      createdAt: now,
+    };
+
+    if (reportedBulk !== undefined) {
+      auditValues.reportedBulk = Number(reportedBulk);
+    }
+    if (reportedPartial !== undefined) {
+      auditValues.reportedPartial = Number(reportedPartial);
+    }
+
+    console.log("[AUDIT] Final values:", JSON.stringify(auditValues, null, 2));
+
+    // Use raw SQL insert to work around Drizzle parameter mapping issues
+    await db.run(sql`
+      INSERT INTO inventory_audits (
+        id, item_id, audit_date, audit_entry_method, 
+        reported_bulk, reported_partial, reported_total, 
+        previous_total, expected_total, system_stock, 
+        physical_count, variance, variance_percent, 
+        audit_reason, audited_by_user_id, audited_at, 
+        counted_at, created_at
+      ) VALUES (
+        ${crypto.randomUUID()}, 
+        ${auditValues.itemId}, 
+        ${now}, 
+        'bulk_partial', 
+        ${auditValues.reportedBulk ?? null}, 
+        ${auditValues.reportedPartial ?? null}, 
+        ${auditValues.reportedTotal ?? null}, 
+        ${auditValues.previousTotal ?? null}, 
+        ${auditValues.expectedTotal ?? null}, 
+        ${auditValues.systemStock}, 
+        ${auditValues.physicalCount}, 
+        ${auditValues.variance}, 
+        ${auditValues.variancePercent}, 
+        ${auditValues.auditReason || "manual"}, 
+        ${auditValues.auditedByUserId ?? null}, 
+        ${now}, 
+        ${now}, 
+        ${now}
+      )
+    `);
+
+    // Get the inserted audit using raw SQL
+    const result = await db
+      .select({
+        id: inventoryAuditsTable.id,
+        itemId: inventoryAuditsTable.itemId,
+        systemStock: inventoryAuditsTable.systemStock,
+        physicalCount: inventoryAuditsTable.physicalCount,
+        variance: inventoryAuditsTable.variance,
+        variancePercent: inventoryAuditsTable.variancePercent,
+      })
+      .from(inventoryAuditsTable)
+      .where(sql`${inventoryAuditsTable.itemId} = ${id}`)
+      .limit(1);
+
+    const audit = result[0];
+
+    // Calculate serving-based variance
+    const servingSize = Number(item.servingSize) || 44.36;
+    const varianceInServings = Math.abs(variance) / servingSize;
+
+    // Update inventory item with reported values
+    // If bulk/partial provided, recalculate stock; otherwise use reportedTotal
+    let newBulk = Number(item.currentBulk) || 0;
+    let newPartial = Number(item.currentPartial) || 0;
+    let newStock = Number(item.currentStock) || 0;
+
+    if (reportedBulk !== undefined) {
+      newBulk = Number(reportedBulk);
+    }
+    if (reportedPartial !== undefined) {
+      newPartial = Number(reportedPartial);
+    }
+    // Recalculate stock from bulk/partial if both provided, otherwise use reportedTotal
+    if (reportedBulk !== undefined && reportedPartial !== undefined) {
+      newStock = newBulk * baseUnitAmount + newPartial;
+    } else if (clientReportedTotal !== undefined) {
+      newStock = Number(clientReportedTotal);
+    }
+
+    await db
+      .update(inventoryItemsTable)
+      .set({
+        currentBulk: newBulk,
+        currentPartial: newPartial,
+        currentStock: newStock,
+        lastAuditedAt: now,
+        lastAuditedByUserId: auditedByUserId || "unknown",
+        updatedAt: now,
+      })
+      .where(eq(inventoryItemsTable.id, id));
+
+    await logEvent({
+      userId: auditedByUserId || "unknown",
+      action: "audit",
+      entityType: "inventory",
+      entityId: id,
+      newValue: { itemName: item.name, variance, variancePercent },
+    });
+
+    res.status(201).json({
+      ...audit,
+      varianceInServings: parseFloat(varianceInServings.toFixed(2)),
+    });
+  } catch (err: any) {
+    console.error("[POST /items/:id/audit] Error:", err.message);
+    res.status(500).json({ error: err.message || "Failed to record audit" });
+  }
+});
+
+router.get("/items/audit-age-stats", async (req: Request, res: Response) => {
+  try {
+    const daysThreshold = Math.max(1, parseInt(req.query.days as string) || 4);
+    const now = Math.floor(Date.now() / 1000);
+    const thresholdTimestamp = now - daysThreshold * 24 * 60 * 60;
+
+    const items = await db
+      .select({
+        id: inventoryItemsTable.id,
+        name: inventoryItemsTable.name,
+        nameEs: inventoryItemsTable.nameEs,
+        type: inventoryItemsTable.type,
+        lastAuditedAt: inventoryItemsTable.lastAuditedAt,
+      })
+      .from(inventoryItemsTable)
+      .where(eq(inventoryItemsTable.isDeleted, 0));
+
+    const itemsNeverAudited = items.filter(
+      (i) => !i.lastAuditedAt || i.lastAuditedAt === 0,
+    );
+    const itemsOverdue = items.filter(
+      (i) => i.lastAuditedAt && i.lastAuditedAt < thresholdTimestamp,
+    );
+    const itemsRecentlyAudited = items.filter(
+      (i) => i.lastAuditedAt && i.lastAuditedAt >= thresholdTimestamp,
+    );
+
+    const oldestAudit = items
+      .filter((i) => i.lastAuditedAt && i.lastAuditedAt > 0)
+      .sort((a, b) => (a.lastAuditedAt || 0) - (b.lastAuditedAt || 0))[0];
+
+    const oldestDays = oldestAudit?.lastAuditedAt
+      ? Math.floor((now - oldestAudit.lastAuditedAt) / (24 * 60 * 60))
+      : null;
+
+    return res.json({
+      totalItems: items.length,
+      itemsNeverAuditedCount: itemsNeverAudited.length,
+      itemsOverdueCount: itemsOverdue.length,
+      itemsRecentlyAuditedCount: itemsRecentlyAudited.length,
+      oldestAuditDays: oldestDays,
+      alertThreshold: daysThreshold,
+      shouldAlert: itemsOverdue.length > 0 || itemsNeverAudited.length > 0,
+    });
+  } catch (err: any) {
+    console.error("Failed to get audit age stats:", err);
+    return res
+      .status(500)
+      .json({ error: "Internal server error", message: err.message });
   }
 });
 

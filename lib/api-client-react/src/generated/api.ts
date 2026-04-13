@@ -4187,35 +4187,59 @@ export function useGetStaffPerformance<
 /**
  * @summary List local events and rushes
  */
-export const getGetRushesUrl = () => {
-  return `/api/rushes`;
+export const getGetRushesUrl = (params?: {
+  days?: number;
+  includePast?: boolean;
+}) => {
+  const url = new URL("/api/rushes", window.location.origin);
+  if (params?.days) {
+    url.searchParams.set("days", params.days.toString());
+  }
+  if (params?.includePast) {
+    url.searchParams.set("includePast", "true");
+  }
+  return url.pathname + url.search;
 };
 
-export const getRushes = async (options?: RequestInit): Promise<Rush[]> => {
-  return customFetch<Rush[]>(getGetRushesUrl(), {
+export const getRushes = async (
+  params?: { days?: number; includePast?: boolean },
+  options?: RequestInit,
+): Promise<Rush[]> => {
+  const url = getGetRushesUrl(params);
+  return customFetch<Rush[]>(url, {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetRushesQueryKey = () => {
-  return [`/api/rushes`] as const;
+export const getGetRushesQueryKey = (params?: {
+  days?: number;
+  includePast?: boolean;
+}) => {
+  return [`/api/rushes`, params?.days?.toString() ?? "7"] as const;
 };
 
 export const getGetRushesQueryOptions = <
   TData = Awaited<ReturnType<typeof getRushes>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<Awaited<ReturnType<typeof getRushes>>, TError, TData>;
-  request?: SecondParameter<typeof customFetch>;
-}) => {
+>(
+  params?: { days?: number; includePast?: boolean },
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getRushes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetRushesQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getGetRushesQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getRushes>>> = ({
     signal,
-  }) => getRushes({ signal, ...requestOptions });
+  }) => getRushes(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getRushes>>,
@@ -4236,11 +4260,18 @@ export type GetRushesQueryError = ErrorType<unknown>;
 export function useGetRushes<
   TData = Awaited<ReturnType<typeof getRushes>>,
   TError = ErrorType<unknown>,
->(options?: {
-  query?: UseQueryOptions<Awaited<ReturnType<typeof getRushes>>, TError, TData>;
-  request?: SecondParameter<typeof customFetch>;
-}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetRushesQueryOptions(options);
+>(
+  params?: { days?: number; includePast?: boolean },
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getRushes>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetRushesQueryOptions(params, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

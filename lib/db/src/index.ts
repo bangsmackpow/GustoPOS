@@ -157,8 +157,8 @@ async function upsertAdmin() {
           password: hashedPassword,
           pin: hashedPin,
           role: "admin",
-          isActive: true,
-          updatedAt: new Date(),
+          isActive: 1,
+          updatedAt: Math.floor(Date.now() / 1000),
         })
         .where(eq(schema.usersTable.id, existing.id));
       console.log(
@@ -174,7 +174,7 @@ async function upsertAdmin() {
         lastName: "Admin",
         role: "admin",
         language: "en",
-        isActive: true,
+        isActive: 1,
       });
       console.log(
         `[Initialize] ✓ Admin user created successfully: ${adminUsername}`,
@@ -287,29 +287,94 @@ export async function initializeDatabase() {
           "[Initialize] ✓ Tables already exist - checking schema completeness...",
         );
 
-        // Verify critical columns exist
+        // Verify critical columns exist across all tables
         try {
-          const columns = await db.all(sql`PRAGMA table_info(inventory_items)`);
-          const hasParentItemId = columns.some(
-            (col: any) => col.name === "parent_item_id",
+          // Check inventory_items for all required columns
+          const invColumns = await db.all(
+            sql`PRAGMA table_info(inventory_items)`,
           );
-          const hasAlcoholDensity = columns.some(
-            (col: any) => col.name === "alcohol_density",
+          const invColNames = invColumns.map((c: any) => c.name);
+          const requiredInvCols = [
+            "parent_item_id",
+            "alcohol_density",
+            "audit_method",
+            "tracking_mode",
+            "reserved_stock",
+            "container_weight_g",
+          ];
+          const hasAllInvCols = requiredInvCols.every((name) =>
+            invColNames.includes(name),
           );
 
-          if (hasParentItemId && hasAlcoholDensity) {
+          // Check settings for all required columns
+          const settingsColumns = await db.all(
+            sql`PRAGMA table_info(settings)`,
+          );
+          const settingsColNames = settingsColumns.map((c: any) => c.name);
+          const requiredSettingsCols = [
+            "variance_warning_threshold",
+            "default_alcohol_density",
+            "default_serving_size_ml",
+            "default_bottle_size_ml",
+            "default_tracking_mode",
+            "default_audit_method",
+          ];
+          const hasAllSettingsCols = requiredSettingsCols.every((name) =>
+            settingsColNames.includes(name),
+          );
+
+          // Check orders for void columns
+          const ordersColumns = await db.all(sql`PRAGMA table_info(orders)`);
+          const ordersColNames = ordersColumns.map((c: any) => c.name);
+          const hasVoidColumns = [
+            "voided",
+            "void_reason",
+            "voided_by_user_id",
+            "voided_at",
+          ].every((name) => ordersColNames.includes(name));
+
+          // Check tabs for close_type
+          const tabsColumns = await db.all(sql`PRAGMA table_info(tabs)`);
+          const tabsColNames = tabsColumns.map((c: any) => c.name);
+          const hasTabsCols = ["close_type", "comp_reason"].every((name) =>
+            tabsColNames.includes(name),
+          );
+
+          if (
+            hasAllInvCols &&
+            hasAllSettingsCols &&
+            hasVoidColumns &&
+            hasTabsCols
+          ) {
             console.log(
               "[Initialize] ✓ Schema is complete - skipping migrations",
             );
           } else {
             console.log(
-              "[Initialize] ⚠ Schema incomplete - will run migrations to add missing columns",
+              "[Initialize] ⚠ Schema incomplete - will add missing columns",
             );
-            tablesAlreadyExist = false; // Run migrations to add missing columns
+            if (!hasAllInvCols)
+              console.log(
+                "[Initialize]   Missing inventory columns:",
+                requiredInvCols.filter((c) => !invColNames.includes(c)),
+              );
+            if (!hasAllSettingsCols)
+              console.log(
+                "[Initialize]   Missing settings columns:",
+                requiredSettingsCols.filter(
+                  (c) => !settingsColNames.includes(c),
+                ),
+              );
+            if (!hasVoidColumns)
+              console.log("[Initialize]   Missing orders columns");
+            if (!hasTabsCols)
+              console.log("[Initialize]   Missing tabs columns");
+            tablesAlreadyExist = false;
           }
         } catch (colError) {
           console.log(
-            "[Initialize] ⚠ Could not verify columns - will run migrations",
+            "[Initialize] ⚠ Could not verify columns - will run migrations:",
+            colError,
           );
           tablesAlreadyExist = false;
         }
@@ -343,6 +408,233 @@ export async function initializeDatabase() {
           migrationFailed = false; // Treat as success
           duplicateColumnError = true;
         }
+      }
+
+      // Fallback: Ensure critical migration columns exist (drizzle migrator doesn't always run ALTER TABLE)
+      console.log("[Initialize] Ensuring migration columns exist...");
+      try {
+        const invCols = await db.all(sql`PRAGMA table_info(inventory_items)`);
+        const colNames = invCols.map((c: any) => c.name);
+
+        // sell_single_serving (was in original 0000 but may be missing)
+        if (!colNames.includes("sell_single_serving")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN sell_single_serving integer DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: sell_single_serving");
+        }
+        // single_serving_price (was in original 0000 but may be missing)
+        if (!colNames.includes("single_serving_price")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN single_serving_price real`,
+          );
+          console.log("[Initialize] Added column: single_serving_price");
+        }
+        // Migration 0001 columns
+        if (!colNames.includes("alcohol_density")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN alcohol_density real DEFAULT 0.94`,
+          );
+          console.log("[Initialize] Added column: alcohol_density");
+        }
+        if (!colNames.includes("pour_size")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN pour_size real`,
+          );
+          console.log("[Initialize] Added column: pour_size");
+        }
+        // Migration 0002 columns
+        if (!colNames.includes("audit_method")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN audit_method text DEFAULT 'auto'`,
+          );
+          console.log("[Initialize] Added column: audit_method");
+        }
+        // Tracking mode column
+        if (!colNames.includes("tracking_mode")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN tracking_mode text DEFAULT 'auto'`,
+          );
+          console.log("[Initialize] Added column: tracking_mode");
+        }
+
+        // Stock tracking columns (may be missing from older databases)
+        if (!colNames.includes("current_bulk")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN current_bulk real DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: current_bulk");
+        }
+        if (!colNames.includes("current_partial")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN current_partial real DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: current_partial");
+        }
+        if (!colNames.includes("current_stock")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN current_stock real DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: current_stock");
+        }
+        // reservedStock for soft-delete tracking
+        if (!colNames.includes("reserved_stock")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN reserved_stock real DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: reserved_stock");
+        }
+        // containerWeightG (renamed from glassWeightG)
+        if (!colNames.includes("container_weight_g")) {
+          if (colNames.includes("glass_weight_g")) {
+            await db.run(
+              sql`ALTER TABLE inventory_items RENAME COLUMN glass_weight_g TO container_weight_g`,
+            );
+            console.log(
+              "[Initialize] Renamed column: glass_weight_g -> container_weight_g",
+            );
+          } else {
+            await db.run(
+              sql`ALTER TABLE inventory_items ADD COLUMN container_weight_g real`,
+            );
+            console.log("[Initialize] Added column: container_weight_g");
+          }
+        }
+
+        // Settings columns
+        const setCols = await db.all(sql`PRAGMA table_info(settings)`);
+        const setColNames = setCols.map((c: any) => c.name);
+        if (!setColNames.includes("variance_warning_threshold")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN variance_warning_threshold real DEFAULT 5.0`,
+          );
+          console.log("[Initialize] Added column: variance_warning_threshold");
+        }
+        if (!setColNames.includes("default_alcohol_density")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN default_alcohol_density real DEFAULT 0.94`,
+          );
+          console.log("[Initialize] Added column: default_alcohol_density");
+        }
+        if (!setColNames.includes("default_serving_size_ml")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN default_serving_size_ml real DEFAULT 44.36`,
+          );
+          console.log("[Initialize] Added column: default_serving_size_ml");
+        }
+        if (!setColNames.includes("default_bottle_size_ml")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN default_bottle_size_ml real DEFAULT 750`,
+          );
+          console.log("[Initialize] Added column: default_bottle_size_ml");
+        }
+        if (!setColNames.includes("default_units_per_case")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN default_units_per_case integer DEFAULT 1`,
+          );
+          console.log("[Initialize] Added column: default_units_per_case");
+        }
+        if (!setColNames.includes("default_low_stock_threshold")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN default_low_stock_threshold real DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: default_low_stock_threshold");
+        }
+        if (!setColNames.includes("default_tracking_mode")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN default_tracking_mode text DEFAULT 'auto'`,
+          );
+          console.log("[Initialize] Added column: default_tracking_mode");
+        }
+        if (!setColNames.includes("default_audit_method")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN default_audit_method text DEFAULT 'auto'`,
+          );
+          console.log("[Initialize] Added column: default_audit_method");
+        }
+
+        // Rushes columns
+        const rushCols = await db.all(sql`PRAGMA table_info(rushes)`);
+        const rushColNames = rushCols.map((c: any) => c.name);
+        if (!rushColNames.includes("repeat_event")) {
+          await db.run(
+            sql`ALTER TABLE rushes ADD COLUMN repeat_event integer DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: repeat_event");
+        }
+
+        // Tabs columns (closeType, compReason)
+        const tabCols = await db.all(sql`PRAGMA table_info(tabs)`);
+        const tabColNames = tabCols.map((c: any) => c.name);
+        if (!tabColNames.includes("close_type")) {
+          await db.run(
+            sql`ALTER TABLE tabs ADD COLUMN close_type text DEFAULT 'sale'`,
+          );
+          console.log("[Initialize] Added column: close_type");
+        }
+        if (!tabColNames.includes("comp_reason")) {
+          await db.run(sql`ALTER TABLE tabs ADD COLUMN comp_reason text`);
+          console.log("[Initialize] Added column: comp_reason");
+        }
+
+        // Orders columns (void tracking)
+        const orderCols = await db.all(sql`PRAGMA table_info(orders)`);
+        const orderColNames = orderCols.map((c: any) => c.name);
+        if (!orderColNames.includes("voided")) {
+          await db.run(
+            sql`ALTER TABLE orders ADD COLUMN voided integer DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: voided");
+        }
+        if (!orderColNames.includes("void_reason")) {
+          await db.run(sql`ALTER TABLE orders ADD COLUMN void_reason text`);
+          console.log("[Initialize] Added column: void_reason");
+        }
+        if (!orderColNames.includes("voided_by_user_id")) {
+          await db.run(
+            sql`ALTER TABLE orders ADD COLUMN voided_by_user_id text`,
+          );
+          console.log("[Initialize] Added column: voided_by_user_id");
+        }
+        if (!orderColNames.includes("voided_at")) {
+          await db.run(sql`ALTER TABLE orders ADD COLUMN voided_at integer`);
+          console.log("[Initialize] Added column: voided_at");
+        }
+
+        // Specials table
+        const specialsTables = await db.all(
+          sql`SELECT name FROM sqlite_master WHERE type='table' AND name='specials'`,
+        );
+        if (specialsTables.length === 0) {
+          await db.run(sql`CREATE TABLE specials (
+            id text PRIMARY KEY,
+            drink_id text REFERENCES drinks(id),
+            special_type text NOT NULL DEFAULT 'manual',
+            discount_type text NOT NULL,
+            discount_value real NOT NULL,
+            days_of_week text,
+            start_hour integer,
+            end_hour integer,
+            start_date integer,
+            end_date integer,
+            is_active integer NOT NULL DEFAULT 1,
+            name text,
+            created_by_user_id text,
+            created_at integer NOT NULL DEFAULT (strftime('%s', 'now'))
+          )`);
+          console.log("[Initialize] Created table: specials");
+          // Create indexes
+          await db.run(
+            sql`CREATE INDEX idx_specials_drink_id ON specials(drink_id)`,
+          );
+          await db.run(
+            sql`CREATE INDEX idx_specials_is_active ON specials(is_active)`,
+          );
+        }
+
+        console.log("[Initialize] ✓ Migration columns verified.");
+      } catch (colError: any) {
+        console.log("[Initialize] Column check warning:", colError.message);
       }
     }
 

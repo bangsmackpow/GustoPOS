@@ -1,6 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useRoute, Link } from "wouter";
-import { useGetTab, useGetDrinks } from "@workspace/api-client-react";
+import {
+  useGetTab,
+  useGetDrinks,
+  useGetIngredients,
+} from "@workspace/api-client-react";
 import {
   useAddOrderMutation,
   useDeleteOrderMutation,
@@ -24,6 +28,9 @@ import {
   Loader2,
   Edit2,
   ShoppingBag,
+  Plus,
+  Minus,
+  Users,
 } from "lucide-react";
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -48,6 +55,7 @@ export default function TabDetail() {
     refetch,
   } = useGetTab(tabId);
   const { data: drinks } = useGetDrinks();
+  const { data: ingredients } = useGetIngredients();
 
   const addOrder = useAddOrderMutation();
   const deleteOrder = useDeleteOrderMutation();
@@ -63,6 +71,31 @@ export default function TabDetail() {
   const [addQuantity, setAddQuantity] = useState<number>(1);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [deletingOrder, setDeletingOrder] = useState<any>(null);
+  const [voidReason, setVoidReason] = useState<string>("");
+  const [selectedQuantities, setSelectedQuantities] = useState<
+    Record<string, number>
+  >({});
+  const [splitMode, setSplitMode] = useState<"single" | "split">("single");
+  const [splitCount, setSplitCount] = useState<number>(2);
+
+  const getSelectedQuantity = (drinkId: string) =>
+    selectedQuantities[drinkId] || 1;
+
+  const updateSelectedQuantity = (drinkId: string, delta: number) => {
+    setSelectedQuantities((prev) => {
+      const current = prev[drinkId] || 1;
+      const newQty = Math.max(1, Math.min(20, current + delta));
+      return { ...prev, [drinkId]: newQty };
+    });
+  };
+
+  const getGrandTotal = () => {
+    return Math.max(0, (tabData?.totalMxn || 0) - appliedDiscount) + tipAmount;
+  };
+
+  const getSplitAmount = () => {
+    return getGrandTotal() / splitCount;
+  };
 
   if (tabLoading) {
     return (
@@ -105,7 +138,7 @@ export default function TabDetail() {
       (d) => activeCategory === "all" || d.category === activeCategory,
     ) || [];
 
-  const handleAddDrink = (drink: any) => {
+  const handleAddDrink = (drink: any, quantity?: number) => {
     if (!activeStaff) {
       toast({
         variant: "destructive",
@@ -115,15 +148,16 @@ export default function TabDetail() {
       return;
     }
 
+    const qty = quantity || getSelectedQuantity(drink.id);
     addOrder.mutate(
-      { id: tabId, data: { drinkId: drink.id, quantity: addQuantity } },
+      { id: tabId, data: { drinkId: drink.id, quantity: qty } },
       {
         onSuccess: () => {
           toast({
             title: getTranslation("success", language),
-            description: `${language === "es" && drink.nameEs ? drink.nameEs : drink.name} added to tab.`,
+            description: `${qty}x ${language === "es" && drink.nameEs ? drink.nameEs : drink.name} added to tab.`,
           });
-          setAddQuantity(1);
+          setSelectedQuantities((prev) => ({ ...prev, [drink.id]: 1 }));
         },
         onError: (error: any) => {
           toast({
@@ -176,21 +210,51 @@ export default function TabDetail() {
   };
 
   const handleCloseTab = (method: "cash" | "card") => {
-    closeTab.mutate(
-      { id: tabId, data: { paymentMethod: method, tipMxn: tipAmount } },
-      {
-        onSuccess: () => {
-          window.location.href = "/tabs";
+    const grandTotal = getGrandTotal();
+
+    if (splitMode === "split" && splitCount > 1) {
+      const amountPerPerson = Math.round((grandTotal / splitCount) * 100) / 100;
+      const tipPerPerson = Math.round((tipAmount / splitCount) * 100) / 100;
+      const payments = Array(splitCount)
+        .fill(null)
+        .map(() => ({
+          amountMxn: amountPerPerson,
+          tipMxn: tipPerPerson,
+          paymentMethod: method,
+        }));
+
+      closeTab.mutate(
+        { id: tabId, data: { paymentMethod: method, payments } },
+        {
+          onSuccess: () => {
+            window.location.href = "/tabs";
+          },
+          onError: (error: any) => {
+            toast({
+              variant: "destructive",
+              title: getTranslation("error", language),
+              description: error.message || "Failed to close tab.",
+            });
+          },
         },
-        onError: (error: any) => {
-          toast({
-            variant: "destructive",
-            title: getTranslation("error", language),
-            description: error.message || "Failed to close tab.",
-          });
+      );
+    } else {
+      closeTab.mutate(
+        { id: tabId, data: { paymentMethod: method, tipMxn: tipAmount } },
+        {
+          onSuccess: () => {
+            window.location.href = "/tabs";
+          },
+          onError: (error: any) => {
+            toast({
+              variant: "destructive",
+              title: getTranslation("error", language),
+              description: error.message || "Failed to close tab.",
+            });
+          },
         },
-      },
-    );
+      );
+    }
   };
 
   const handleDeleteOrder = (order: any) => {
@@ -200,7 +264,12 @@ export default function TabDetail() {
   const confirmDeleteOrder = () => {
     if (!deletingOrder) return;
     deleteOrder.mutate(
-      { id: deletingOrder.id, tabId },
+      {
+        id: deletingOrder.id,
+        tabId,
+        reason: voidReason,
+        voidedByUserId: activeStaff?.id,
+      },
       {
         onSuccess: () => {
           toast({
@@ -208,6 +277,7 @@ export default function TabDetail() {
             description: "Order removed from tab.",
           });
           setDeletingOrder(null);
+          setVoidReason("");
         },
         onError: (error: any) => {
           toast({
@@ -220,7 +290,46 @@ export default function TabDetail() {
     );
   };
 
-  const getStockStatus = (_drink: any) => {
+  const getStockStatus = (drink: any) => {
+    if (!ingredients || !drink.recipe || drink.recipe.length === 0) {
+      return { status: "available", message: "" };
+    }
+
+    let minServingsAvailable = Infinity;
+
+    for (const recipeItem of drink.recipe) {
+      if (!recipeItem.ingredientId) continue;
+
+      const ingredient = ingredients.find(
+        (i: any) => i.id === recipeItem.ingredientId,
+      );
+      if (!ingredient) continue;
+
+      const availableStock = Number(ingredient.currentStock) || 0;
+      const reservedStock = Number(ingredient.reservedStock) || 0;
+      const totalAvailable = availableStock + reservedStock;
+      const amountNeeded = Number(recipeItem.amountInBaseUnit) || 0;
+
+      if (amountNeeded <= 0) continue;
+
+      const servingsAvailable = totalAvailable / amountNeeded;
+      minServingsAvailable = Math.min(minServingsAvailable, servingsAvailable);
+    }
+
+    if (minServingsAvailable === Infinity || minServingsAvailable <= 0) {
+      return { status: "out", message: "OUT" };
+    } else if (minServingsAvailable < 5) {
+      return {
+        status: "low",
+        message: `${Math.floor(minServingsAvailable)} left`,
+      };
+    } else if (minServingsAvailable < 15) {
+      return {
+        status: "medium",
+        message: `${Math.floor(minServingsAvailable)} left`,
+      };
+    }
+
     return { status: "available", message: "" };
   };
 
@@ -255,7 +364,7 @@ export default function TabDetail() {
               tabData.orders.map((order) => (
                 <div
                   key={order.id}
-                  className="flex items-center justify-between group"
+                  className={`flex items-center justify-between group ${order.voided ? "opacity-40 line-through" : ""}`}
                 >
                   <div>
                     <p className="font-medium text-foreground group-hover:text-primary transition-colors">
@@ -266,25 +375,34 @@ export default function TabDetail() {
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatMoney(order.unitPriceMxn)} ea
+                      {order.voided && order.voidReason && (
+                        <span className="ml-2 text-destructive">
+                          (Voided: {order.voidReason.replace(/_/g, " ")})
+                        </span>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-bold">
                       {formatMoney(order.totalPriceMxn)}
                     </span>
-                    <button
-                      onClick={() => setEditingOrder(order)}
-                      className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteOrder(order)}
-                      disabled={deleteOrder.isPending}
-                      className="w-8 h-8 rounded-full bg-destructive/10 text-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {!order.voided && (
+                      <>
+                        <button
+                          onClick={() => setEditingOrder(order)}
+                          className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteOrder(order)}
+                          disabled={deleteOrder.isPending}
+                          className="w-8 h-8 rounded-full bg-destructive/10 text-destructive flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               ))
@@ -406,13 +524,50 @@ export default function TabDetail() {
                   <div className="flex justify-between font-bold text-lg">
                     <span>{getTranslation("total", language) || "Total"}</span>
                     <span className="text-primary">
-                      {formatMoney(
-                        Math.max(0, tabData.totalMxn - appliedDiscount) +
-                          tipAmount,
-                      )}
+                      {formatMoney(getGrandTotal())}
                     </span>
                   </div>
                 </div>
+
+                {splitMode === "split" && (
+                  <div className="mt-4 p-4 rounded-xl bg-primary/10 border border-primary/20">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium">
+                        Split {splitCount} ways
+                      </span>
+                      <button
+                        onClick={() => setSplitMode("single")}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        Cancel split
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-center gap-4">
+                      <button
+                        onClick={() => setSplitCount((c) => Math.max(2, c - 1))}
+                        disabled={splitCount <= 2}
+                        className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <span className="text-2xl font-bold w-12 text-center">
+                        {splitCount}
+                      </span>
+                      <button
+                        onClick={() =>
+                          setSplitCount((c) => Math.min(10, c + 1))
+                        }
+                        disabled={splitCount >= 10}
+                        className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center disabled:opacity-30"
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                    <p className="text-center text-primary font-bold text-xl mt-3">
+                      {formatMoney(getSplitAmount())} each
+                    </p>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3 pt-4">
                   <Button
@@ -422,7 +577,9 @@ export default function TabDetail() {
                     disabled={closeTab.isPending}
                   >
                     <Banknote className="mr-2" size={18} />{" "}
-                    {getTranslation("cash", language)}
+                    {splitMode === "split"
+                      ? `${formatMoney(getSplitAmount())} Cash`
+                      : getTranslation("cash", language)}
                   </Button>
                   <Button
                     size="lg"
@@ -431,14 +588,32 @@ export default function TabDetail() {
                     disabled={closeTab.isPending}
                   >
                     <CreditCard className="mr-2" size={18} />{" "}
-                    {getTranslation("card", language)}
+                    {splitMode === "split"
+                      ? `${formatMoney(getSplitAmount())} Card`
+                      : getTranslation("card", language)}
                   </Button>
+
+                  {splitMode === "single" && (
+                    <Button
+                      variant="outline"
+                      className="col-span-2"
+                      onClick={() => {
+                        setSplitMode("split");
+                        setSplitCount(2);
+                      }}
+                    >
+                      <Users className="mr-2" size={18} />
+                      Split Bill
+                    </Button>
+                  )}
+
                   <Button
                     variant="ghost"
                     className="col-span-2"
                     onClick={() => {
                       setShowCloseDialog(false);
                       setTipAmount(0);
+                      setSplitMode("single");
                     }}
                     disabled={closeTab.isPending}
                   >
@@ -451,7 +626,10 @@ export default function TabDetail() {
                 size="lg"
                 className="w-full h-14 text-lg"
                 disabled={tabData.orders.length === 0}
-                onClick={() => setShowCloseDialog(true)}
+                onClick={() => {
+                  setSplitMode("single");
+                  setShowCloseDialog(true);
+                }}
               >
                 {getTranslation("close_tab", language)}
               </Button>
@@ -484,11 +662,12 @@ export default function TabDetail() {
             const stock = getStockStatus(drink);
             const isOut = stock.status === "out";
             const isLow = stock.status === "low";
+            const selectedQty = getSelectedQuantity(drink.id);
 
             return (
               <div
                 key={drink.id}
-                className={`glass p-4 rounded-3xl text-left transition-all duration-200 group border border-transparent flex flex-col h-44 relative overflow-hidden ${
+                className={`glass p-4 rounded-3xl text-left transition-all duration-200 group border border-transparent flex flex-col h-48 relative overflow-hidden ${
                   isOut
                     ? "opacity-40 grayscale pointer-events-none"
                     : "hover:-translate-y-1 active:scale-95 hover:border-primary/30"
@@ -500,15 +679,12 @@ export default function TabDetail() {
                     e.stopPropagation();
                     setViewingRecipe(drink);
                   }}
+                  title="View recipe"
                 >
                   <Info size={18} />
                 </button>
 
-                <button
-                  onClick={() => handleAddDrink(drink)}
-                  disabled={!drink.isAvailable || addOrder.isPending || isOut}
-                  className="flex-1 flex flex-col w-full text-left"
-                >
+                <div className="flex-1 flex flex-col w-full">
                   <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center mb-3 text-primary group-hover:scale-110 transition-transform relative">
                     <Icon size={20} />
                     {isLow && (
@@ -523,7 +699,7 @@ export default function TabDetail() {
 
                   {stock.message && (
                     <p
-                      className={`text-[10px] font-bold uppercase tracking-wider mb-auto ${isOut ? "text-destructive" : "text-amber-500"}`}
+                      className={`text-[10px] font-bold uppercase tracking-wider mb-auto ${isOut ? "text-destructive" : stock.status === "medium" ? "text-amber-400" : "text-amber-500"}`}
                     >
                       {stock.message}
                     </p>
@@ -532,7 +708,44 @@ export default function TabDetail() {
                   <div className="font-display font-bold text-lg mt-auto pt-2">
                     {formatMoney(drink.actualPrice || drink.suggestedPrice)}
                   </div>
-                </button>
+                </div>
+
+                {/* Quantity Selector */}
+                {!isOut && drink.isAvailable && (
+                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between bg-background/80 backdrop-blur-sm rounded-xl p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateSelectedQuantity(drink.id, -1);
+                      }}
+                      disabled={selectedQty <= 1}
+                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-white/20 transition-colors disabled:opacity-30"
+                    >
+                      <Minus size={14} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAddDrink(drink);
+                      }}
+                      disabled={addOrder.isPending}
+                      className="flex-1 mx-1 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Plus size={14} />
+                      <span>{selectedQty}</span>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateSelectedQuantity(drink.id, 1);
+                      }}
+                      disabled={selectedQty >= 20}
+                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-white/20 transition-colors disabled:opacity-30"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -600,16 +813,32 @@ export default function TabDetail() {
               )}
             </div>
 
-            <Button
-              className="w-full mt-8 h-12"
-              disabled={getStockStatus(viewingRecipe).status === "out"}
-              onClick={() => {
-                handleAddDrink(viewingRecipe);
-                setViewingRecipe(null);
-              }}
-            >
-              Add to Ticket
-            </Button>
+            <div className="flex items-center gap-3 mt-8">
+              <button
+                onClick={() => updateSelectedQuantity(viewingRecipe.id, -1)}
+                disabled={getSelectedQuantity(viewingRecipe.id) <= 1}
+                className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center hover:bg-white/20 transition-colors disabled:opacity-30"
+              >
+                <Minus size={20} />
+              </button>
+              <Button
+                className="flex-1 h-12"
+                disabled={getStockStatus(viewingRecipe).status === "out"}
+                onClick={() => {
+                  handleAddDrink(viewingRecipe);
+                  setViewingRecipe(null);
+                }}
+              >
+                Add {getSelectedQuantity(viewingRecipe.id)} to Ticket
+              </Button>
+              <button
+                onClick={() => updateSelectedQuantity(viewingRecipe.id, 1)}
+                disabled={getSelectedQuantity(viewingRecipe.id) >= 20}
+                className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center hover:bg-white/20 transition-colors disabled:opacity-30"
+              >
+                <Plus size={20} />
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -757,7 +986,10 @@ export default function TabDetail() {
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-background/90 backdrop-blur-md animate-in fade-in duration-200">
           <div className="glass p-8 rounded-3xl w-full max-w-md relative border border-white/10 shadow-2xl">
             <button
-              onClick={() => setDeletingOrder(null)}
+              onClick={() => {
+                setDeletingOrder(null);
+                setVoidReason("");
+              }}
               className="absolute top-6 right-6 text-muted-foreground hover:text-foreground"
             >
               <X size={24} />
@@ -765,31 +997,67 @@ export default function TabDetail() {
             <div className="flex items-center gap-3 mb-6">
               <Trash2 size={24} className="text-destructive" />
               <h2 className="text-2xl font-display font-bold text-destructive">
-                {getTranslation("remove_item", language) || "Remove Item"}
+                {getTranslation("remove_item", language) || "Void Item"}
               </h2>
             </div>
 
-            <p className="text-muted-foreground mb-6">
-              Are you sure you want to remove{" "}
+            <p className="text-muted-foreground mb-4">
+              Are you sure you want to void{" "}
               <span className="font-semibold text-foreground">
                 {deletingOrder.quantity}x{" "}
                 {language === "es" && deletingOrder.drinkNameEs
                   ? deletingOrder.drinkNameEs
                   : deletingOrder.drinkName}
               </span>
-              ? This action cannot be undone.
+              ?
             </p>
 
+            <div className="mb-6">
+              <label className="text-sm font-medium mb-2 block">
+                Reason for void:
+              </label>
+              <select
+                value={voidReason}
+                onChange={(e) => setVoidReason(e.target.value)}
+                className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary focus:outline-none"
+              >
+                <option value="">Select a reason...</option>
+                <option value="customer_changed_mind">
+                  {language === "es"
+                    ? "Cliente cambió de opinión"
+                    : "Customer changed mind"}
+                </option>
+                <option value="wrong_order">
+                  {language === "es" ? "Pedido incorrecto" : "Wrong order"}
+                </option>
+                <option value="spilled">
+                  {language === "es" ? "Derramado/Servido" : "Spilled"}
+                </option>
+                <option value="comp">
+                  {language === "es" ? "Cortesía" : "Comp"}
+                </option>
+                <option value="other">
+                  {language === "es" ? "Otro" : "Other"}
+                </option>
+              </select>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
-              <Button variant="ghost" onClick={() => setDeletingOrder(null)}>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setDeletingOrder(null);
+                  setVoidReason("");
+                }}
+              >
                 {getTranslation("cancel", language) || "Cancel"}
               </Button>
               <Button
                 variant="destructive"
                 onClick={confirmDeleteOrder}
-                disabled={deleteOrder.isPending}
+                disabled={deleteOrder.isPending || !voidReason}
               >
-                {deleteOrder.isPending ? "..." : "Remove"}
+                {deleteOrder.isPending ? "..." : "Void Order"}
               </Button>
             </div>
           </div>

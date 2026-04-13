@@ -1,0 +1,132 @@
+name,containerSize_ml,trackingMode,type,emptyContainerWeight_g,fullBottleWeight_g,estimatedPriceMXN,priceSource
+Zacatecano,1000,pool,Spirits,500,1500,"$300-400","Sonora Prime" bar
+Xotikal Licor de coco,750,pool,Spirits,400,1150,No data,"No data"
+Wild Turkey,750,pool,Whiskey,450,1200,"$215","Sonora Prime" single
+West Bottoms,750,pool,Whiskey,450,1200,"$215","Sonora Prime" single
+Vino Rojo,750,pool,Vino,450,1200,No data,"No data"
+Union,700,pool,Mezcal,400,1100,"$220","Sonora Prime" single
+Tom's Town,750,pool,Whiskey,450,1200,"$215","Sonora Prime" single
+Titos,1000,pool,Vodka,500,1500,"$160","Sonora Prime" single
+Tiahuani,700,pool,Mezcal,400,1100,"$205","Sonora Prime" single
+Tiahuani,550,pool,Mezcal,350,900,"$205","Sonora Prime" single
+Tanqueray,750,pool,Gin,450,1270,"$235","Sonora Prime" single
+Sons of Erin Irish Whiskey,750,pool,Whiskey,450,1200,"$215","Sonora Prime" single
+Smirnoff,1000,pool,Vodka,500,1500,"$160","Sonora Prime" single
+Six Columns Bourbon,750,pool,Whiskey,450,1200,"$215","Sonora Prime" single
+Seleccion Sauvignon blanc,750,pool,Vino,450,1200,No data,"No data"
+Salamandra Naranja,750,pool,Misc Licor,400,1150,No data,"No data"
+Salamandra Curacao,1000,pool,Misc Licor,500,1571,"$300","Est"
+Rumchata,700,pool,Misc Licor,400,1429,"$250","Est"
+Reigers KC Champ,1000,pool,Vodka,500,1500,"$160","Sonora Prime" single
+Raicilla (bulk),5000,pool,Misc Licor,1200,6206,No data,"No data"
+Raicilla (bar),750,pool,Misc Licor,400,1420,"$150","Est"
+Patron Silver Blanco,700,pool,Tequila,400,1514,"$270","Sonora Prime" single
+Passport Selection,700,pool,Whiskey,400,1100,No data,"No data"
+Nixta,750,pool,Misc Licor,400,1150,"$180","Est"
+McAndrews,950,pool,Whiskey,500,1850,"$335","Sonora Prime" single
+Malibu,750,pool,Misc Licor,400,1180,"$50","Mordidas" bar
+Makers Mark,750,pool,Whiskey,450,1212,"$215","Sonora Prime" single
+Madrilena,1000,pool,Misc Licor,500,1346,"$250","Est"
+Liqor de Platano,1000,pool,Misc Licor,500,1620,"$250","Est"
+Licor 43 Horchata,700,pool,Misc Licor,400,1100,"$150","Est"
+Licor 43,700,pool,Misc Licor,400,1250,"$150","Est"
+Krasnaya Tamarinda,1000,pool,Vodka,500,1649,"$200","Est"
+Kirkland's 12 year blended scotch,1750,pool,Whiskey,700,2483,"$335","Sonora Prime" single
+Kirkland (chardonnay),1500,pool,Vino,600,2161,"$300","Est"
+Ketel One,750,pool,Vodka,450,1151,"$190","Sonora Prime" single
+Kamikaze,750,pool,Misc Licor,400,1150,No data,"No data"
+Kahlua,1000,pool,Misc Licor,500,1648,"$150","Est"
+Johnnie Walker Rojo,700,pool,Whiskey,400,1065,"$180","Sonora Prime" single
+Jim Beam,700,pool,Whiskey,400,1117,"$215","Sonora Prime" single
+Jameson,700,pool,Whiskey,400,1065,"$210","Sonora Prime" single
+Jagermeister,700,pool,Misc Licor,400,1287,"$150","Est"
+Jack Daniels,1000,pool,Whiskey,500,1450,"$210","Sonora Prime" single
+Hornitos,700,pool,Tequila,400,1058,"$295","Sonora Prime" single
+Herradura Ultra,375,pool,Tequila,300,813,"$295","Sonora Prime" single
+Herradura Rep,700,pool,Tequila,400,1058,"$290","Sonora Prime" single
+Herradura de Plata,700,pool,Tequila,400,1058,"$290","Sonora Prime" single
+Havana 7,700,pool,Rum,400,1072,"$275","Est"
+Havana 7,200,pool,Rum,200,385,"$100","Est"
+Havana 3,750,pool,Rum,400,1120,No data,"No data"
+Grey Goose,750,pool,Vodka,450,1151,"$290","Sonora Prime" single
+Grand Marnier,700,pool,Misc Licor,400,1121,"$200","Est"
+Forty Creek Niagra Whiskey,1000,pool,Whiskey,500,1450,"$210","Est"
+Flamingo Licor de Naranja Triple Sec,750,pool,Misc Licor,400,1705,"$150","Est"
+Fireball,700,pool,Misc Licor,400,1350,"$150","Est"
+Fernet-Branca,750,pool,Misc Licor,400,1150,"$150","Est"
+Don Pancho Cafe Liquour,1000,pool,Misc Licor,500,1500,"$200","Est"
+Don Julio Rep,700,pool,Tequila,400,1514,"$285","Sonora Prime" single
+Don Julio Chile,700,pool,Tequila,400,1514,"$285","Sonora Prime" single
+Don Julio Blano,700,pool,Tequila,400,1271,"$270","Sonora Prime" single
+Don Julio 70,700,pool,Tequila,400,1514,"$305","Sonora Prime" single
+Don Julio 1942,750,pool,Tequila,450,1155,"$450","Sonora Prime" double
+Diega Limon,950,pool,Gin,500,1393,"$235","Sonora Prime" single
+Devil Simon,750,pool,Misc Licor,400,1150,No data,"No data"
+Deuellum Dias de muertos,750,pool,Gin,400,1105,"$235","Sonora Prime" single
+Crown Royal,1000,pool,Whiskey,500,1620,"$210","Sonora Prime" single
+Corralejo Rep,1000,pool,Tequila,500,1440,"$300","Est"
+Controy,1000,pool,Misc Licor,500,1500,"$150","Est"
+CinZano Rosso Vermouth,750,pool,Misc Licor,400,1150,"$100","Est"
+CinZano MIX Vermouth,750,pool,Misc Licor,400,1150,"$100","Est"
+CinZano Blanco Vermouth,750,pool,Misc Licor,400,1150,"$100","Est"
+Chivas 12,750,pool,Whiskey,450,1212,"$245","Sonora Prime" single
+Centenario Rep.,700,pool,Tequila,400,1058,"$290","Sonora Prime" single
+Centaenario Plata,950,pool,Tequila,500,1393,"$305","Sonora Prime" single
+Cazadores,950,pool,Tequila,500,1571,"$290","Sonora Prime" single
+CASA VODKA (Plastic),1000,pool,Vodka,50,1032,"$160","Sonora Prime" single
+CASA VODKA (Glass),1000,pool,Vodka,500,1555,"$160","Sonora Prime" single
+CASA TEQUILA STOCK,5000,pool,Tequila,800,5800,No data,"No data"
+CASA TEQUILA BULK,5000,pool,Tequila,800,5800,No data,"No data"
+CASA RUM-RON,1000,pool,Rum,500,1480,"$180","Est"
+CASA MEZCAL,750,pool,Mezcal,400,1086,"$220","Est"
+Casa Acosta,500,pool,Tequila,350,916,"$150","Est"
+Capitan Morgan,700,pool,Rum,400,1159,"$250","Est"
+Campari,750,pool,Misc Licor,400,1240,"$150","Est"
+Bulleit Burboun,750,pool,Whiskey,450,1162,"$215","Sonora Prime" single
+Builders,750,pool,Gin,400,1105,"$235","Sonora Prime" single
+Buchanan's 12,750,pool,Whiskey,450,1162,"$285","Sonora Prime" single
+Bombay,700,pool,Gin,400,1058,"$235","Sonora Prime" single
+Black Jack (CASA),1750,pool,Whiskey,700,2362,"$335","Sonora Prime" single
+Belvedere,750,pool,Vodka,450,1151,"$315","Sonora Prime" single
+Barcelo Imperial Onyx,700,pool,Rum,400,1100,"$275","Est"
+Baileys,1000,pool,Misc Licor,500,1550,"$200","Est"
+Bahamas Blanco (CASA),1000,pool,Rum,500,1573,"$180","Est"
+Bacardi Ocho Anos,750,pool,Rum,400,1120,"$275","Est"
+Bacardi Blanco,980,pool,Rum,480,1420,"$150","Est"
+Armonico,500,pool,Gin,350,820,"$180","Est"
+Aperol,700,pool,Misc Licor,400,1293,"$150","Est"
+Agua Dulce Oxaca,750,pool,Mezcal,400,1275,"$200","Est"
+Agua Dulce Michoacan,750,pool,Mezcal,400,1275,"$200","Est"
+Agua Dulce Cuerno,750,pool,Mezcal,400,1275,"$200","Est"
+Agua Dulce Chato,750,pool,Mezcal,400,1275,"$200","Est"
+Absolut Rasberry,750,pool,Vodka,450,1151,"$155","Sonora Prime" single
+Absolut Mandrin,200,pool,Vodka,200,385,"$80","Sonora Prime" single
+Absolut,750,pool,Vodka,450,1151,"$155","Sonora Prime" single
+Abrojo,750,pool,Gin,400,1105,"$235","Sonora Prime" single
+7 Leguas,1000,pool,Tequila,500,1929,"$270","Sonora Prime" single
+400 Canejos,700,pool,Mezcal,400,1267.5,"$205","Sonora Prime" single
+1800 Rep,700,pool,Tequila,400,1058,"$295","Sonora Prime" single
+1800 Cristalino,700,pool,Tequila,400,1058,"$295","Sonora Prime" single
+1800 Anejo,700,pool,Tequila,400,1058,"$275","Sonora Prime" single
+Pacifico,1,collection,Beer,20,25,"$30","Mordidas" bar
+Corona,1,collection,Beer,20,25,"$30","Mordidas" bar
+Victoria,1,collection,Beer,20,25,"$30","Mordidas" bar
+Corona Light,1,collection,Beer,20,25,"$30","Mordidas" bar
+Tecate Rojo,1,collection,Beer,20,25,"$30","Mordidas" bar
+Tecate Light,1,collection,Beer,20,25,"$30","Mordidas" bar
+XX Lager,1,collection,Beer,20,25,"$30","Mordidas" bar
+Indio,1,collection,Beer,20,25,"$30","Mordidas" bar
+Amstel,1,collection,Beer,20,30,"$45","Mordidas" bar
+Coors,1,collection,Beer,20,30,"$45","Mordidas" bar
+Miller,1,collection,Beer,20,30,"$45","Mordidas" bar
+Stella Artois,1,collection,Beer,20,30,"$45","Mordidas" bar
+Carta Blanca,1,collection,Beer,20,30,"$45","Mordidas" bar
+Bohemia Pilsener,1,collection,Beer,20,30,"$45","Mordidas" bar
+Bohemia Cristal,1,collection,Beer,20,30,"$45","Mordidas" bar
+Modelo Especial,1,collection,Beer,20,30,"$45","Mordidas" bar
+Modelo Negro,1,collection,Beer,20,30,"$45","Mordidas" bar
+Seagrams Seltzer (Frutos Rojos),1,collection,Beer,20,25,"$45","Est"
+Seagrams Seltzer (Pina Maracuya),1,collection,Beer,20,25,"$45","Est"
+Corona Cero,1,collection,Beer,20,25,No data,"No data"
+Model0% Derado,1,collection,Beer,20,25,No data,"No data"
+Model0% Negro,1,collection,Beer,20,25,No data,"No data"

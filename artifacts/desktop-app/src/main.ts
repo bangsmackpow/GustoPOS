@@ -7,8 +7,8 @@ import fs from "fs";
 let apiProcess: ChildProcess | null = null;
 let mainWindow: BrowserWindow | null = null;
 
-const API_PORT = 3000;
-const API_URL = `http://localhost:${API_PORT}`;
+let apiPort = 3000;
+let apiUrl = `http://localhost:${apiPort}`;
 
 // Setup logging infrastructure
 const LOG_DIR = path.join(app.getPath("home"), "Library", "Logs", "GustoPOS");
@@ -115,6 +115,11 @@ function _findOpenPort(port: number): Promise<number> {
 async function startApi(): Promise<void> {
   const isDev = !app.isPackaged;
   const workspaceRoot = isDev ? path.resolve(app.getAppPath(), "..", "..") : "";
+
+  // Find an available port starting from 3000
+  apiPort = await _findOpenPort(3000);
+  apiUrl = `http://localhost:${apiPort}`;
+  logInfo(`[Desktop] Using port ${apiPort} for API`);
 
   // In production, artifacts are in Resources folder
   // In dev mode, point to the workspace build output
@@ -228,7 +233,7 @@ async function startApi(): Promise<void> {
       env: {
         ...process.env,
         ELECTRON_RUN_AS_NODE: "1",
-        PORT: API_PORT.toString(),
+        PORT: apiPort.toString(),
         DATABASE_URL: `file://${dbPath.replace(/ /g, "%20")}`,
         NODE_ENV: "production",
         // NODE_PATH with both pnpm hoisted and dist node_modules
@@ -251,6 +256,18 @@ async function startApi(): Promise<void> {
         LOG_DIR: LOG_DIR,
       },
       stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    // Handle process exit - this is when API fails to start
+    apiProcess.on("exit", (code, signal) => {
+      logInfo(
+        `[Desktop] API process exited with code ${code} (signal: ${signal})`,
+      );
+      if (code !== 0 && code !== null) {
+        const errorMsg = `API process exited with code ${code}`;
+        apiStartupError = errorMsg;
+        logError(`[Desktop] ${errorMsg}`);
+      }
     });
 
     // Log API stdout and stderr
@@ -487,11 +504,11 @@ async function createWindow() {
     }
 
     try {
-      logInfo(`[Desktop] Checking API health at ${API_URL}/api/healthz...`);
-      const response = await fetch(`${API_URL}/api/healthz`);
+      logInfo(`[Desktop] Checking API health at ${apiUrl}/api/healthz...`);
+      const response = await fetch(`${apiUrl}/api/healthz`);
       if (response.ok) {
         logInfo("[Desktop] API is ready, loading application...");
-        await mainWindow?.loadURL(API_URL);
+        await mainWindow?.loadURL(apiUrl);
         mainWindow?.show();
       } else {
         logInfo(

@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Wine, Lock, Mail } from "lucide-react";
+import { Wine, Lock, Mail, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePosStore } from "@/store";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -17,6 +18,7 @@ export default function Login() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { language, setLanguage } = usePosStore();
 
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,6 +121,16 @@ export default function Login() {
       </div>
 
       <div className="z-10 w-full max-w-md p-8 glass rounded-3xl text-center relative border-t border-white/10">
+        {/* Language Toggle */}
+        <button
+          type="button"
+          onClick={() => setLanguage(language === "en" ? "es" : "en")}
+          className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          title={language === "en" ? "Switch to Spanish" : "Cambiar a Inglés"}
+        >
+          <Globe size={20} className="text-muted-foreground" />
+        </button>
+
         <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 rounded-2xl bg-linear-to-br from-primary to-amber-300 flex items-center justify-center shadow-[0_0_40px_rgba(245,158,11,0.4)] border-2 border-background">
           <Wine className="text-primary-foreground w-12 h-12" />
         </div>

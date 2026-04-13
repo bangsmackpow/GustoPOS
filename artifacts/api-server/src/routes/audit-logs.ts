@@ -78,7 +78,9 @@ router.get("/audit-logs", async (req: Request, res: Response) => {
         userName: userMap.get(l.userId) || l.userId,
         oldValue: l.oldValue ? JSON.parse(l.oldValue) : null,
         newValue: l.newValue ? JSON.parse(l.newValue) : null,
-        createdAt: l.createdAt?.toISOString(),
+        createdAt: l.createdAt
+          ? new Date(l.createdAt * 1000).toISOString()
+          : null,
       })),
     );
   } catch (err: any) {

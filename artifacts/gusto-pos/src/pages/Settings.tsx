@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "wouter";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   useGetSettings,
@@ -42,6 +43,9 @@ import {
   FileSpreadsheet,
   Database,
   RefreshCw,
+  Sliders,
+  ChevronDown,
+  ClipboardList,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -79,56 +83,81 @@ const APP_COLUMNS = [
     suggest: ["subtype", "sub-category", "variety", "style"],
   },
   {
-    key: "baseUnit",
-    label: "Base Unit",
+    key: "trackingMode",
+    label: "Tracking Mode",
     required: false,
-    suggest: ["bulk unit", "unit", "baseunit", "uom"],
-  },
-  {
-    key: "baseUnitAmount",
-    label: "Base Unit Amount",
-    required: false,
-    suggest: ["bulk size", "size", "volume", "amount", "baseunitamount"],
-  },
-  {
-    key: "bulkUnit",
-    label: "Bulk Unit",
-    required: false,
-    suggest: ["bulk_unit", "bulkunit", "case", "case size"],
-  },
-  {
-    key: "servingSize",
-    label: "Serving Size",
-    required: false,
-    suggest: ["serving size", "servingsize", "pour", "serving", "pour size"],
-  },
-  {
-    key: "servingUnit",
-    label: "Serving Unit",
-    required: false,
-    suggest: ["serving_unit", "servingunit", "serve unit", "oz"],
+    hint: "Pool, Collection, or Auto",
+    suggest: ["trackingmode", "tracking mode", "tracking_mode"],
   },
   {
     key: "bottleSizeMl",
-    label: "Bottle Size (ml)",
+    label: "Container Size",
     required: false,
-    suggest: ["bottle_size_ml", "bottlesize", "ml", "bottle ml"],
+    hint: "Pool: ml per bottle | Collection: units per case",
+    suggest: [
+      "bottle_size_ml",
+      "bottlesize",
+      "containersize",
+      "ml",
+      "container",
+      "size",
+      "units",
+    ],
   },
   {
     key: "fullBottleWeightG",
     label: "Full Bottle Weight (g)",
     required: false,
+    hint: "Pool only - total weight of full bottle",
     suggest: [
       "full_bottle_weight_g",
+      "fullbottleweightg",
       "fullbottleweight",
       "full weight",
       "full bottle",
     ],
   },
   {
+    key: "containerWeightG",
+    label: "Container Weight (g)",
+    required: false,
+    hint: "Pool only - empty container weight",
+    suggest: [
+      "container_weight_g",
+      "containerweightg",
+      "containerweight",
+      "empty weight",
+      "tare",
+      "glass weight",
+    ],
+  },
+  {
+    key: "density",
+    label: "Density",
+    required: false,
+    hint: "Liquid density (default: 0.94)",
+    suggest: ["density", "specific gravity"],
+  },
+  {
+    key: "servingSize",
+    label: "Serving Size",
+    required: false,
+    hint: "Pool: oz per serving | Collection: units per serving",
+    suggest: [
+      "serving size",
+      "servingsize",
+      "serving",
+      "pour",
+      "pour size",
+      "oz",
+      "units",
+    ],
+  },
+  {
     key: "orderCost",
     label: "Order Cost",
     required: false,
+    hint: "Price per bottle/case",
     suggest: [
       "bulk cost",
       "cost",
@@ -139,21 +168,10 @@ const APP_COLUMNS = [
     ],
   },
   {
-    key: "currentStock",
-    label: "Current Stock",
-    required: false,
-    suggest: ["stock", "quantity", "qty", "currentstock", "on hand"],
-  },
-  {
-    key: "currentPartial",
-    label: "Current Partial",
-    required: false,
-    suggest: ["current_partial", "partial", "open", "opened"],
-  },
-  {
     key: "lowStockThreshold",
-    label: "Low Stock Alert Threshold",
+    label: "Low Stock Alert",
     required: false,
+    hint: "Minimum stock before alert",
     suggest: [
       "low_stock_threshold",
       "lowstockthreshold",
@@ -163,22 +181,41 @@ const APP_COLUMNS = [
     ],
   },
   {
-    key: "unitsPerCase",
-    label: "Units Per Case",
-    required: false,
-    suggest: [
-      "units_per_case",
-      "unitspercase",
-      "case qty",
-      "case quantity",
-      "pack size",
-    ],
-  },
-  {
     key: "isOnMenu",
     label: "On Menu",
     required: false,
+    hint: "Available for sale",
     suggest: ["is_on_menu", "onmenu", "available", "active"],
+  },
+  {
+    key: "currentSealed",
+    label: "Sealed Containers",
+    required: false,
+    hint: "Pool: full bottles | Collection: unopened cases",
+    suggest: [
+      "current_sealed",
+      "sealedcontainers",
+      "sealed",
+      "full",
+      "unopened",
+      "cases",
+      "bottles",
+    ],
+  },
+  {
+    key: "currentPartial",
+    label: "Open Weight (g)",
+    required: false,
+    hint: "Pool: partial bottle weight in grams | Collection: loose units",
+    suggest: [
+      "current_partial",
+      "openweightg",
+      "partial",
+      "open",
+      "loose",
+      "grams",
+      "weight",
+    ],
   },
 ];
 
@@ -188,9 +225,13 @@ export default function Settings() {
   const [showBlankFieldModal, setShowBlankFieldModal] = useState(false);
   const [pendingImport, setPendingImport] = useState<any[]>([]);
   const { language } = usePosStore();
+  const [rushDays, setRushDays] = useState(7);
+  const [showAllRushes, setShowAllRushes] = useState(false);
   const { data: settings } = useGetSettings();
   const { data: users, refetch: refetchUsers } = useGetUsers();
-  const { data: rushes, refetch: refetchRushes } = useGetRushes();
+  const { data: rushes, refetch: refetchRushes } = useGetRushes({
+    days: showAllRushes ? 365 : rushDays,
+  });
 
   const updateSettings = useUpdateSettings();
   const updateUser = useUpdateUser();
@@ -201,12 +242,14 @@ export default function Settings() {
   const { toast } = useToast();
   const { data: auth } = useGetCurrentAuthUser();
   const isAdmin = auth?.user?.role === "admin";
+  const [, setLocation] = useLocation();
 
   const [formData, setFormData] = useState({
     barName: "",
     barIcon: "Wine",
     usdToMxnRate: 0,
     cadToMxnRate: 0,
+    defaultMarkupFactor: 3.0,
     smtpHost: "",
     smtpPort: 587,
     smtpUser: "",
@@ -215,6 +258,7 @@ export default function Settings() {
     inventoryAlertEmail: "",
     enableLitestream: false,
     enableUsbBackup: false,
+    pinLockTimeoutMin: 5,
     autoBackupEnabled: true,
     autoBackupIntervalMin: 15,
     maxAutoBackups: 5,
@@ -235,12 +279,24 @@ export default function Settings() {
   const [showDeleteDataModal, setShowDeleteDataModal] = useState(false);
 
   const [showRecipeImport, setShowRecipeImport] = useState(false);
+  const [systemDefaults, setSystemDefaults] = useState<any>({
+    defaultAlcoholDensity: 0.94,
+    defaultServingSizeMl: 44.36,
+    defaultBottleSizeMl: 750,
+    defaultUnitsPerCase: 1,
+    defaultLowStockThreshold: 0,
+    defaultTrackingMode: "auto",
+    defaultAuditMethod: "auto",
+    varianceWarningThreshold: 5.0,
+  });
+  const [defaultsLoading, setDefaultsLoading] = useState(false);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditOffset, setAuditOffset] = useState(0);
   const [auditFilter, setAuditFilter] = useState<
     "all" | "tab" | "inventory" | "user"
   >("all");
+  const [batchAuditLoading, setBatchAuditLoading] = useState(false);
   const [recipePreview, setRecipePreview] = useState<any[]>([]);
 
   const [showIngredientImport, setShowIngredientImport] = useState(false);
@@ -260,6 +316,7 @@ export default function Settings() {
     title: "",
     type: "cruise" as const,
     impact: "medium" as const,
+    repeatEvent: 0,
     startTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
     endTime: "",
     description: "",
@@ -290,6 +347,31 @@ export default function Settings() {
     }
   };
 
+  const handleStartBatchAudit = async (typeFilter: string) => {
+    setBatchAuditLoading(true);
+    try {
+      const res = await fetch("/api/inventory/audit-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          typeFilter,
+          startedByUserId: auth?.user?.id,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to create audit session");
+      const session = await res.json();
+      setLocation("/settings/batch-audit/" + session.id);
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: err.message || "Failed to start batch audit",
+      });
+    } finally {
+      setBatchAuditLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (settings && !formData.barName) {
       setFormData({
@@ -297,6 +379,7 @@ export default function Settings() {
         barIcon: settings.barIcon || "Wine",
         usdToMxnRate: settings.usdToMxnRate,
         cadToMxnRate: settings.cadToMxnRate,
+        defaultMarkupFactor: settings.defaultMarkupFactor ?? 3.0,
         smtpHost: settings.smtpHost || "",
         smtpPort: settings.smtpPort || 587,
         smtpUser: settings.smtpUser || "",
@@ -305,6 +388,7 @@ export default function Settings() {
         inventoryAlertEmail: settings.inventoryAlertEmail || "",
         enableLitestream: settings.enableLitestream,
         enableUsbBackup: settings.enableUsbBackup,
+        pinLockTimeoutMin: settings.pinLockTimeoutMin ?? 5,
         autoBackupEnabled: settings.autoBackupEnabled ?? true,
         autoBackupIntervalMin: settings.autoBackupIntervalMin ?? 15,
         maxAutoBackups: settings.maxAutoBackups ?? 5,
@@ -332,6 +416,18 @@ export default function Settings() {
 
   useEffect(() => {
     fetchBackups();
+    // Fetch system defaults
+    (async () => {
+      try {
+        const res = await fetch("/api/settings/defaults");
+        if (res.ok) {
+          const data = await res.json();
+          setSystemDefaults(data);
+        }
+      } catch (err) {
+        console.error("Failed to load system defaults:", err);
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -613,71 +709,159 @@ export default function Settings() {
           ? row[columnMappings["subtype"]] || ""
           : "";
         const subtype = normalizeSubtype(rawSubtype, type);
-        const rawBulkUnit = columnMappings["baseUnit"]
-          ? row[columnMappings["baseUnit"]] || ""
+
+        // Container Size: Pool = ml per bottle, Collection = units per case
+        const rawContainerSize = columnMappings["bottleSizeMl"]
+          ? row[columnMappings["bottleSizeMl"]] || ""
           : "";
-        const bulkUnit = normalizeBulkUnit(rawBulkUnit, type);
-        const rawBulkSize = columnMappings["baseUnitAmount"]
-          ? row[columnMappings["baseUnitAmount"]] || ""
-          : "";
-        let bulkSize = parseFloat(rawBulkSize);
-        if (isNaN(bulkSize) || rawBulkSize === "") {
-          if (type === "spirit") bulkSize = 750;
-          else if (type === "beer") bulkSize = 24;
-          else if (type === "mixer") bulkSize = 1000;
-          else bulkSize = 1;
+        let containerSize = parseFloat(rawContainerSize.replace(/,/g, ""));
+        if (isNaN(containerSize) || rawContainerSize === "") {
+          if (type === "spirit") containerSize = 750;
+          else if (type === "mixer") containerSize = 1000;
+          else if (type === "beer") containerSize = 24;
+          else if (type === "ingredient") containerSize = 1000;
+          else containerSize = 1;
         }
-        const baseUnitAmount = convertBulkSize(bulkSize, bulkUnit, rawBulkUnit);
+
+        // Get trackingMode from CSV if present, otherwise determine from container size
+        const rawTrackingMode = columnMappings["trackingMode"]
+          ? row[columnMappings["trackingMode"]] || ""
+          : "";
+        let trackingMode = rawTrackingMode.toLowerCase().trim();
+        if (
+          trackingMode !== "pool" &&
+          trackingMode !== "collection" &&
+          trackingMode !== "auto"
+        ) {
+          // Failsafe: Determine trackingMode based on container size
+          // >=100 = ml (pool), <100 = units (collection)
+          trackingMode = containerSize >= 100 ? "pool" : "collection";
+
+          // Override based on type for known categories
+          if (
+            type === "spirit" ||
+            type === "mixer" ||
+            (type === "ingredient" && subtype === "liquid")
+          ) {
+            trackingMode = "pool";
+          } else if (
+            type === "beer" ||
+            type === "merch" ||
+            type === "misc" ||
+            (type === "ingredient" && subtype === "weighted")
+          ) {
+            trackingMode = "collection";
+          }
+        }
+
+        // Determine if this is Pool or Collection based on final trackingMode
+        const isPool = trackingMode === "pool";
+        const isCollection = trackingMode === "collection";
+
+        // Full Bottle Weight - Pool only
+        const rawFullWeight = columnMappings["fullBottleWeightG"]
+          ? row[columnMappings["fullBottleWeightG"]] || ""
+          : "";
+        const fullBottleWeightG = parseFloat(rawFullWeight) || 0;
+
+        // Container Weight - Pool only (also accept glassWeightG for backward compatibility)
+        const rawContainerWeight = columnMappings["containerWeightG"]
+          ? row[columnMappings["containerWeightG"]] || ""
+          : columnMappings["glassWeightG"]
+            ? row[columnMappings["glassWeightG"]] || ""
+            : "";
+        const containerWeightG = parseFloat(rawContainerWeight) || 0;
+
+        // Density - Pool only
+        const rawDensity = columnMappings["density"]
+          ? row[columnMappings["density"]] || ""
+          : "0.94";
+        const density = parseFloat(rawDensity) || 0.94;
+
+        // Serving Size in oz - convert to ml for backend
         const rawServingSize = columnMappings["servingSize"]
           ? row[columnMappings["servingSize"]] || ""
           : "";
-        let servingSizeVal = parseFloat(rawServingSize);
-        if (isNaN(servingSizeVal) || rawServingSize === "") {
-          if (type === "spirit") servingSizeVal = 1.5;
-          else if (type === "beer") servingSizeVal = 1;
-          else if (type === "mixer") servingSizeVal = 1;
-          else servingSizeVal = 1;
+        let servingSize = parseFloat(rawServingSize);
+        if (isNaN(servingSize) || rawServingSize === "") {
+          if (type === "spirit") servingSize = 1.5;
+          else if (type === "mixer") servingSize = 1;
+          else if (type === "beer") servingSize = 12;
+          else if (type === "ingredient") servingSize = 1;
+          else servingSize = 1;
         }
-        const servingUnit = normalizeServingUnit(
-          rawServingSize ? bulkUnit : "",
-          bulkUnit,
-        );
-        const servingSizeInBase = convertServingSize(
-          servingSizeVal,
-          servingUnit,
-          bulkUnit,
-        );
+        // Convert oz to ml for backend
+        servingSize = servingSize * 29.5735;
+
+        // Order Cost
         const rawCost = columnMappings["orderCost"]
           ? row[columnMappings["orderCost"]] || "0"
           : "0";
-        const bulkCost = parseFloat(rawCost.replace(/[$,]/g, ""));
-        const rawStock = columnMappings["currentStock"]
-          ? row[columnMappings["currentStock"]] || "0"
-          : "0";
-        const currentStock = parseFloat(rawStock) || 0;
-        const unitsPerCase =
-          type === "beer" && rawBulkUnit.toLowerCase().trim() === "case"
-            ? bulkSize
-            : type === "beer"
-              ? 24
-              : 1;
+        const orderCost = parseFloat(rawCost.replace(/[$,]/g, "")) || 0;
+
+        // Low Stock Threshold
+        const rawThreshold = columnMappings["lowStockThreshold"]
+          ? row[columnMappings["lowStockThreshold"]] || ""
+          : "1";
+        const lowStockThreshold = parseFloat(rawThreshold) || 1;
+
+        // On Menu
+        const rawOnMenu = columnMappings["isOnMenu"]
+          ? row[columnMappings["isOnMenu"]] || ""
+          : "";
+        const isOnMenu =
+          rawOnMenu.toLowerCase().trim() === "true" ||
+          rawOnMenu.toLowerCase().trim() === "1" ||
+          rawOnMenu.toLowerCase().trim() === "yes" ||
+          rawOnMenu.toLowerCase().trim() === "on" ||
+          rawOnMenu.toLowerCase().trim() === "available"
+            ? 1
+            : 0;
+
+        // Current Sealed (full bottles for Pool, unopened cases for Collection)
+        const rawSealed = columnMappings["currentSealed"]
+          ? row[columnMappings["currentSealed"]] || ""
+          : "";
+        const currentSealed = parseFloat(rawSealed.replace(/,/g, "")) || 0;
+
+        // Current Partial (weight in grams for Pool, loose units for Collection)
+        const rawPartial = columnMappings["currentPartial"]
+          ? row[columnMappings["currentPartial"]] || ""
+          : "";
+        const currentPartial = parseFloat(rawPartial.replace(/,/g, "")) || 0;
+
+        // Calculate currentStock for backend compatibility
+        let currentStock = 0;
+        if (trackingMode === "pool") {
+          currentStock = currentSealed * containerSize + currentPartial;
+        } else {
+          currentStock = currentSealed * containerSize + currentPartial;
+        }
 
         return {
           name,
           nameEs: "",
           type,
           subtype,
-          baseUnit: bulkUnit,
-          baseUnitAmount,
-          orderCost: isNaN(bulkCost) ? 0 : bulkCost,
-          currentStock:
-            currentStock > 0 && type !== "beer"
-              ? currentStock * baseUnitAmount
-              : currentStock,
-          servingSize: servingSizeInBase,
-          lowStockThreshold: 1,
-          unitsPerCase,
-          isOnMenu: false,
+          trackingMode,
+          baseUnit: trackingMode === "pool" ? "ml" : "unit",
+          baseUnitAmount:
+            trackingMode === "pool" ? containerSize : containerSize,
+          // Pool fields
+          bottleSizeMl: trackingMode === "pool" ? containerSize : 0,
+          fullBottleWeightG: trackingMode === "pool" ? fullBottleWeightG : 0,
+          containerWeightG: trackingMode === "pool" ? containerWeightG : 0,
+          density: trackingMode === "pool" ? density : 0.94,
+          servingSize: servingSize,
+          // Collection fields
+          unitsPerCase: trackingMode === "collection" ? containerSize : 0,
+          // Common fields
+          orderCost: orderCost,
+          lowStockThreshold: lowStockThreshold,
+          isOnMenu: isOnMenu,
+          currentStock: currentStock,
+          currentBulk: currentSealed,
+          currentPartial: currentPartial,
         };
       })
       .filter((item) => item.name.trim());
@@ -880,16 +1064,22 @@ export default function Settings() {
       return;
     }
 
-    if (!editingStaff.role) {
+    if (
+      !editingStaff.role ||
+      !["admin", "employee"].includes(editingStaff.role)
+    ) {
       toast({
         variant: "destructive",
         title: getTranslation("error", language),
-        description: "Role is required",
+        description: "Valid role is required (admin or employee)",
       });
       return;
     }
 
-    if (!editingStaff.language) {
+    if (
+      !editingStaff.language ||
+      !["en", "es"].includes(editingStaff.language)
+    ) {
       editingStaff.language = "en";
     }
 
@@ -921,12 +1111,15 @@ export default function Settings() {
     } else {
       createUser.mutate(
         {
-          ...rest,
-          password: password || "",
-          isActive: true,
+          data: {
+            ...rest,
+            password: password || "",
+            isActive: 1,
+          },
         },
         {
           onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ["/api/users"] });
             setEditingStaff(null);
             toast({
               title: getTranslation("success", language),
@@ -934,6 +1127,7 @@ export default function Settings() {
             });
           },
           onError: (err: any) => {
+            console.error("Create user error:", err);
             toast({
               variant: "destructive",
               title: getTranslation("error", language),
@@ -946,8 +1140,25 @@ export default function Settings() {
   };
 
   const handleAddRush = () => {
+    const startTimeUnix = Math.floor(
+      new Date(newRush.startTime).getTime() / 1000,
+    );
+    const endTimeUnix = newRush.endTime
+      ? Math.floor(new Date(newRush.endTime).getTime() / 1000)
+      : undefined;
+
     createRush.mutate(
-      { data: newRush },
+      {
+        data: {
+          title: newRush.title,
+          description: newRush.description || undefined,
+          startTime: startTimeUnix,
+          endTime: endTimeUnix,
+          repeatEvent: newRush.repeatEvent as 0 | 1 | 2 | 3,
+          impact: newRush.impact as "low" | "medium" | "high",
+          type: newRush.type as "cruise" | "festival" | "music" | "other",
+        },
+      },
       {
         onSuccess: () => {
           setShowAddRush(false);
@@ -955,6 +1166,7 @@ export default function Settings() {
             title: "",
             type: "cruise" as const,
             impact: "medium" as const,
+            repeatEvent: 0,
             startTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
             endTime: "",
             description: "",
@@ -1006,6 +1218,51 @@ export default function Settings() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
+      {/* Quick Navigation */}
+      <div className="glass rounded-3xl p-4">
+        <h3 className="text-sm font-medium text-muted-foreground mb-3">
+          Quick Navigation
+        </h3>
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="#bar-settings"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-white/10 text-sm hover:bg-white/5"
+          >
+            Bar Settings
+          </a>
+          <a
+            href="#backup-settings"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-white/10 text-sm hover:bg-white/5"
+          >
+            Backups
+          </a>
+          <a
+            href="#inventory-settings"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-white/10 text-sm hover:bg-white/5"
+          >
+            Inventory
+          </a>
+          <a
+            href="#system-defaults"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-white/10 text-sm hover:bg-white/5"
+          >
+            System Defaults
+          </a>
+          <a
+            href="#audit-logs"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-white/10 text-sm hover:bg-white/5"
+          >
+            Audit Logs
+          </a>
+          <a
+            href="#data-management"
+            className="px-3 py-1.5 rounded-lg bg-secondary border border-white/10 text-sm hover:bg-white/5"
+          >
+            Data Management
+          </a>
+        </div>
+      </div>
+
       {/* Blank Field Import Modal */}
       <Dialog open={showBlankFieldModal} onOpenChange={setShowBlankFieldModal}>
         <DialogContent>
@@ -1051,9 +1308,37 @@ export default function Settings() {
           <h3 className="text-lg font-medium text-primary flex items-center gap-2">
             <Zap size={18} /> Rush Events
           </h3>
-          <Button size="sm" onClick={() => setShowAddRush(true)}>
-            <Plus size={16} className="mr-2" /> Schedule Rush
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={rushDays === 7 ? "default" : "outline"}
+              onClick={() => {
+                setRushDays(7);
+                setShowAllRushes(false);
+                refetchRushes();
+              }}
+            >
+              7 Days
+            </Button>
+            <Button
+              size="sm"
+              variant={rushDays === 30 ? "default" : "outline"}
+              onClick={() => {
+                setRushDays(30);
+                setShowAllRushes(false);
+                refetchRushes();
+              }}
+            >
+              30 Days
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowAddRush(true)}
+            >
+              <Plus size={16} className="mr-2" /> Schedule Rush
+            </Button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -1114,10 +1399,100 @@ export default function Settings() {
       </section>
 
       {/* Audit Logs */}
-      <section className="glass rounded-3xl p-6 space-y-6">
-        <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
-          <Shield size={18} /> Audit Logs
-        </h3>
+      <section id="audit-logs" className="glass rounded-3xl p-6 space-y-6">
+        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+          <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+            <Shield size={18} /> Audit Logs
+          </h3>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => (window.location.href = "/inventory")}
+            >
+              <ClipboardList size={16} className="mr-2" />
+              Individual
+            </Button>
+            <div className="relative">
+              <Button
+                size="sm"
+                disabled={batchAuditLoading}
+                onClick={() => {
+                  const menu = document.getElementById("batch-audit-menu");
+                  if (menu) menu.classList.toggle("hidden");
+                }}
+              >
+                <ClipboardList size={16} className="mr-2" />
+                Batch Audit
+                <ChevronDown size={14} className="ml-1" />
+              </Button>
+              <div
+                id="batch-audit-menu"
+                className="hidden absolute right-0 mt-1 w-48 glass rounded-xl border border-white/10 shadow-lg z-50"
+              >
+                <button
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-white/5 rounded-t-xl"
+                  onClick={() => {
+                    document
+                      .getElementById("batch-audit-menu")
+                      ?.classList.add("hidden");
+                    handleStartBatchAudit("all");
+                  }}
+                >
+                  All Items
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-white/5"
+                  onClick={() => {
+                    document
+                      .getElementById("batch-audit-menu")
+                      ?.classList.add("hidden");
+                    handleStartBatchAudit("spirit");
+                  }}
+                >
+                  Spirits
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-white/5"
+                  onClick={() => {
+                    document
+                      .getElementById("batch-audit-menu")
+                      ?.classList.add("hidden");
+                    handleStartBatchAudit("beer");
+                  }}
+                >
+                  Beer
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-white/5"
+                  onClick={() => {
+                    document
+                      .getElementById("batch-audit-menu")
+                      ?.classList.add("hidden");
+                    handleStartBatchAudit("mixer");
+                  }}
+                >
+                  Mixers
+                </button>
+                <button
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-white/5 rounded-b-xl"
+                  onClick={() => {
+                    document
+                      .getElementById("batch-audit-menu")
+                      ?.classList.add("hidden");
+                    handleStartBatchAudit("ingredient");
+                  }}
+                >
+                  Ingredients
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          View past inventory audits or perform a new audit. Use Individual for
+          single items or Batch Audit to audit multiple items at once.
+        </p>
         <div className="flex gap-2 mb-4">
           {["all", "tab", "inventory", "user"].map((filter) => {
             const isActive = auditFilter === filter;
@@ -1407,7 +1782,7 @@ export default function Settings() {
       </section>
 
       {/* Backups / Disaster Recovery */}
-      <section className="glass rounded-3xl p-6 space-y-6">
+      <section id="backup-settings" className="glass rounded-3xl p-6 space-y-6">
         <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
           <Shield size={18} /> Backups & Disaster Recovery
         </h3>
@@ -1451,10 +1826,17 @@ export default function Settings() {
                   key={backup.id}
                   className="flex items-center justify-between p-2 bg-white/5 rounded-lg text-sm"
                 >
-                  <span className="text-muted-foreground">
-                    {format(new Date(backup.createdAt), "MMM d, HH:mm")} -{" "}
-                    {(backup.size / 1024 / 1024).toFixed(1)}MB
-                  </span>
+                  <a
+                    href={`/api/admin/backups/${backup.filename}/download`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:text-primary/80 underline flex items-center gap-2"
+                  >
+                    <span className="text-muted-foreground">
+                      {format(new Date(backup.createdAt), "MMM d, HH:mm")} -{" "}
+                      {(backup.size / 1024 / 1024).toFixed(1)}MB
+                    </span>
+                  </a>
                   <span className="capitalize text-xs px-2 py-0.5 bg-white/10 rounded">
                     {backup.type}
                   </span>
@@ -1521,11 +1903,207 @@ export default function Settings() {
         </Button>
       </section>
 
+      {/* System Defaults */}
+      <section id="system-defaults" className="glass rounded-3xl p-6 space-y-6">
+        <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
+          <Sliders size={18} /> System Defaults
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Configure default values for new inventory items. These can be
+          overridden per item.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Default Alcohol Density
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={systemDefaults.defaultAlcoholDensity}
+              onChange={(e) =>
+                setSystemDefaults({
+                  ...systemDefaults,
+                  defaultAlcoholDensity: parseFloat(e.target.value) || 0.94,
+                })
+              }
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              {" "}
+              spirits (default: 0.94)
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Default Serving Size (ml)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={systemDefaults.defaultServingSizeMl}
+              onChange={(e) =>
+                setSystemDefaults({
+                  ...systemDefaults,
+                  defaultServingSizeMl: parseFloat(e.target.value) || 44.36,
+                })
+              }
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
+            />
+            <p className="text-xs text-muted-foreground"> 1.5oz = 44.36ml</p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Default Bottle Size (ml)
+            </label>
+            <input
+              type="number"
+              value={systemDefaults.defaultBottleSizeMl}
+              onChange={(e) =>
+                setSystemDefaults({
+                  ...systemDefaults,
+                  defaultBottleSizeMl: parseInt(e.target.value) || 750,
+                })
+              }
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              {" "}
+              standard bottle (default: 750)
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Default Units Per Case
+            </label>
+            <input
+              type="number"
+              value={systemDefaults.defaultUnitsPerCase}
+              onChange={(e) =>
+                setSystemDefaults({
+                  ...systemDefaults,
+                  defaultUnitsPerCase: parseInt(e.target.value) || 1,
+                })
+              }
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              {" "}
+              beer/merch (default: 1)
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">
+              Default Low Stock Threshold
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              value={systemDefaults.defaultLowStockThreshold}
+              onChange={(e) =>
+                setSystemDefaults({
+                  ...systemDefaults,
+                  defaultLowStockThreshold: parseFloat(e.target.value) || 0,
+                })
+              }
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              {" "}
+              alert threshold (default: 0)
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Default Tracking Mode</label>
+            <select
+              value={systemDefaults.defaultTrackingMode}
+              onChange={(e) =>
+                setSystemDefaults({
+                  ...systemDefaults,
+                  defaultTrackingMode: e.target.value,
+                })
+              }
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
+            >
+              <option value="auto">Auto (based on type)</option>
+              <option value="pool">Pool (weight-based)</option>
+              <option value="collection">Collection (unit-based)</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Default Audit Method</label>
+            <select
+              value={systemDefaults.defaultAuditMethod}
+              onChange={(e) =>
+                setSystemDefaults({
+                  ...systemDefaults,
+                  defaultAuditMethod: e.target.value,
+                })
+              }
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
+            >
+              <option value="auto">Auto</option>
+              <option value="weight">Weight-based</option>
+              <option value="count">Count-based</option>
+            </select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Variance Warning (%)</label>
+            <input
+              type="number"
+              step="0.1"
+              value={systemDefaults.varianceWarningThreshold}
+              onChange={(e) =>
+                setSystemDefaults({
+                  ...systemDefaults,
+                  varianceWarningThreshold: parseFloat(e.target.value) || 5.0,
+                })
+              }
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
+            />
+            <p className="text-xs text-muted-foreground">
+              {" "}
+              alert threshold (default: 5%)
+            </p>
+          </div>
+        </div>
+        <Button
+          className="w-full"
+          onClick={async () => {
+            setDefaultsLoading(true);
+            try {
+              const res = await fetch("/api/settings/defaults", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(systemDefaults),
+              });
+              if (!res.ok) throw new Error("Failed to save");
+              toast({
+                title: "Success",
+                description: "System defaults saved",
+              });
+            } catch (err: any) {
+              toast({
+                variant: "destructive",
+                title: "Error",
+                description: err.message || "Failed to save defaults",
+              });
+            } finally {
+              setDefaultsLoading(false);
+            }
+          }}
+          disabled={defaultsLoading}
+        >
+          <Save size={16} className="mr-2" />
+          {defaultsLoading ? "Saving..." : "Save System Defaults"}
+        </Button>
+      </section>
+
       {/* SMTP / Notifications - DISABLED for offline-first deployment */}
       {/* Email notifications not available in local/offline mode */}
 
       {/* Data Management */}
-      <section className="glass rounded-3xl p-6 space-y-6">
+      <section id="data-management" className="glass rounded-3xl p-6 space-y-6">
         <div className="flex justify-between items-center border-b border-white/5 pb-2">
           <h3 className="text-lg font-medium text-primary flex items-center gap-2">
             <Database size={18} /> Data Management
@@ -1638,6 +2216,26 @@ export default function Settings() {
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
                     <option value="high">High</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">
+                    Repeat
+                  </label>
+                  <select
+                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                    value={newRush.repeatEvent}
+                    onChange={(e) =>
+                      setNewRush({
+                        ...newRush,
+                        repeatEvent: Number(e.target.value),
+                      })
+                    }
+                  >
+                    <option value={0}>Never</option>
+                    <option value={1}>Weekly</option>
+                    <option value={2}>Monthly</option>
+                    <option value={3}>Daily</option>
                   </select>
                 </div>
               </div>
@@ -1855,6 +2453,24 @@ export default function Settings() {
                     }
                   />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">
+                  {getTranslation("language", language)}
+                </label>
+                <select
+                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+                  value={editingStaff.language || "en"}
+                  onChange={(e) =>
+                    setEditingStaff({
+                      ...editingStaff,
+                      language: e.target.value,
+                    })
+                  }
+                >
+                  <option value="en">English</option>
+                  <option value="es">Español</option>
+                </select>
               </div>
               <div className="flex items-center gap-2 pt-2 p-4 bg-white/5 rounded-2xl border border-white/5">
                 <input
@@ -2192,8 +2808,37 @@ export default function Settings() {
                             {item.name}
                           </div>
                           <div className="text-muted-foreground">
-                            {item.type} • {item.baseUnit} •{" "}
-                            {item.baseUnitAmount}
+                            {item.type} •{" "}
+                            {item.trackingMode === "pool" ||
+                            (item.trackingMode === "auto" &&
+                              item.type === "spirit") ||
+                            (item.trackingMode === "auto" &&
+                              item.type === "mixer")
+                              ? `${item.bottleSizeMl || 0}ml`
+                              : `${item.unitsPerCase || item.bottleSizeMl || 0} units`}{" "}
+                            • {item.servingSize}
+                            {item.trackingMode === "pool" ||
+                            (item.trackingMode === "auto" &&
+                              item.type === "spirit") ||
+                            (item.trackingMode === "auto" &&
+                              item.type === "mixer")
+                              ? "oz"
+                              : "units"}
+                            {(item.currentBulk > 0 ||
+                              item.currentPartial > 0) && (
+                              <span className="ml-2 text-primary">
+                                • Stock: {item.currentBulk || 0} sealed,{" "}
+                                {item.currentPartial || 0}{" "}
+                                {item.trackingMode === "pool" ||
+                                (item.trackingMode === "auto" &&
+                                  item.type === "spirit") ||
+                                (item.trackingMode === "auto" &&
+                                  item.type === "mixer")
+                                  ? "g"
+                                  : "units"}{" "}
+                                open
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="text-muted-foreground">

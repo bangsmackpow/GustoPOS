@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useSearchParams } from "wouter";
 import { useGetDrinks, useGetIngredients } from "@workspace/api-client-react";
 import { useSaveDrinkMutation } from "@/hooks/use-pos-mutations";
@@ -19,9 +19,9 @@ import {
   Menu,
   Copy as CopyIcon,
   ChefHat,
-  Beaker,
   Wine,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -60,6 +60,7 @@ export default function Drinks() {
   const [deleteDrinkId, setDeleteDrinkId] = useState<string | null>(null);
   const [deleteDrinkName, setDeleteDrinkName] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [filterSidebarCollapsed, setFilterSidebarCollapsed] = useState(false);
 
   const activeCategory = searchParams.get("category") || "all";
   const onMenuOnly = searchParams.get("onMenu") === "true";
@@ -147,6 +148,22 @@ export default function Drinks() {
 
   const handleMenuToggle = async (drink: any) => {
     const newVal = !drink.isOnMenu;
+
+    // Block enabling menu without recipe (unless it's inventory_single which has auto-recipe)
+    if (
+      newVal &&
+      (!drink.recipe || drink.recipe.length === 0) &&
+      drink.sourceType !== "inventory_single"
+    ) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description:
+          "Add at least one ingredient to the recipe before enabling menu",
+      });
+      return;
+    }
+
     qc.setQueryData(["drinks"], (old: any) => {
       if (!old) return old;
       return old.map((d: any) =>
@@ -281,8 +298,37 @@ export default function Drinks() {
   return (
     <div className="flex h-full">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-70 flex-col border-r border-white/5 p-4 overflow-y-auto shrink-0">
-        {sidebarContent}
+      <aside
+        className={`hidden md:flex flex-col border-r border-white/5 p-4 overflow-y-auto shrink-0 transition-all duration-300 ${
+          filterSidebarCollapsed ? "w-16" : "w-70"
+        }`}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <span
+            className={`font-display font-bold text-lg transition-opacity duration-300 ${
+              filterSidebarCollapsed ? "hidden" : ""
+            }`}
+          >
+            {getTranslation("menu", language)}
+          </span>
+          <button
+            onClick={() => setFilterSidebarCollapsed(!filterSidebarCollapsed)}
+            className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+            title={
+              filterSidebarCollapsed ? "Expand filters" : "Collapse filters"
+            }
+          >
+            <ChevronLeft
+              size={18}
+              className={`transition-transform duration-300 ${
+                filterSidebarCollapsed ? "rotate-180" : ""
+              }`}
+            />
+          </button>
+        </div>
+        <div className={filterSidebarCollapsed ? "hidden" : ""}>
+          {sidebarContent}
+        </div>
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -682,34 +728,74 @@ function DrinkModal({
       });
       return;
     }
+    // Require recipe for non-inventory_single drinks
+    if (
+      editing.sourceType !== "inventory_single" &&
+      (!editing.recipe || editing.recipe.length === 0)
+    ) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: "Add at least one ingredient to the recipe",
+      });
+      return;
+    }
     onSave(editing);
   };
 
-  const spiritIngredients = useMemo(() => {
-    return ingredients.filter(
-      (ing: any) => ing.type === "spirit" || ing.type === "ingredient",
-    );
-  }, [ingredients]);
+  const recipeTypes = [
+    "spirit",
+    "mixer",
+    "juice",
+    "sour",
+    "sweet",
+    "bitter",
+    "garnish",
+    "other",
+  ];
 
-  const subtypes = useMemo(() => {
-    const subs = new Set<string>();
-    spiritIngredients.forEach((ing: any) => {
-      if (ing.subtype) subs.add(ing.subtype);
-    });
-    return Array.from(subs).sort();
-  }, [spiritIngredients]);
+  const getIngredientsFiltered = (typeFilter: string, subtype: string) => {
+    return ingredients
+      .filter(
+        (ing: any) =>
+          ing.type === typeFilter || (typeFilter === "other" && !ing.type),
+      )
+      .filter(
+        (ing: any) =>
+          ing.subtype === subtype || (!ing.subtype && subtype === "other"),
+      );
+  };
 
-  const getIngredientsBySubtype = (subtype: string) => {
-    return spiritIngredients.filter(
-      (ing: any) =>
-        ing.subtype === subtype || (!ing.subtype && subtype === "other"),
-    );
+  const subtypeOptionsByType: Record<string, string[]> = {
+    spirit: [
+      "tequila",
+      "mezcal",
+      "whiskey",
+      "vodka",
+      "gin",
+      "rum",
+      "brandy",
+      " liqueur",
+      "other",
+    ],
+    mixer: ["soda", "tonic", "water", "energy", "beer", "other"],
+    juice: ["lime", "lemon", "orange", "grapefruit", "cranberry", "other"],
+    sour: ["lime", "lemon", "other"],
+    sweet: ["simple", "agave", "honey", "other"],
+    bitter: ["angostura", "campari", "other"],
+    garnish: ["salt", "lime", "cherry", "olive", "other"],
+    other: [],
   };
 
   const updateRecipeItem = (idx: number, updates: any) => {
     const newRecipe = [...(editing.recipe || [])];
     newRecipe[idx] = { ...newRecipe[idx], ...updates };
 
+    if (updates.type) {
+      newRecipe[idx].subtype = "";
+      newRecipe[idx].ingredientId = "";
+      newRecipe[idx].ingredientName = "";
+    }
     if (updates.subtype) {
       newRecipe[idx].ingredientId = "";
       newRecipe[idx].ingredientName = "";
@@ -872,16 +958,37 @@ function DrinkModal({
                   >
                     <div className="flex gap-2 items-center">
                       <select
+                        className="w-24 bg-secondary border border-white/10 rounded-xl px-2 py-2 text-foreground text-sm font-medium"
+                        value={item.type || ""}
+                        onChange={(e) =>
+                          updateRecipeItem(idx, { type: e.target.value })
+                        }
+                      >
+                        <option value="">
+                          {getTranslation("type", language)}
+                        </option>
+                        {recipeTypes.map((t) => (
+                          <option key={t} value={t}>
+                            {t.charAt(0).toUpperCase() + t.slice(1)}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
                         className="flex-1 bg-secondary border border-white/10 rounded-xl px-3 py-2 text-foreground text-sm"
                         value={item.subtype || ""}
                         onChange={(e) =>
                           updateRecipeItem(idx, { subtype: e.target.value })
                         }
+                        disabled={!item.type}
                       >
                         <option value="">
                           {getTranslation("select_subtype", language)}
                         </option>
-                        {subtypes.map((sub) => (
+                        {(
+                          subtypeOptionsByType[item.type] ||
+                          subtypeOptionsByType["other"]
+                        ).map((sub) => (
                           <option key={sub} value={sub}>
                             {getTranslation(sub, language) || sub}
                           </option>
@@ -901,7 +1008,7 @@ function DrinkModal({
                         <option value="">
                           {getTranslation("select_ingredient", language)}
                         </option>
-                        {getIngredientsBySubtype(item.subtype).map(
+                        {getIngredientsFiltered(item.type, item.subtype).map(
                           (ing: any) => (
                             <option key={ing.id} value={ing.id}>
                               {language === "es" && ing.nameEs

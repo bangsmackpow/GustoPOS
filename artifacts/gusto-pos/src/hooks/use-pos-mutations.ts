@@ -125,8 +125,23 @@ export function useAddOrderMutation() {
 export function useDeleteOrderMutation() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (variables: { id: string; tabId: string }) =>
-      deleteOrder(variables.id),
+    mutationFn: (variables: {
+      id: string;
+      tabId: string;
+      reason?: string;
+      voidedByUserId?: string;
+    }) =>
+      fetch(`/api/orders/${variables.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reason: variables.reason,
+          voidedByUserId: variables.voidedByUserId,
+        }),
+      }).then((res) => {
+        if (!res.ok) throw new Error("Failed to void order");
+        return res.json();
+      }),
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: getGetTabQueryKey(variables.tabId) });
       qc.invalidateQueries({ queryKey: getGetTabsQueryKey() });
@@ -154,7 +169,10 @@ export function useCloseShiftMutation() {
   const qc = useQueryClient();
   const { toast } = useToast();
   return useMutation({
-    mutationFn: (variables: { id: string; data?: Parameters<typeof closeShift>[1] }) => closeShift(variables.id, variables.data ?? {}),
+    mutationFn: (variables: {
+      id: string;
+      data?: Parameters<typeof closeShift>[1];
+    }) => closeShift(variables.id, variables.data ?? {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: getGetActiveShiftQueryKey() });
       qc.invalidateQueries({ queryKey: getGetShiftsQueryKey() });

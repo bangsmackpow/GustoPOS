@@ -31,7 +31,19 @@ import {
   Zap,
   Trash2,
 } from "lucide-react";
-import { format, subDays } from "date-fns";
+import {
+  format,
+  subDays,
+  startOfDay,
+  endOfDay,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+  subWeeks,
+  subYears,
+} from "date-fns";
 
 export default function Reports() {
   const { language, activeStaff } = usePosStore();
@@ -40,12 +52,61 @@ export default function Reports() {
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [openTabsError, setOpenTabsError] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<
-    "shifts" | "analytics" | "forecast" | "audits"
+    "shifts" | "analytics" | "forecast" | "audits" | "stats"
   >("shifts");
   const [startDate, setStartDate] = useState(
     format(subDays(new Date(), 7), "yyyy-MM-dd"),
   );
   const [endDate, setEndDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [activeDatePreset, setActiveDatePreset] = useState<string | null>(null);
+
+  const setDatePreset = (preset: string) => {
+    const now = new Date();
+    let start: Date;
+    let end: Date = now;
+
+    switch (preset) {
+      case "today":
+        start = startOfDay(now);
+        break;
+      case "yesterday":
+        start = startOfDay(subDays(now, 1));
+        end = endOfDay(subDays(now, 1));
+        break;
+      case "thisWeek":
+        start = startOfWeek(now, { weekStartsOn: 1 });
+        break;
+      case "lastWeek":
+        start = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+        end = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+        break;
+      case "thisMonth":
+        start = startOfMonth(now);
+        break;
+      case "lastMonth":
+        start = startOfMonth(subMonths(now, 1));
+        end = endOfMonth(subMonths(now, 1));
+        break;
+      case "last7":
+        start = subDays(now, 7);
+        break;
+      case "last30":
+        start = subDays(now, 30);
+        break;
+      case "last90":
+        start = subDays(now, 90);
+        break;
+      case "ytd":
+        start = new Date(now.getFullYear(), 0, 1);
+        break;
+      default:
+        return;
+    }
+
+    setStartDate(format(start, "yyyy-MM-dd"));
+    setEndDate(format(end, "yyyy-MM-dd"));
+    setActiveDatePreset(preset);
+  };
   const [analyticsData, setAnalyticsData] = useState<any>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [forecastDays, setForecastDays] = useState(14);
@@ -55,6 +116,10 @@ export default function Reports() {
   const [auditHistory, setAuditHistory] = useState<any>(null);
   const [varianceSummary, setVarianceSummary] = useState<any>(null);
   const [auditLoading, setAuditLoading] = useState(false);
+  const [voidAnalyticsData, setVoidAnalyticsData] = useState<any>(null);
+  const [voidAnalyticsLoading, setVoidAnalyticsLoading] = useState(false);
+  const [statsData, setStatsData] = useState<any>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [actualCash, setActualCash] = useState("");
 
@@ -170,6 +235,48 @@ export default function Reports() {
     }
   };
 
+  const loadStats = async () => {
+    if (!startDate || !endDate) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: "Please select both dates",
+      });
+      return;
+    }
+
+    setStatsLoading(true);
+    try {
+      const params = new URLSearchParams({
+        startDate: startDate + "T00:00:00Z",
+        endDate: endDate + "T23:59:59Z",
+      });
+      
+      const [salesRes, voidsRes] = await Promise.all([
+        fetch("/api/analytics/sales?" + params.toString()),
+        fetch("/api/analytics/voids?" + params.toString()),
+      ]);
+
+      if (!salesRes.ok || !voidsRes.ok) throw new Error("Failed to fetch stats");
+      
+      const salesData = await salesRes.json();
+      const voidsData = await voidsRes.json();
+      
+      setStatsData({ sales: salesData, voids: voidsData });
+      toast({
+        title: getTranslation("success", language),
+        description: "Stats loaded successfully",
+      });
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: err.message || "Failed to load stats",
+      });
+    } finally {
+      setStatsLoading(false);
+    }
+  };
   const generateAuditReport = async () => {
     setAuditLoading(true);
     try {
@@ -288,6 +395,17 @@ export default function Reports() {
             <Package size={18} className="inline mr-2" />
             {getTranslation("inventory_audits", language)}
           </button>
+          <button
+            onClick={() => setActiveTab("stats")}
+            className={`px-4 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === "stats"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <BarChart3 size={18} className="inline mr-2" />
+            Stats
+          </button>
         </div>
       </div>
 
@@ -389,28 +507,40 @@ export default function Reports() {
                     </p>
                   </div>
 
-                  {report.shift?.cashVarianceMxn !== null && report.shift?.cashVarianceMxn !== undefined && (
-                    <div className="glass p-6 rounded-3xl border border-white/5">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${
-                        report.shift.cashVarianceMxn >= 0 ? "bg-emerald-500/20 text-emerald-400" : "bg-destructive/20 text-destructive"
-                      }`}>
-                        <DollarSign size={20} />
-                      </div>
-                      <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">
-                        Cash Variance
-                      </p>
-                      <div className="mt-1">
-                        <p className={`text-3xl font-display font-bold ${
-                          report.shift.cashVarianceMxn >= 0 ? "text-emerald-400" : "text-destructive"
-                        }`}>
-                          {report.shift.cashVarianceMxn >= 0 ? "+" : ""}${report.shift.cashVarianceMxn.toLocaleString()}
+                  {report.shift?.cashVarianceMxn !== null &&
+                    report.shift?.cashVarianceMxn !== undefined && (
+                      <div className="glass p-6 rounded-3xl border border-white/5">
+                        <div
+                          className={`w-10 h-10 rounded-xl flex items-center justify-center mb-4 ${
+                            report.shift.cashVarianceMxn >= 0
+                              ? "bg-emerald-500/20 text-emerald-400"
+                              : "bg-destructive/20 text-destructive"
+                          }`}
+                        >
+                          <DollarSign size={20} />
+                        </div>
+                        <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">
+                          Cash Variance
                         </p>
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">
-                          Expected: ${report.shift.expectedCashMxn?.toLocaleString() ?? 0}
-                        </p>
+                        <div className="mt-1">
+                          <p
+                            className={`text-3xl font-display font-bold ${
+                              report.shift.cashVarianceMxn >= 0
+                                ? "text-emerald-400"
+                                : "text-destructive"
+                            }`}
+                          >
+                            {report.shift.cashVarianceMxn >= 0 ? "+" : ""}$
+                            {report.shift.cashVarianceMxn.toLocaleString()}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground uppercase font-bold mt-1">
+                            Expected: $
+                            {report.shift.expectedCashMxn?.toLocaleString() ??
+                              0}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
 
                 {/* Profit Insights */}
@@ -596,6 +726,40 @@ export default function Reports() {
       ) : (
         /* Analytics Tab */
         <div className="space-y-6">
+          {/* Quick Date Filters */}
+          <div className="glass rounded-3xl p-6 space-y-4">
+            <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+              <Clock size={18} />{" "}
+              {getTranslation("quick_filters", language) || "Quick Filters"}
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { id: "today", label: "Today" },
+                { id: "yesterday", label: "Yesterday" },
+                { id: "thisWeek", label: "This Week" },
+                { id: "lastWeek", label: "Last Week" },
+                { id: "thisMonth", label: "This Month" },
+                { id: "lastMonth", label: "Last Month" },
+                { id: "last7", label: "Last 7 Days" },
+                { id: "last30", label: "Last 30 Days" },
+                { id: "last90", label: "Last 90 Days" },
+                { id: "ytd", label: "Year to Date" },
+              ].map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => setDatePreset(preset.id)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    activeDatePreset === preset.id
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary border border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Date Range Selector */}
           <div className="glass rounded-3xl p-6 space-y-4">
             <h3 className="text-lg font-medium text-primary flex items-center gap-2 border-b border-white/5 pb-2">
@@ -1437,6 +1601,124 @@ export default function Reports() {
       )}
 
       {/* Close Shift Modal */}
+
+      {/* Stats Tab */}
+      {activeTab === "stats" && (
+        <div className="space-y-8">
+          <div className="glass rounded-3xl p-6 border border-white/5 space-y-4">
+            <h3 className="text-lg font-medium flex items-center gap-2">
+              <BarChart3 size={20} className="text-blue-400" />
+              Stats & Insights
+            </h3>
+            <div className="flex gap-4 items-end">
+              <Button onClick={loadStats} disabled={statsLoading}>
+                {statsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Load Stats
+              </Button>
+            </div>
+          </div>
+
+          {statsData && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="glass p-6 rounded-3xl border border-white/5">
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Total Sales</p>
+                  <p className="text-3xl font-display font-bold text-primary mt-1">
+                    ${(statsData.sales?.summary?.totalRevenue || 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="glass p-6 rounded-3xl border border-white/5">
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Tabs Closed</p>
+                  <p className="text-3xl font-display font-bold text-emerald-400 mt-1">
+                    {statsData.sales?.summary?.tabsCount || 0}
+                  </p>
+                </div>
+                <div className="glass p-6 rounded-3xl border border-white/5">
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Avg Ticket</p>
+                  <p className="text-3xl font-display font-bold text-blue-400 mt-1">
+                    ${statsData.sales?.summary?.tabsCount ? (statsData.sales.summary.totalRevenue / statsData.sales.summary.tabsCount).toFixed(0) : 0}
+                  </p>
+                </div>
+                <div className="glass p-6 rounded-3xl border border-white/5">
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Total Tips</p>
+                  <p className="text-3xl font-display font-bold text-amber-400 mt-1">
+                    ${(statsData.sales?.summary?.totalTips || 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+
+              <div className="glass rounded-3xl p-6 border border-white/5">
+                <h3 className="text-lg font-medium text-primary mb-4">Staff Performance</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-white/10">
+                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Staff</th>
+                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">Sales</th>
+                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">Tabs</th>
+                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">Avg Ticket</th>
+                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">Tips</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {statsData.sales?.salesByStaff?.map((staff: any) => (
+                        <tr key={staff.userId} className="border-b border-white/5">
+                          <td className="py-3 px-4 font-medium">{staff.userName}</td>
+                          <td className="py-3 px-4 text-right text-emerald-400">${staff.totalRevenue?.toLocaleString()}</td>
+                          <td className="py-3 px-4 text-right">{staff.tabsCount}</td>
+                          <td className="py-3 px-4 text-right">${staff.avgTicket?.toFixed(0)}</td>
+                          <td className="py-3 px-4 text-right text-amber-400">${staff.tipsTotal?.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="glass rounded-3xl p-6 border border-white/5">
+                <h3 className="text-lg font-medium text-destructive mb-4">Void Analysis</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                  <div className="p-4 bg-destructive/10 rounded-xl">
+                    <p className="text-xs text-muted-foreground uppercase">Total Voids</p>
+                    <p className="text-2xl font-bold">{statsData.voids?.summary?.totalVoids || 0}</p>
+                  </div>
+                  <div className="p-4 bg-destructive/10 rounded-xl">
+                    <p className="text-xs text-muted-foreground uppercase">Void Value</p>
+                    <p className="text-2xl font-bold text-destructive">${(statsData.voids?.summary?.totalVoidValue || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="p-4 bg-destructive/10 rounded-xl">
+                    <p className="text-xs text-muted-foreground uppercase">Void Rate</p>
+                    <p className="text-2xl font-bold">{(statsData.voids?.summary?.voidRate || 0).toFixed(1)}%</p>
+                  </div>
+                  <div className="p-4 bg-destructive/10 rounded-xl">
+                    <p className="text-xs text-muted-foreground uppercase">Total Orders</p>
+                    <p className="text-2xl font-bold">{statsData.voids?.summary?.totalOrders || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="glass rounded-3xl p-6 border border-white/5">
+                <h3 className="text-lg font-medium text-primary mb-4">Top Sellers</h3>
+                <div className="space-y-3">
+                  {statsData.sales?.salesByDrink?.slice(0, 10).map((drink: any, idx: number) => (
+                    <div key={drink.drinkId} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">{idx + 1}</span>
+                        <span className="font-medium">{drink.drinkName}</span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-emerald-400 font-bold">${drink.totalRevenue?.toLocaleString()}</span>
+                        <span className="text-muted-foreground text-sm ml-2">({drink.unitsPriced} sold)</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
       {showCloseModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90 backdrop-blur-xl">
           <div className="glass p-8 rounded-[2.5rem] w-full max-w-md border border-white/10 shadow-2xl">
@@ -1445,15 +1727,18 @@ export default function Reports() {
               {getTranslation("close_shift", language)}
             </h2>
             <p className="text-muted-foreground mb-6">
-              Enter the exact amount of cash physically in the drawer to calculate variance.
+              Enter the exact amount of cash physically in the drawer to
+              calculate variance.
             </p>
-            
+
             <div className="mb-8">
               <label className="text-sm font-medium text-muted-foreground mb-2 block uppercase tracking-wider">
                 Actual Drawer Cash
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                  $
+                </span>
                 <input
                   type="number"
                   value={actualCash}

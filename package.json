@@ -10,7 +10,7 @@
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --if-present run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "build:desktop": "pnpm run build && pnpm --filter @workspace/desktop-app run build && pnpm --filter @workspace/desktop-app run package:mac"
+    "build:desktop": "pnpm --filter @workspace/gusto-pos run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/desktop-app run build && pnpm --filter @workspace/desktop-app run package:mac"
   },
   "private": true,
   "engines": {

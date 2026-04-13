@@ -51,8 +51,8 @@ function formatShift(
   return {
     id: shift.id,
     name: shift.name,
-    startedAt: shift.startedAt.toISOString(),
-    closedAt: shift.closedAt?.toISOString() ?? null,
+    startedAt: shift.startedAt,
+    closedAt: shift.closedAt ?? null,
     status: shift.status,
     openedByUserId: shift.openedByUserId,
     openedByUserName: openedByUserName ?? null,
@@ -141,7 +141,8 @@ router.get("/shifts/active", async (req: Request, res: Response) => {
 
 router.post("/shifts/:id/close", async (req: Request, res: Response) => {
   const force = req.body?.force === true;
-  const actualCashMxn = typeof req.body?.actualCashMxn === "number" ? req.body.actualCashMxn : 0;
+  const actualCashMxn =
+    typeof req.body?.actualCashMxn === "number" ? req.body.actualCashMxn : 0;
 
   // Check for open tabs before allowing shift close
   const openTabs = await db
@@ -171,8 +172,8 @@ router.post("/shifts/:id/close", async (req: Request, res: Response) => {
     .where(
       and(
         eq(tabsTable.shiftId, req.params.id as string),
-        eq(tabsTable.status, "closed")
-      )
+        eq(tabsTable.status, "closed"),
+      ),
     );
   const expectedCashMxn = allShiftTabs
     .filter((t) => t.paymentMethod === "cash")
@@ -181,12 +182,12 @@ router.post("/shifts/:id/close", async (req: Request, res: Response) => {
 
   const [shift] = await db
     .update(shiftsTable)
-    .set({ 
-      status: "closed", 
-      closedAt: new Date(),
+    .set({
+      status: "closed",
+      closedAt: Math.floor(Date.now() / 1000),
       expectedCashMxn,
       actualCashMxn,
-      cashVarianceMxn
+      cashVarianceMxn,
     })
     .where(eq(shiftsTable.id, req.params.id as string))
     .returning();
@@ -249,7 +250,7 @@ router.get(
     const closedTabs = tabs.filter((t) => t.status === "closed");
 
     const tabIds = tabs.map((t) => t.id);
-    const allOrders =
+    const allOrdersRaw =
       tabIds.length > 0
         ? await db
             .select()
@@ -258,6 +259,7 @@ router.get(
               sql`${ordersTable.tabId} IN (${sql.raw(tabIds.map((id) => `'${id}'`).join(","))})`,
             )
         : [];
+    const allOrders = allOrdersRaw.filter((o) => !o.voided);
 
     const allDrinkIds = [...new Set(allOrders.map((o) => o.drinkId))];
     const drinks =
@@ -438,6 +440,34 @@ router.get(
     const allItems = await db.select().from(inventoryItemsTable);
     const itemMap = new Map(allItems.map((i) => [i.id, i]));
 
+    const parentItems = allItems.filter((i) => !i.parentItemId);
+    const childItems = allItems.filter((i) => i.parentItemId);
+    const parentMap = new Map(parentItems.map((i) => [i.id, i]));
+    const childrenByParent = new Map<string, typeof childItems>();
+    for (const child of childItems) {
+      if (child.parentItemId) {
+        const existing = childrenByParent.get(child.parentItemId) || [];
+        existing.push(child);
+        childrenByParent.set(child.parentItemId, existing);
+      }
+    }
+
+    const getParentId = (itemId: string): string => {
+      const item = itemMap.get(itemId);
+      return item?.parentItemId || itemId;
+    };
+
+    const getStockForParent = (parentId: string): number => {
+      const parent = parentMap.get(parentId);
+      if (!parent) return 0;
+      let total = Number(parent.currentStock) || 0;
+      const children = childrenByParent.get(parentId) || [];
+      for (const child of children) {
+        total += Number(child.currentStock) || 0;
+      }
+      return total;
+    };
+
     for (const order of allOrders) {
       const tab = tabs.find((t) => t.id === order.tabId);
       if (!tab || tab.status !== "closed") continue;
@@ -446,15 +476,20 @@ router.get(
         if (!r.ingredientId) continue;
         const inv = itemMap.get(r.ingredientId);
         if (!inv) continue;
-        if (!inventoryUsedMap.has(r.ingredientId)) {
-          inventoryUsedMap.set(r.ingredientId, {
-            name: inv.name,
-            baseUnit: inv.baseUnit,
+        const parentId = getParentId(r.ingredientId);
+        const parentItem = parentMap.get(parentId);
+        if (!parentItem) continue;
+        const displayName = parentItem.name;
+        const displayUnit = parentItem.baseUnit || "ml";
+        if (!inventoryUsedMap.has(parentId)) {
+          inventoryUsedMap.set(parentId, {
+            name: displayName,
+            baseUnit: displayUnit,
             amount: 0,
-            currentStock: Number(inv.currentStock),
+            currentStock: getStockForParent(parentId),
           });
         }
-        inventoryUsedMap.get(r.ingredientId)!.amount +=
+        inventoryUsedMap.get(parentId)!.amount +=
           r.amountInBaseUnit * order.quantity;
       }
     }
@@ -469,12 +504,15 @@ router.get(
       }),
     );
 
-    const lowStockAlerts = allItems
-      .filter((i) => Number(i.currentStock) <= Number(i.lowStockThreshold))
+    const lowStockAlerts = parentItems
+      .filter((i) => {
+        const totalStock = getStockForParent(i.id);
+        return totalStock <= Number(i.lowStockThreshold);
+      })
       .map((i) => ({
         ingredientId: i.id,
         ingredientName: i.name,
-        currentStock: Number(i.currentStock),
+        currentStock: getStockForParent(i.id),
         minimumStock: Number(i.lowStockThreshold),
         unit: i.baseUnit,
       }));
@@ -498,8 +536,8 @@ router.get(
       paymentMethod: t.paymentMethod ?? null,
       currency: t.currency,
       convertedTotal: null,
-      openedAt: t.openedAt.toISOString(),
-      closedAt: t.closedAt?.toISOString() ?? null,
+      openedAt: t.openedAt,
+      closedAt: t.closedAt ?? null,
       notes: t.notes ?? null,
     }));
 

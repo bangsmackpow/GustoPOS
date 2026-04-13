@@ -1,13 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
-import { Link } from 'wouter';
-import type { InventoryItem } from '@/types/inventory';
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
+import type { InventoryItem } from "@/types/inventory";
 
 export function LowStockWidget() {
   const { data: lowStockItems = [], isLoading } = useQuery({
-    queryKey: ['/api/inventory/low-stock'],
+    queryKey: ["/api/inventory/low-stock"],
     queryFn: async () => {
-      const response = await fetch('/api/inventory/low-stock');
-      if (!response.ok) throw new Error('Failed to fetch low stock items');
+      const response = await fetch("/api/inventory/low-stock");
+      if (!response.ok) throw new Error("Failed to fetch low stock items");
       return response.json() as Promise<InventoryItem[]>;
     },
     // Refresh every 5 minutes
@@ -24,12 +24,13 @@ export function LowStockWidget() {
   }
 
   const criticalItems = lowStockItems.filter((item) => {
-    const current = item.currentBulk * item.bulkSize + item.currentPartial;
+    const current =
+      item.currentBulk * (item.baseUnitAmount || 750) + item.currentPartial;
     // Critical if below 30% of threshold
-    if (item.lowStockMethod?.includes('manual')) {
+    if (item.lowStockMethod?.includes("manual")) {
       return current < item.lowStockManualThreshold! * 0.3;
     }
-    if (item.lowStockMethod?.includes('percentage')) {
+    if (item.lowStockMethod?.includes("percentage")) {
       const pct = (current / item.lowStockPercentBase!) * 100;
       return pct < item.lowStockPercent! * 0.3;
     }
@@ -69,7 +70,9 @@ export function LowStockWidget() {
                     <div>
                       <p className="font-medium text-red-900">{item.name}</p>
                       <p className="text-xs text-red-700">
-                        {item.currentBulk}{item.bulkUnit} + {item.currentPartial.toFixed(1)}
+                        {item.currentBulk}
+                        {item.baseUnit || "ml"} +{" "}
+                        {item.currentPartial.toFixed(1)}
                         {item.partialUnit}
                       </p>
                     </div>
@@ -90,10 +93,13 @@ export function LowStockWidget() {
           )}
 
           {/* Regular low stock */}
-          {lowStockItems.filter((i) => !criticalItems.includes(i)).length > 0 && (
+          {lowStockItems.filter((i) => !criticalItems.includes(i)).length >
+            0 && (
             <>
               <p className="text-xs font-semibold text-yellow-600 uppercase mt-3">
-                🟡 Low Stock ({lowStockItems.filter((i) => !criticalItems.includes(i)).length})
+                🟡 Low Stock (
+                {lowStockItems.filter((i) => !criticalItems.includes(i)).length}
+                )
               </p>
               {lowStockItems
                 .filter((i) => !criticalItems.includes(i))
@@ -109,7 +115,9 @@ export function LowStockWidget() {
                           {item.name}
                         </p>
                         <p className="text-xs text-yellow-700">
-                          {item.currentBulk}{item.bulkUnit} + {item.currentPartial.toFixed(1)}
+                          {item.currentBulk}
+                          {item.baseUnit || "ml"} +{" "}
+                          {item.currentPartial.toFixed(1)}
                           {item.partialUnit}
                         </p>
                       </div>

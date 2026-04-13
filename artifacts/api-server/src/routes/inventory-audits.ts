@@ -43,8 +43,12 @@ router.get("/history", async (req: Request, res: Response) => {
         itemName: inventoryItemsTable.name,
         itemNameEs: inventoryItemsTable.nameEs,
         baseUnit: inventoryItemsTable.baseUnit,
-        systemStock: inventoryAuditsTable.systemStock,
-        physicalCount: inventoryAuditsTable.physicalCount,
+        auditEntryMethod: inventoryAuditsTable.auditEntryMethod,
+        reportedBulk: inventoryAuditsTable.reportedBulk,
+        reportedPartial: inventoryAuditsTable.reportedPartial,
+        reportedTotal: inventoryAuditsTable.reportedTotal,
+        previousTotal: inventoryAuditsTable.previousTotal,
+        expectedTotal: inventoryAuditsTable.expectedTotal,
         variance: inventoryAuditsTable.variance,
         variancePercent: inventoryAuditsTable.variancePercent,
         auditReason: inventoryAuditsTable.auditReason,
@@ -68,10 +72,23 @@ router.get("/history", async (req: Request, res: Response) => {
       },
       audits: audits.map((a) => ({
         ...a,
-        systemStock: parseFloat(a.systemStock.toFixed(2)),
-        physicalCount: parseFloat(a.physicalCount.toFixed(2)),
-        variance: parseFloat(a.variance.toFixed(2)),
-        variancePercent: parseFloat(a.variancePercent.toFixed(2)),
+        reportedBulk: a.reportedBulk
+          ? parseFloat(a.reportedBulk.toFixed(2))
+          : null,
+        reportedPartial: a.reportedPartial
+          ? parseFloat(a.reportedPartial.toFixed(2))
+          : null,
+        reportedTotal: a.reportedTotal
+          ? parseFloat(a.reportedTotal.toFixed(2))
+          : 0,
+        previousTotal: a.previousTotal
+          ? parseFloat(a.previousTotal.toFixed(2))
+          : 0,
+        expectedTotal: a.expectedTotal
+          ? parseFloat(a.expectedTotal.toFixed(2))
+          : 0,
+        variance: parseFloat((a.variance ?? 0).toFixed(2)),
+        variancePercent: parseFloat((a.variancePercent ?? 0).toFixed(2)),
       })),
     });
   } catch (error) {
@@ -141,26 +158,28 @@ router.get("/variance-summary", async (req: Request, res: Response) => {
           auditCount: 0,
           totalVariance: 0,
           avgVariancePercent: 0,
-          maxVariance: Math.abs(audit.variance),
-          minVariance: Math.abs(audit.variance),
+          maxVariance: audit.variance ?? 0, // Largest (most positive)
+          minVariance: audit.variance ?? 0, // Smallest (most negative)
           negativeCount: 0,
           positiveCount: 0,
-          lastVariancePercent: audit.variancePercent,
+          lastVariancePercent: audit.variancePercent ?? 0,
         };
       }
 
       const item = itemVariances[audit.itemId];
+      const variance = audit.variance ?? 0;
+      const variancePercent = audit.variancePercent ?? 0;
       item.auditCount += 1;
-      item.totalVariance += audit.variance;
+      item.totalVariance += variance;
       item.avgVariancePercent =
-        (item.avgVariancePercent * (item.auditCount - 1) +
-          audit.variancePercent) /
+        (item.avgVariancePercent * (item.auditCount - 1) + variancePercent) /
         item.auditCount;
-      item.maxVariance = Math.max(item.maxVariance, Math.abs(audit.variance));
-      item.minVariance = Math.min(item.minVariance, Math.abs(audit.variance));
-      item.negativeCount += audit.variance < 0 ? 1 : 0;
-      item.positiveCount += audit.variance > 0 ? 1 : 0;
-      item.lastVariancePercent = audit.variancePercent;
+      // Track actual extremes (not absolute) for overage vs underage
+      item.maxVariance = Math.max(item.maxVariance, variance); // Most overage
+      item.minVariance = Math.min(item.minVariance, variance); // Most underage
+      item.negativeCount += variance < 0 ? 1 : 0;
+      item.positiveCount += variance > 0 ? 1 : 0;
+      item.lastVariancePercent = variancePercent;
     });
 
     // Convert to array and sort by total variance

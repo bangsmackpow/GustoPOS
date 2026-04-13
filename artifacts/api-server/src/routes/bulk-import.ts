@@ -16,21 +16,58 @@ const IngredientRowSchema = z.object({
     .pipe(z.string().transform((s) => s.toLowerCase())),
   subtype: z.string().optional().nullable(),
   baseUnit: z.string().default("ml"),
-  baseUnitAmount: z.coerce.number().positive().default(750),
+  baseUnitAmount: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) ? 750 : Math.max(0, val)))
+    .default(750),
   bulkUnit: z.string().optional().nullable(),
-  servingSize: z.coerce.number().positive().default(44.36),
+  servingSize: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) ? 44.36 : Math.max(0, val)))
+    .default(44.36),
   servingUnit: z.string().optional().nullable(),
   bottleSizeMl: z.coerce.number().optional().nullable(),
   fullBottleWeightG: z.coerce.number().optional().nullable(),
-  orderCost: z.coerce.number().nonnegative().default(0),
-  currentStock: z.coerce.number().nonnegative().default(0),
-  currentPartial: z.coerce.number().nonnegative().default(0),
-  lowStockThreshold: z.coerce.number().nonnegative().default(1),
-  unitsPerCase: z.coerce.number().positive().default(1),
-  isOnMenu: z.boolean().optional().default(false),
-  sellSingleServing: z.boolean().optional().default(false),
+  density: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) || val === 0 ? 0.94 : val))
+    .default(0.94),
+  orderCost: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) ? 0 : Math.max(0, val)))
+    .default(0),
+  currentStock: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) ? 0 : Math.max(0, val)))
+    .default(0),
+  currentBulk: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) ? 0 : Math.max(0, val)))
+    .default(0),
+  currentPartial: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) ? 0 : Math.max(0, val)))
+    .default(0),
+  lowStockThreshold: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) ? 1 : Math.max(0, val)))
+    .default(1),
+  unitsPerCase: z.coerce
+    .number()
+    .transform((val) => (isNaN(val) ? 1 : Math.max(0, val)))
+    .default(1),
+  trackingMode: z.string().optional().default("auto"),
+  isOnMenu: z
+    .union([z.boolean(), z.number()])
+    .optional()
+    .default(false)
+    .transform((val) => (val ? 1 : 0)),
+  sellSingleServing: z
+    .union([z.boolean(), z.number()])
+    .optional()
+    .default(false)
+    .transform((val) => (val ? 1 : 0)),
   singleServingPrice: z.coerce.number().optional().nullable(),
-  // Aliases for source fields
   unitSize: z.coerce.number().optional(),
   size: z.coerce.number().optional(),
   cost: z.coerce.number().optional(),
@@ -39,6 +76,7 @@ const IngredientRowSchema = z.object({
   qty: z.coerce.number().optional(),
   min: z.coerce.number().optional(),
   minimumStock: z.coerce.number().optional(),
+  alcoholDensity: z.coerce.number().optional(),
 });
 
 const DrinkRowSchema = z.object({
@@ -97,7 +135,36 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
   const validRows: any[] = [];
 
   for (let i = 0; i < ingredients.length; i++) {
-    const result = IngredientRowSchema.safeParse(ingredients[i]);
+    const row = ingredients[i];
+
+    // Skip completely empty rows
+    const hasContent =
+      row &&
+      Object.values(row).some((v) => v !== "" && v !== null && v !== undefined);
+    if (!hasContent) {
+      continue;
+    }
+
+    // Sanitize row - convert empty strings to undefined for optional fields
+    // Also handle numbers with commas (e.g., "1,000" -> 1000)
+    const sanitizedRow: Record<string, any> = {};
+    for (const [key, value] of Object.entries(row || {})) {
+      if (value === "" || value === null || value === undefined) {
+        sanitizedRow[key] = undefined;
+      } else if (typeof value === "string") {
+        // Remove commas and trim for number parsing
+        const cleanedValue = value.replace(/,/g, "").trim();
+        if (!isNaN(Number(cleanedValue))) {
+          sanitizedRow[key] = Number(cleanedValue);
+        } else {
+          sanitizedRow[key] = value.trim();
+        }
+      } else {
+        sanitizedRow[key] = value;
+      }
+    }
+
+    const result = IngredientRowSchema.safeParse(sanitizedRow);
     if (!result.success) {
       validationErrors.push({
         row: i + 1,
@@ -111,10 +178,16 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
   }
 
   if (validationErrors.length > 0) {
+    console.log(
+      `[Bulk Import] ${validationErrors.length} rows failed validation, proceeding with ${validRows.length} valid rows`,
+    );
+  }
+
+  if (validRows.length === 0) {
     res.status(400).json({
-      error: "Validation failed",
-      validationErrors,
-      summary: `${validationErrors.length} of ${ingredients.length} rows failed validation`,
+      error: "No valid rows to import",
+      failedRows: validationErrors,
+      summary: `All ${ingredients.length} rows failed validation`,
     });
     return;
   }
@@ -149,17 +222,63 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
         const servingUnit = item.servingUnit || null;
         const bottleSizeMl = item.bottleSizeMl || null;
         const fullBottleWeightG = item.fullBottleWeightG || null;
-        // Calculate glassWeightG from fullBottleWeightG if provided
-        const density = 0.94; // Default density
-        const glassWeightG = fullBottleWeightG
-          ? fullBottleWeightG - baseUnitAmount * density
+        // Calculate containerWeightG from fullBottleWeightG if provided
+        // Container Weight = Full Weight - (Bottle Size in ml × Density)
+        const density = item.density || 0.94;
+        const bottleSizeForCalc =
+          item.bottleSizeMl || item.baseUnitAmount || 750;
+        const containerWeightG = fullBottleWeightG
+          ? fullBottleWeightG - bottleSizeForCalc * density
           : null;
         const currentStock = item.currentStock || item.stock || item.qty || 0;
+        const currentBulk = item.currentBulk || 0;
         const currentPartial = item.currentPartial || 0;
         const orderCost = item.orderCost || item.cost || item.bulkCost || 0;
         const lowStockThreshold =
           item.lowStockThreshold || item.min || item.minimumStock || 1;
         const unitsPerCase = item.unitsPerCase || 1;
+
+        // Determine trackingMode based on container size (failsafe)
+        // >=100 = ml (pool), <100 = units (collection)
+        let trackingMode = item.trackingMode || "auto";
+        const containerSize = item.bottleSizeMl || item.baseUnitAmount || 0;
+
+        // Normalize type for comparison (handle "spirits" -> "spirit", "tequila" -> "spirit", etc.)
+        const normalizedType = (type || "").toLowerCase().replace(/s$/, "");
+
+        if (trackingMode === "auto") {
+          if (containerSize >= 100) {
+            trackingMode = "pool";
+          } else if (containerSize > 0) {
+            trackingMode = "collection";
+          }
+
+          // Override based on type for known categories
+          if (
+            normalizedType === "spirit" ||
+            normalizedType === "tequila" ||
+            normalizedType === "mezcal" ||
+            normalizedType === "whiskey" ||
+            normalizedType === "vodka" ||
+            normalizedType === "gin" ||
+            normalizedType === "rum" ||
+            normalizedType === "vino" ||
+            normalizedType === "mixer" ||
+            (normalizedType === "ingredient" &&
+              (subtype || "").toLowerCase() === "liquid")
+          ) {
+            trackingMode = "pool";
+          } else if (
+            normalizedType === "beer" ||
+            normalizedType === "merch" ||
+            normalizedType === "misc" ||
+            (normalizedType === "ingredient" &&
+              (subtype || "").toLowerCase() === "weighted")
+          ) {
+            trackingMode = "collection";
+          }
+        }
+
         const isOnMenu = item.isOnMenu ? 1 : 0;
         const singleServingPrice = item.singleServingPrice || null;
         const sellSingleServing =
@@ -169,7 +288,17 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
         try {
           // AUTO-POOLING logic: ONLY for Spirits and Mixers
           let parentItemId: string | null = null;
-          const isPooledType = type === "spirit" || type === "mixer";
+          const normalizedType = (type || "").toLowerCase().replace(/s$/, "");
+          const isPooledType =
+            normalizedType === "spirit" ||
+            normalizedType === "tequila" ||
+            normalizedType === "mezcal" ||
+            normalizedType === "whiskey" ||
+            normalizedType === "vodka" ||
+            normalizedType === "gin" ||
+            normalizedType === "rum" ||
+            normalizedType === "vino" ||
+            normalizedType === "mixer";
 
           if (isPooledType) {
             if (nameToParentId.has(name)) {
@@ -209,7 +338,10 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 .update(inventoryItemsTable)
                 .set({
                   type: existing.type,
-                  subtype: subtype || existing.subtype,
+                  subtype:
+                    subtype && subtype.trim() !== ""
+                      ? subtype
+                      : existing.subtype,
                   baseUnit: existing.baseUnit,
                   baseUnitAmount: existing.baseUnitAmount,
                   bulkUnit: bulkUnit || existing.bulkUnit,
@@ -218,17 +350,20 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                   bottleSizeMl: bottleSizeMl || existing.bottleSizeMl,
                   fullBottleWeightG:
                     fullBottleWeightG || existing.fullBottleWeightG,
-                  glassWeightG: glassWeightG || existing.glassWeightG,
+                  containerWeightG:
+                    containerWeightG || existing.containerWeightG,
                   orderCost: existing.orderCost,
                   currentStock: existing.currentStock,
+                  currentBulk: currentBulk || existing.currentBulk,
                   currentPartial: existing.currentPartial,
                   lowStockThreshold: existing.lowStockThreshold,
                   unitsPerCase: existing.unitsPerCase,
+                  trackingMode: trackingMode || existing.trackingMode,
                   isOnMenu: existing.isOnMenu,
-                  sellSingleServing: !!existing.sellSingleServing,
+                  sellSingleServing: existing.sellSingleServing ? 1 : 0,
                   singleServingPrice: existing.singleServingPrice,
                   parentItemId: existing.parentItemId,
-                  updatedAt: new Date(),
+                  updatedAt: Math.floor(Date.now() / 1000),
                 })
                 .where(eq(inventoryItemsTable.id, existing.id));
             } else {
@@ -246,17 +381,19 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                   servingUnit,
                   bottleSizeMl,
                   fullBottleWeightG,
-                  glassWeightG,
+                  containerWeightG,
                   orderCost,
                   currentStock,
+                  currentBulk,
                   currentPartial,
                   lowStockThreshold,
                   unitsPerCase,
-                  isOnMenu: !!isOnMenu,
-                  sellSingleServing: !!sellSingleServing,
+                  trackingMode,
+                  isOnMenu: isOnMenu ? 1 : 0,
+                  sellSingleServing: sellSingleServing ? 1 : 0,
                   singleServingPrice,
                   parentItemId: parentItemId || existing.parentItemId,
-                  updatedAt: new Date(),
+                  updatedAt: Math.floor(Date.now() / 1000),
                 })
                 .where(eq(inventoryItemsTable.id, existing.id));
             }
@@ -267,10 +404,10 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 name: name,
                 category: type,
                 actualPrice: 0,
-                isAvailable: true,
-                isOnMenu: true,
+                isAvailable: 1,
+                isOnMenu: 1,
                 sourceType: "inventory_single",
-                updatedAt: new Date(),
+                updatedAt: Math.floor(Date.now() / 1000),
               };
               const [existingDrink] = await tx
                 .select()
@@ -294,10 +431,10 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 name: `${name} (Shot)`,
                 category: type,
                 actualPrice: singleServingPrice || 0,
-                isAvailable: true,
-                isOnMenu: true,
+                isAvailable: 1,
+                isOnMenu: 1,
                 sourceType: "inventory_single",
-                updatedAt: new Date(),
+                updatedAt: Math.floor(Date.now() / 1000),
               };
               const [existingSingle] = await tx
                 .select()
@@ -329,17 +466,19 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 servingUnit,
                 bottleSizeMl,
                 fullBottleWeightG,
-                glassWeightG,
+                containerWeightG,
                 orderCost,
                 currentStock,
+                currentBulk,
                 currentPartial,
                 lowStockThreshold,
                 unitsPerCase,
-                isOnMenu: !!isOnMenu,
-                sellSingleServing: !!sellSingleServing,
+                trackingMode,
+                isOnMenu: isOnMenu ? 1 : 0,
+                sellSingleServing: sellSingleServing ? 1 : 0,
                 singleServingPrice,
                 parentItemId,
-                updatedAt: new Date(),
+                updatedAt: Math.floor(Date.now() / 1000),
               } as any)
               .returning();
 
@@ -350,9 +489,16 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 name: name,
                 category: type,
                 actualPrice: 0,
-                isAvailable: true,
-                isOnMenu: true,
+                isAvailable: 1,
+                isOnMenu: 1,
                 sourceType: "inventory_single",
+              });
+
+              // Auto-create recipe: add 1 serving of the item to itself
+              await tx.insert(recipeIngredientsTable).values({
+                drinkId: inserted.id,
+                ingredientId: inserted.id,
+                amountInBaseUnit: servingSize || 44.36,
               });
             }
 
@@ -362,8 +508,8 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 name: `${name} (Shot)`,
                 category: type,
                 actualPrice: singleServingPrice || 0,
-                isAvailable: true,
-                isOnMenu: true,
+                isAvailable: 1,
+                isOnMenu: 1,
                 sourceType: "inventory_single",
               });
             }
@@ -402,13 +548,17 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
         count: processedCount,
         skipped: skippedCount,
         errors: errorCount,
+        failedRows: validationErrors,
         message,
       });
     });
   } catch (err: any) {
     console.error("Bulk ingredients import error:", err);
     console.error("Error stack:", err.stack);
-    res.status(500).json({ error: err.message || "Unknown error occurred" });
+    res.status(500).json({
+      error: err.message || "Unknown error occurred",
+      failedRows: validationErrors,
+    });
   }
 });
 
@@ -469,7 +619,7 @@ router.post("/bulk-drinks", async (req: Request, res: Response) => {
                 ? Number(item.actualPrice)
                 : undefined,
               sourceType: item.sourceType || "standard",
-              updatedAt: new Date(),
+              updatedAt: Math.floor(Date.now() / 1000),
             })
             .where(eq(drinksTable.id, existing.id))
             .returning();

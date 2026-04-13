@@ -36,13 +36,14 @@ export default function adminSeedRouter(): express.Router {
 
         if (existing.length === 0) {
           await db.insert(usersTable).values({
+            username: adminEmail.split("@")[0],
             email: adminEmail,
             firstName: "Admin",
             lastName: "User",
             role: "admin",
             language: "en",
             pin: adminPin,
-            isActive: true,
+            isActive: 1,
           });
           return res.json({
             ok: true,
@@ -51,7 +52,7 @@ export default function adminSeedRouter(): express.Router {
         } else {
           await db
             .update(usersTable)
-            .set({ pin: adminPin, role: "admin", isActive: true })
+            .set({ pin: adminPin, role: "admin", isActive: 1 })
             .where(eq(usersTable.email, adminEmail));
           return res.json({
             ok: true,

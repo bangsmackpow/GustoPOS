@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Delete, X, Lock } from "lucide-react";
+import { Delete, X, Lock, Globe } from "lucide-react";
 import { Button } from "./ui/button";
 import { useGetUsers } from "@workspace/api-client-react";
 import { usePosStore } from "@/store";
@@ -18,8 +18,9 @@ export function PinPad({
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submittedRef = useRef(false);
   const { data: users } = useGetUsers();
-  const { setActiveStaff, language } = usePosStore();
+  const { setActiveStaff, language, setLanguage } = usePosStore();
 
   const handleNumber = (num: string) => {
     if (pin.length < 4) {
@@ -30,14 +31,16 @@ export function PinPad({
 
   const handleBackspace = () => setPin((prev) => prev.slice(0, -1));
 
-  const handleSubmit = React.useCallback(async () => {
-    if (pin.length !== 4) return;
+  const handleSubmit = useCallback(async () => {
+    if (pin.length !== 4 || submittedRef.current) return;
+    submittedRef.current = true;
     setIsSubmitting(true);
     try {
       if (!users || users.length === 0) {
         setError(true);
         setPin("");
         setIsSubmitting(false);
+        submittedRef.current = false;
         return;
       }
       let foundMatch = false;
@@ -80,6 +83,7 @@ export function PinPad({
       setPin("");
     } finally {
       setIsSubmitting(false);
+      submittedRef.current = false;
     }
   }, [users, pin, setActiveStaff, onLogin, onClose]);
 
@@ -87,7 +91,32 @@ export function PinPad({
     if (pin.length === 4 && !isSubmitting) {
       handleSubmit();
     }
-  }, [pin, handleSubmit, isSubmitting]);
+  }, [pin, isSubmitting, handleSubmit]);
+
+  // Keyboard input support for laptop/desktop users
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Allow typing numbers 0-9
+      if (e.key >= "0" && e.key <= "9") {
+        e.preventDefault();
+        handleNumber(e.key);
+      } else if (e.key === "Backspace") {
+        e.preventDefault();
+        handleBackspace();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (pin.length === 4 && !isSubmitting) {
+          handleSubmit();
+        }
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [pin, isSubmitting, handleSubmit]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-md p-4">
@@ -106,6 +135,15 @@ export function PinPad({
           </button>
         )}
 
+        {/* Language Toggle */}
+        <button
+          onClick={() => setLanguage(language === "en" ? "es" : "en")}
+          className="absolute top-6 left-6 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
+          title={language === "en" ? "Switch to Spanish" : "Cambiar a Inglés"}
+        >
+          <Globe size={20} className="text-muted-foreground" />
+        </button>
+
         <div className="text-center mb-8">
           <div className="flex justify-center mb-3">
             <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
@@ -121,6 +159,9 @@ export function PinPad({
             {lockScreen
               ? getTranslation("enter_pin_unlock", language)
               : "Enter 4-digit code"}
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            Use keyboard or click buttons
           </p>
         </div>
 

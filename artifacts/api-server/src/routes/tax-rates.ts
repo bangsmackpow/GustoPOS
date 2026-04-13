@@ -23,15 +23,15 @@ router.get("/", async (req: Request, res: Response) => {
       orderBy: (table) => table.rate,
     });
 
-    const response: zod.infer<typeof GetTaxRatesResponse> = {
+    const response = {
       rates: rates.map((r) => ({
         id: r.id,
         category: r.category,
         rate: r.rate,
         description: r.description ?? undefined,
-        isActive: r.isActive,
+        isActive: r.isActive === 1, // Convert to boolean for API response
       })),
-    };
+    } as any;
 
     return res.set(customHeaders).json(response);
   } catch (error) {
@@ -47,7 +47,7 @@ router.get("/", async (req: Request, res: Response) => {
 router.get("/config", async (req: Request, res: Response) => {
   try {
     const rates = await db.query.taxRatesTable.findMany({
-      where: (table) => eq(table.isActive, true),
+      where: (table) => eq(table.isActive, 1),
     });
 
     const defaultRate =
@@ -58,11 +58,11 @@ router.get("/config", async (req: Request, res: Response) => {
       rateMap[r.category] = r.rate;
     });
 
-    const response: zod.infer<typeof GetTaxConfigResponse> = {
+    const response = {
       defaultRate,
       rates: rateMap,
       lastUpdated: new Date().toISOString(),
-    };
+    } as any;
 
     res.set(customHeaders).json(response);
   } catch (error) {
@@ -105,7 +105,7 @@ router.post("/:category", async (req: Request, res: Response) => {
         category,
         rate: body.rate,
         description: body.description,
-        isActive: true,
+        isActive: 1,
       });
 
       rate = await db.query.taxRatesTable.findFirst({
@@ -113,16 +113,16 @@ router.post("/:category", async (req: Request, res: Response) => {
       });
     }
 
-    const response: zod.infer<typeof UpdateTaxRateResponse> = {
+    const response = {
       success: true,
       rate: {
         id: rate!.id,
         category: rate!.category,
         rate: rate!.rate,
         description: rate!.description ?? undefined,
-        isActive: rate!.isActive,
+        isActive: rate!.isActive === 1, // Convert to boolean for API response
       },
-    };
+    } as any;
 
     return res.set(customHeaders).json(response);
   } catch (error) {
@@ -157,7 +157,7 @@ router.get("/:category", async (req: Request, res: Response) => {
       category: rate.category,
       rate: rate.rate,
       description: rate.description,
-      isActive: rate.isActive,
+      isActive: rate.isActive === 1, // Convert to boolean for API response
     };
 
     return res.set(customHeaders).json(response);

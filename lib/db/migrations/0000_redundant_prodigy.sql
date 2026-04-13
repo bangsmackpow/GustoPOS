@@ -9,7 +9,7 @@ CREATE TABLE `users` (
 	`role` text DEFAULT 'employee' NOT NULL,
 	`language` text DEFAULT 'es' NOT NULL,
 	`pin` text DEFAULT '0000' NOT NULL,
-	`is_active` integer DEFAULT true NOT NULL,
+	`is_active` integer DEFAULT 1 NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
@@ -42,9 +42,9 @@ CREATE TABLE `drinks` (
 	`actual_price` real DEFAULT 0 NOT NULL,
 	`markup_factor` real DEFAULT 3 NOT NULL,
 	`source_type` text DEFAULT 'standard' NOT NULL,
-	`is_available` integer DEFAULT true NOT NULL,
-	`is_on_menu` integer DEFAULT false NOT NULL,
-	`is_deleted` integer DEFAULT false NOT NULL,
+	`is_available` integer DEFAULT 1 NOT NULL,
+	`is_on_menu` integer DEFAULT 0 NOT NULL,
+	`is_deleted` integer DEFAULT 0 NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
@@ -86,7 +86,7 @@ CREATE TABLE `promo_codes` (
 	`max_uses` integer,
 	`current_uses` integer DEFAULT 0 NOT NULL,
 	`expires_at` integer,
-	`is_active` integer DEFAULT true NOT NULL,
+	`is_active` integer DEFAULT 1 NOT NULL,
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
@@ -127,10 +127,10 @@ CREATE TABLE `settings` (
 	`smtp_password` text,
 	`smtp_from_email` text,
 	`inventory_alert_email` text,
-	`enable_litestream` integer DEFAULT false NOT NULL,
-	`enable_usb_backup` integer DEFAULT false NOT NULL,
+	`enable_litestream` integer DEFAULT 0 NOT NULL,
+	`enable_usb_backup` integer DEFAULT 0 NOT NULL,
 	`pin_lock_timeout_min` integer DEFAULT 5 NOT NULL,
-	`auto_backup_enabled` integer DEFAULT true NOT NULL,
+	`auto_backup_enabled` integer DEFAULT 1 NOT NULL,
 	`auto_backup_interval_min` integer DEFAULT 15 NOT NULL,
 	`max_auto_backups` integer DEFAULT 5 NOT NULL,
 	`last_auto_backup` integer,
@@ -218,7 +218,7 @@ CREATE TABLE `tax_rates` (
 	`category` text NOT NULL,
 	`rate` real NOT NULL,
 	`description` text,
-	`is_active` integer DEFAULT true NOT NULL,
+	`is_active` integer DEFAULT 1 NOT NULL,
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
@@ -281,10 +281,10 @@ CREATE TABLE `inventory_items` (
 	`bulk_cost` real,
 	`order_cost` real DEFAULT 0 NOT NULL,
 	`markup_factor` real DEFAULT 3,
-	`is_on_menu` integer DEFAULT true NOT NULL,
-	`sell_single_serving` integer DEFAULT false NOT NULL,
+	`is_on_menu` integer DEFAULT 1 NOT NULL,
+	`sell_single_serving` integer DEFAULT 0 NOT NULL,
 	`single_serving_price` real,
-	`is_deleted` integer DEFAULT false NOT NULL,
+	`is_deleted` integer DEFAULT 0 NOT NULL,
 	`low_stock_method` text DEFAULT 'manual',
 	`low_stock_manual_threshold` real,
 	`low_stock_threshold` real DEFAULT 0 NOT NULL,

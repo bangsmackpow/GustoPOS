@@ -91,10 +91,14 @@ async function getDrinksBatched(drinkIds?: string[]) {
       actualPrice,
       markupFactor,
       recipe,
-      isAvailable: drink.isAvailable,
-      isOnMenu: drink.isOnMenu,
-      createdAt: drink.createdAt.toISOString(),
-      updatedAt: drink.updatedAt.toISOString(),
+      isAvailable: drink.isAvailable === 1,
+      isOnMenu: drink.isOnMenu === 1,
+      createdAt: drink.createdAt
+        ? new Date(drink.createdAt * 1000).toISOString()
+        : null,
+      updatedAt: drink.updatedAt
+        ? new Date(drink.updatedAt * 1000).toISOString()
+        : null,
     };
   });
 }
@@ -128,7 +132,16 @@ router.post("/drinks", async (req: Request, res: Response) => {
       actualPrice,
       isAvailable,
       recipe,
+      sourceType,
     } = parsed.data as any;
+
+    // Validate recipe required unless inventory_single
+    if (sourceType !== "inventory_single" && (!recipe || recipe.length === 0)) {
+      res
+        .status(400)
+        .json({ error: "Recipe must have at least one ingredient" });
+      return;
+    }
 
     const [drink] = await db
       .insert(drinksTable)
@@ -140,7 +153,7 @@ router.post("/drinks", async (req: Request, res: Response) => {
         category: category as any,
         markupFactor: Number(markupFactor ?? 3.0),
         actualPrice: actualPrice != null ? Number(actualPrice) : null,
-        isAvailable: isAvailable !== undefined ? isAvailable : true,
+        isAvailable: isAvailable !== undefined ? (isAvailable ? 1 : 0) : 1,
       } as typeof drinksTable.$inferInsert)
       .returning();
 
@@ -188,7 +201,7 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
     }
     const data = parsed.data as any;
     const updateData: Partial<typeof drinksTable.$inferInsert> = {
-      updatedAt: new Date(),
+      updatedAt: Math.floor(Date.now() / 1000),
     };
     if (data.name != null) updateData.name = data.name;
     if (data.nameEs !== undefined) updateData.nameEs = data.nameEs;
@@ -203,6 +216,35 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
       updateData.actualPrice =
         data.actualPrice != null ? Number(data.actualPrice) : undefined;
     if (data.isAvailable != null) updateData.isAvailable = data.isAvailable;
+
+    // Validate isOnMenu requires recipe
+    if (data.isOnMenu === true) {
+      const [existing] = await db
+        .select()
+        .from(drinksTable)
+        .where(eq(drinksTable.id, req.params.id as string))
+        .limit(1);
+
+      if (existing && existing.isOnMenu !== 1) {
+        // Check if recipe exists or if it's inventory_single
+        const recipeRows = await db
+          .select()
+          .from(recipeIngredientsTable)
+          .where(eq(recipeIngredientsTable.drinkId, req.params.id as string));
+
+        const isInventorySingle = existing.sourceType === "inventory_single";
+        if (recipeRows.length === 0 && !isInventorySingle) {
+          res
+            .status(400)
+            .json({
+              error:
+                "Cannot enable menu: recipe must have at least one ingredient",
+            });
+          return;
+        }
+      }
+    }
+    if (data.isOnMenu != null) updateData.isOnMenu = data.isOnMenu;
 
     const [drink] = await db
       .update(drinksTable)
@@ -257,7 +299,7 @@ router.delete("/drinks/:id", async (req: Request, res: Response) => {
   try {
     const [drink] = await db
       .update(drinksTable)
-      .set({ isDeleted: true, updatedAt: new Date() })
+      .set({ isDeleted: 1, updatedAt: Math.floor(Date.now() / 1000) })
       .where(eq(drinksTable.id, req.params.id as string))
       .returning();
     if (!drink) {

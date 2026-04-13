@@ -171,6 +171,15 @@ export const IngredientBaseUnit = {
   unit: "unit",
 } as const;
 
+export type IngredientTrackingMode =
+  (typeof IngredientTrackingMode)[keyof typeof IngredientTrackingMode];
+
+export const IngredientTrackingMode = {
+  auto: "auto",
+  pool: "pool",
+  collection: "collection",
+} as const;
+
 export interface Ingredient {
   id: string;
   name: string;
@@ -187,10 +196,20 @@ export interface Ingredient {
   singleServingPrice?: number | null;
   /** @nullable */
   fullBottleWeightG?: number | null;
+  /** @nullable */
+  containerWeightG?: number | null;
+  /** @nullable */
+  density?: number | null;
   currentStock: number;
+  currentBulk?: number;
+  currentPartial?: number;
+  reservedStock?: number;
   orderCost: number;
   lowStockThreshold: number;
   unitsPerCase: number;
+  trackingMode?: IngredientTrackingMode;
+  /** @nullable */
+  parentItemId?: string | null;
   isOnMenu: boolean;
   createdAt: string;
   updatedAt: string;
@@ -215,6 +234,15 @@ export const CreateIngredientBodyBaseUnit = {
   unit: "unit",
 } as const;
 
+export type CreateIngredientBodyTrackingMode =
+  (typeof CreateIngredientBodyTrackingMode)[keyof typeof CreateIngredientBodyTrackingMode];
+
+export const CreateIngredientBodyTrackingMode = {
+  auto: "auto",
+  pool: "pool",
+  collection: "collection",
+} as const;
+
 export interface CreateIngredientBody {
   name: string;
   /** @nullable */
@@ -234,8 +262,18 @@ export interface CreateIngredientBody {
   orderCost?: number;
   lowStockThreshold?: number;
   unitsPerCase?: number;
+  trackingMode?: CreateIngredientBodyTrackingMode;
   isOnMenu?: boolean;
 }
+
+export type UpdateIngredientBodyTrackingMode =
+  (typeof UpdateIngredientBodyTrackingMode)[keyof typeof UpdateIngredientBodyTrackingMode];
+
+export const UpdateIngredientBodyTrackingMode = {
+  auto: "auto",
+  pool: "pool",
+  collection: "collection",
+} as const;
 
 export interface UpdateIngredientBody {
   /** @nullable */
@@ -266,6 +304,7 @@ export interface UpdateIngredientBody {
   lowStockThreshold?: number | null;
   /** @nullable */
   unitsPerCase?: number | null;
+  trackingMode?: UpdateIngredientBodyTrackingMode;
   /** @nullable */
   isOnMenu?: boolean | null;
 }
@@ -432,6 +471,13 @@ export interface Order {
   totalPriceMxn: number;
   /** @nullable */
   notes?: string | null;
+  voided?: boolean;
+  /** @nullable */
+  voidReason?: string | null;
+  /** @nullable */
+  voidedByUserId?: string | null;
+  /** @nullable */
+  voidedAt?: string | null;
   createdAt: string;
 }
 
@@ -695,6 +741,19 @@ export interface UpdateSettingsBody {
   maxAutoBackups?: number | null;
 }
 
+/**
+ * 0=never, 1=weekly, 2=monthly, 3=daily
+ */
+export type RushRepeatEvent =
+  (typeof RushRepeatEvent)[keyof typeof RushRepeatEvent];
+
+export const RushRepeatEvent = {
+  NUMBER_0: 0,
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+  NUMBER_3: 3,
+} as const;
+
 export type RushImpact = (typeof RushImpact)[keyof typeof RushImpact];
 
 export const RushImpact = {
@@ -717,12 +776,27 @@ export interface Rush {
   title: string;
   /** @nullable */
   description?: string | null;
-  startTime: string;
+  startTime: number;
   /** @nullable */
-  endTime?: string | null;
+  endTime?: number | null;
+  /** 0=never, 1=weekly, 2=monthly, 3=daily */
+  repeatEvent?: RushRepeatEvent;
   impact: RushImpact;
   type: RushType;
 }
+
+/**
+ * 0=never, 1=weekly, 2=monthly, 3=daily
+ */
+export type CreateRushBodyRepeatEvent =
+  (typeof CreateRushBodyRepeatEvent)[keyof typeof CreateRushBodyRepeatEvent];
+
+export const CreateRushBodyRepeatEvent = {
+  NUMBER_0: 0,
+  NUMBER_1: 1,
+  NUMBER_2: 2,
+  NUMBER_3: 3,
+} as const;
 
 export type CreateRushBodyImpact =
   (typeof CreateRushBodyImpact)[keyof typeof CreateRushBodyImpact];
@@ -747,9 +821,11 @@ export interface CreateRushBody {
   title: string;
   /** @nullable */
   description?: string | null;
-  startTime: string;
+  startTime: number;
   /** @nullable */
-  endTime?: string | null;
+  endTime?: number | null;
+  /** 0=never, 1=weekly, 2=monthly, 3=daily */
+  repeatEvent?: CreateRushBodyRepeatEvent;
   impact: CreateRushBodyImpact;
   type: CreateRushBodyType;
 }

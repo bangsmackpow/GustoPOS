@@ -39,9 +39,7 @@ export default function pinLoginRouter(): express.Router {
         const [dbUser] = await db
           .select()
           .from(usersTable)
-          .where(
-            and(eq(usersTable.email, email), eq(usersTable.isActive, true)),
-          );
+          .where(and(eq(usersTable.email, email), eq(usersTable.isActive, 1)));
 
         if (!dbUser) {
           return res

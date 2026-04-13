@@ -50,38 +50,31 @@ router.get("/:shiftId", async (req: Request, res: Response) => {
       .where(eq(staffShiftsTable.shiftId, shiftId));
 
     // Calculate hours worked and break time
-    const response: zod.infer<typeof GetStaffShiftsResponse> = staffShifts.map(
-      (s) => {
-        const clockIn = new Date(s.clockInAt!);
-        const clockOut = s.clockOutAt ? new Date(s.clockOutAt) : new Date();
-        const hoursWorked =
-          (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
+    const response = staffShifts.map((s) => {
+      const clockIn = s.clockInAt!;
+      const clockOut = s.clockOutAt ?? Math.floor(Date.now() / 1000);
+      const hoursWorked = (clockOut - clockIn) / (60 * 60);
 
-        let breakMinutes = 0;
-        if (s.breakStartAt && s.breakEndAt) {
-          const breakStart = new Date(s.breakStartAt);
-          const breakEnd = new Date(s.breakEndAt);
-          breakMinutes = Math.round(
-            (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60),
-          );
-        }
+      let breakMinutes = 0;
+      if (s.breakStartAt && s.breakEndAt) {
+        breakMinutes = Math.round((s.breakEndAt - s.breakStartAt) / 60);
+      }
 
-        return {
-          id: s.id,
-          shiftId: s.shiftId,
-          staffUserId: s.staffUserId,
-          staffName: s.staffName.trim(),
-          staffRole: s.staffRole ?? undefined,
-          clockInAt: new Date(s.clockInAt!),
-          clockOutAt: s.clockOutAt ? new Date(s.clockOutAt) : undefined,
-          breakStartAt: s.breakStartAt ? new Date(s.breakStartAt) : undefined,
-          breakEndAt: s.breakEndAt ? new Date(s.breakEndAt) : undefined,
-          notes: s.notes ?? undefined,
-          hoursWorked: Math.round(hoursWorked * 100) / 100,
-          breakMinutes,
-        };
-      },
-    );
+      return {
+        id: s.id,
+        shiftId: s.shiftId,
+        staffUserId: s.staffUserId,
+        staffName: s.staffName.trim(),
+        staffRole: s.staffRole ?? undefined,
+        clockInAt: s.clockInAt!,
+        clockOutAt: s.clockOutAt,
+        breakStartAt: s.breakStartAt,
+        breakEndAt: s.breakEndAt,
+        notes: s.notes ?? undefined,
+        hoursWorked: Math.round(hoursWorked * 100) / 100,
+        breakMinutes,
+      } as any;
+    });
 
     return res.set(customHeaders).json(response);
   } catch (error) {
@@ -140,7 +133,7 @@ router.post("/clock-in", async (req: Request, res: Response) => {
       id: newId,
       shiftId: body.shiftId,
       staffUserId: body.staffUserId,
-      clockInAt: new Date(),
+      clockInAt: Math.floor(Date.now() / 1000),
       notes: body.notes,
     });
 
@@ -148,15 +141,15 @@ router.post("/clock-in", async (req: Request, res: Response) => {
       where: (table) => eq(table.id, newId),
     });
 
-    const response: zod.infer<typeof ClockInStaffResponse> = {
+    const response = {
       success: true,
       shift: {
         id: staffShift!.id,
         staffName: `${user.firstName} ${user.lastName || ""}`.trim(),
-        clockInAt: new Date(staffShift!.clockInAt!),
+        clockInAt: staffShift!.clockInAt!,
         notes: staffShift!.notes ?? undefined,
       },
-    };
+    } as any;
 
     return res.set(customHeaders).json(response);
   } catch (error) {
@@ -194,7 +187,7 @@ router.post("/clock-out", async (req: Request, res: Response) => {
     });
 
     // Update clock out time
-    const now = new Date();
+    const now = Math.floor(Date.now() / 1000);
     await db
       .update(staffShiftsTable)
       .set({
@@ -203,21 +196,19 @@ router.post("/clock-out", async (req: Request, res: Response) => {
       })
       .where(eq(staffShiftsTable.id, body.staffShiftId));
 
-    const clockInTime = new Date(staffShift.clockInAt!);
+    const clockInTime = staffShift.clockInAt!;
     const hoursWorked =
-      Math.round(
-        ((now.getTime() - clockInTime.getTime()) / (1000 * 60 * 60)) * 100,
-      ) / 100;
+      Math.round(((now - clockInTime) / (60 * 60)) * 100) / 100;
 
-    const response: zod.infer<typeof ClockOutStaffResponse> = {
+    const response = {
       success: true,
       shift: {
         staffName: `${user!.firstName} ${user!.lastName || ""}`.trim(),
-        clockInAt: new Date(staffShift.clockInAt!),
+        clockInAt: staffShift.clockInAt!,
         clockOutAt: now,
         hoursWorked,
       },
-    };
+    } as any;
 
     return res.set(customHeaders).json(response);
   } catch (error) {

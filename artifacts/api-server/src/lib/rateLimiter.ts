@@ -7,6 +7,8 @@ export const sensitiveLimiter = rateLimit({
   message: "Too many attempts, please try again in 15 minutes",
   standardHeaders: true,
   legacyHeaders: false,
+  // @ts-expect-error - trustProxy option exists at runtime but not in types
+  trustProxy: false,
 });
 
 export const loginLimiter = rateLimit({
@@ -15,6 +17,8 @@ export const loginLimiter = rateLimit({
   message: "Too many login attempts, please try again in 15 minutes",
   standardHeaders: true, // Include rate limit info in RateLimit-* headers
   legacyHeaders: false, // Disable X-RateLimit-* headers
+  // @ts-expect-error - trustProxy option exists at runtime but not in types
+  trustProxy: false,
   skip: (req) => {
     // Skip rate limiting for health checks
     return req.path === "/api/healthz";
@@ -27,6 +31,8 @@ export const pinLoginLimiter = rateLimit({
   message: "Too many PIN login attempts, please try again in 15 minutes",
   standardHeaders: true,
   legacyHeaders: false,
+  // @ts-expect-error - trustProxy option exists at runtime but not in types
+  trustProxy: false,
   keyGenerator: (req) => {
     // Rate limit by email + IP for better security
     return `${req.body?.email || "unknown"}:${req.ip}`;

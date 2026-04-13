@@ -19,10 +19,10 @@ export const _ingredientsTable = sqliteTable("ingredients", {
   currentStock: real("current_stock").notNull().default(0),
   minimumStock: real("minimum_stock").notNull().default(1),
   category: text("category").notNull().default("other"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+  updatedAt: integer("updated_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -41,17 +41,13 @@ export const drinksTable = sqliteTable("drinks", {
   actualPrice: real("actual_price").notNull().default(0),
   markupFactor: real("markup_factor").notNull().default(3.0),
   sourceType: text("source_type").notNull().default("standard"),
-  isAvailable: integer("is_available", { mode: "boolean" })
-    .notNull()
-    .default(true),
-  isOnMenu: integer("is_on_menu", { mode: "boolean" }).notNull().default(false),
-  isDeleted: integer("is_deleted", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  isAvailable: integer("is_available").notNull().default(1),
+  isOnMenu: integer("is_on_menu").notNull().default(0),
+  isDeleted: integer("is_deleted").notNull().default(0),
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+  updatedAt: integer("updated_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -77,10 +73,10 @@ export const shiftsTable = sqliteTable("shifts", {
   name: text("name").notNull(),
   status: text("status").notNull().default("active"),
   openedByUserId: text("opened_by_user_id").notNull(),
-  startedAt: integer("started_at", { mode: "timestamp" })
+  startedAt: integer("started_at")
     .notNull()
     .default(sql`(unixepoch())`),
-  closedAt: integer("closed_at", { mode: "timestamp" }),
+  closedAt: integer("closed_at"),
   expectedCashMxn: real("expected_cash_mxn"),
   actualCashMxn: real("actual_cash_mxn"),
   cashVarianceMxn: real("cash_variance_mxn"),
@@ -103,10 +99,12 @@ export const tabsTable = sqliteTable("tabs", {
   paymentMethod: text("payment_method"),
   currency: text("currency").notNull().default("MXN"),
   notes: text("notes"),
-  openedAt: integer("opened_at", { mode: "timestamp" })
+  openedAt: integer("opened_at")
     .notNull()
     .default(sql`(unixepoch())`),
-  closedAt: integer("closed_at", { mode: "timestamp" }),
+  closedAt: integer("closed_at"),
+  closeType: text("close_type").default("sale"),
+  compReason: text("comp_reason"),
 });
 
 export const tabPaymentsTable = sqliteTable("tab_payments", {
@@ -119,7 +117,7 @@ export const tabPaymentsTable = sqliteTable("tab_payments", {
   amountMxn: real("amount_mxn").notNull(),
   tipMxn: real("tip_mxn").notNull().default(0),
   paymentMethod: text("payment_method").notNull(),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -141,9 +139,13 @@ export const ordersTable = sqliteTable("orders", {
   taxCategory: text("tax_category").notNull().default("standard"),
   taxRate: real("tax_rate").notNull().default(0),
   notes: text("notes"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
+  voided: integer("voided").notNull().default(0),
+  voidReason: text("void_reason"),
+  voidedByUserId: text("voided_by_user_id"),
+  voidedAt: integer("voided_at"),
 });
 
 export const settingsTable = sqliteTable("settings", {
@@ -161,24 +163,34 @@ export const settingsTable = sqliteTable("settings", {
   smtpPassword: text("smtp_password"),
   smtpFromEmail: text("smtp_from_email"),
   inventoryAlertEmail: text("inventory_alert_email"),
-  enableLitestream: integer("enable_litestream", { mode: "boolean" })
-    .notNull()
-    .default(false),
-  enableUsbBackup: integer("enable_usb_backup", { mode: "boolean" })
-    .notNull()
-    .default(false),
+  enableLitestream: integer("enable_litestream").notNull().default(0),
+  enableUsbBackup: integer("enable_usb_backup").notNull().default(0),
   pinLockTimeoutMin: integer("pin_lock_timeout_min").notNull().default(5),
-  autoBackupEnabled: integer("auto_backup_enabled", { mode: "boolean" })
-    .notNull()
-    .default(true),
+  autoBackupEnabled: integer("auto_backup_enabled").notNull().default(1),
   autoBackupIntervalMin: integer("auto_backup_interval_min")
     .notNull()
     .default(15),
   maxAutoBackups: integer("max_auto_backups").notNull().default(5),
-  lastAutoBackup: integer("last_auto_backup", { mode: "timestamp" }),
-  lastDailyBackup: integer("last_daily_backup", { mode: "timestamp" }),
-  lastWeeklyBackup: integer("last_weekly_backup", { mode: "timestamp" }),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+  defaultAlcoholDensity: real("default_alcohol_density")
+    .notNull()
+    .default(0.94),
+  defaultServingSizeMl: real("default_serving_size_ml")
+    .notNull()
+    .default(44.36),
+  defaultBottleSizeMl: real("default_bottle_size_ml").notNull().default(750),
+  defaultUnitsPerCase: integer("default_units_per_case").notNull().default(1),
+  defaultLowStockThreshold: real("default_low_stock_threshold")
+    .notNull()
+    .default(0),
+  defaultTrackingMode: text("default_tracking_mode").notNull().default("auto"),
+  defaultAuditMethod: text("default_audit_method").notNull().default("auto"),
+  varianceWarningThreshold: real("variance_warning_threshold")
+    .notNull()
+    .default(5.0),
+  lastAutoBackup: integer("last_auto_backup"),
+  lastDailyBackup: integer("last_daily_backup"),
+  lastWeeklyBackup: integer("last_weekly_backup"),
+  updatedAt: integer("updated_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -189,11 +201,12 @@ export const rushesTable = sqliteTable("rushes", {
     .$defaultFn(() => crypto.randomUUID()),
   title: text("title").notNull(),
   description: text("description"),
-  startTime: integer("start_time", { mode: "timestamp" }).notNull(),
-  endTime: integer("end_time", { mode: "timestamp" }),
+  startTime: integer("start_time").notNull(),
+  endTime: integer("end_time"),
+  repeatEvent: integer("repeat_event").notNull().default(0),
   impact: text("impact").notNull().default("medium"),
   type: text("type").notNull().default("event"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -208,12 +221,12 @@ export const staffShiftsTable = sqliteTable("staff_shifts", {
   staffUserId: text("staff_user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-  clockInAt: integer("clock_in_at", { mode: "timestamp" })
+  clockInAt: integer("clock_in_at")
     .notNull()
     .default(sql`(unixepoch())`),
-  clockOutAt: integer("clock_out_at", { mode: "timestamp" }),
-  breakStartAt: integer("break_start_at", { mode: "timestamp" }),
-  breakEndAt: integer("break_end_at", { mode: "timestamp" }),
+  clockOutAt: integer("clock_out_at"),
+  breakStartAt: integer("break_start_at"),
+  breakEndAt: integer("break_end_at"),
   notes: text("notes"),
 });
 
@@ -237,7 +250,7 @@ export const staffPerformanceTable = sqliteTable("staff_performance", {
   customerCount: integer("customer_count").notNull().default(0),
   ordersPerHour: real("orders_per_hour").notNull().default(0),
   revenuePerHour: real("revenue_per_hour").notNull().default(0),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -249,8 +262,8 @@ export const taxRatesTable = sqliteTable("tax_rates", {
   category: text("category").notNull().unique(),
   rate: real("rate").notNull(),
   description: text("description"),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+  isActive: integer("is_active").notNull().default(1),
+  updatedAt: integer("updated_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -265,12 +278,33 @@ export const promoCodesTable = sqliteTable("promo_codes", {
   discountValue: real("discount_value").notNull(),
   maxUses: integer("max_uses"),
   currentUses: integer("current_uses").notNull().default(0),
-  expiresAt: integer("expires_at", { mode: "timestamp" }),
-  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  expiresAt: integer("expires_at"),
+  isActive: integer("is_active").notNull().default(1),
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
+  updatedAt: integer("updated_at")
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+export const specialsTable = sqliteTable("specials", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  drinkId: text("drink_id").references(() => drinksTable.id),
+  specialType: text("special_type").notNull().default("manual"),
+  discountType: text("discount_type").notNull(),
+  discountValue: real("discount_value").notNull(),
+  daysOfWeek: text("days_of_week"),
+  startHour: integer("start_hour"),
+  endHour: integer("end_hour"),
+  startDate: integer("start_date"),
+  endDate: integer("end_date"),
+  isActive: integer("is_active").notNull().default(1),
+  name: text("name"),
+  createdByUserId: text("created_by_user_id"),
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });
@@ -286,7 +320,7 @@ export const eventLogsTable = sqliteTable("event_logs", {
   oldValue: text("old_value"),
   newValue: text("new_value"),
   reason: text("reason"),
-  createdAt: integer("created_at", { mode: "timestamp" })
+  createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
 });

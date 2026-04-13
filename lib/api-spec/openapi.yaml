@@ -1160,7 +1160,17 @@ components:
           type: ["number", "null"]
         fullBottleWeightG:
           type: ["number", "null"]
+        containerWeightG:
+          type: ["number", "null"]
+        density:
+          type: ["number", "null"]
         currentStock:
+          type: number
+        currentBulk:
+          type: number
+        currentPartial:
+          type: number
+        reservedStock:
           type: number
         orderCost:
           type: number
@@ -1168,6 +1178,11 @@ components:
           type: number
         unitsPerCase:
           type: integer
+        trackingMode:
+          type: string
+          enum: [auto, pool, collection]
+        parentItemId:
+          type: ["string", "null"]
         isOnMenu:
           type: boolean
         createdAt:
@@ -1224,6 +1239,9 @@ components:
           type: number
         unitsPerCase:
           type: integer
+        trackingMode:
+          type: string
+          enum: [auto, pool, collection]
         isOnMenu:
           type: boolean
       required:
@@ -1264,6 +1282,9 @@ components:
           type: ["number", "null"]
         unitsPerCase:
           type: ["integer", "null"]
+        trackingMode:
+          type: string
+          enum: [auto, pool, collection]
         isOnMenu:
           type: ["boolean", "null"]
 
@@ -1565,6 +1586,14 @@ components:
         totalPriceMxn:
           type: number
         notes:
+          type: ["string", "null"]
+        voided:
+          type: boolean
+        voidReason:
+          type: ["string", "null"]
+        voidedByUserId:
+          type: ["string", "null"]
+        voidedAt:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -1916,11 +1945,13 @@ components:
         description:
           type: ["string", "null"]
         startTime:
-          type: string
-          format: date-time
+          type: integer
         endTime:
-          type: ["string", "null"]
-          format: date-time
+          type: ["integer", "null"]
+        repeatEvent:
+          type: integer
+          enum: [0, 1, 2, 3]
+          description: "0=never, 1=weekly, 2=monthly, 3=daily"
         impact:
           type: string
           enum: [low, medium, high]
@@ -1942,11 +1973,13 @@ components:
         description:
           type: ["string", "null"]
         startTime:
-          type: string
-          format: date-time
+          type: integer
         endTime:
-          type: ["string", "null"]
-          format: date-time
+          type: ["integer", "null"]
+        repeatEvent:
+          type: integer
+          enum: [0, 1, 2, 3]
+          description: "0=never, 1=weekly, 2=monthly, 3=daily"
         impact:
           type: string
           enum: [low, medium, high]

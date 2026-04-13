@@ -32,55 +32,65 @@ router.get("/auth/logout", (req: Request, res: Response) => {
 
 import { sensitiveLimiter } from "../lib/rateLimiter";
 
-router.post("/auth/reset-password", sensitiveLimiter, async (req: Request, res: Response) => {
-  const { email, pin, newPassword } = req.body;
+router.post(
+  "/auth/reset-password",
+  sensitiveLimiter,
+  async (req: Request, res: Response) => {
+    const { email, pin, newPassword } = req.body;
 
-  if (!email || !pin || !newPassword) {
-    return res
-      .status(400)
-      .json({ error: "Email, PIN, and new password are required" });
-  }
-
-  if (newPassword.length < 4) {
-    return res
-      .status(400)
-      .json({ error: "Password must be at least 4 characters" });
-  }
-
-  try {
-    const [user] = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.email, email));
-
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
+    if (!email || !pin || !newPassword) {
+      return res
+        .status(400)
+        .json({ error: "Email, PIN, and new password are required" });
     }
 
-    // Verify PIN — support both bcrypt and plaintext migration
-    let pinValid = false;
-    if (user.pin.startsWith("$2")) {
-      pinValid = await bcrypt.compare(pin, user.pin);
-    } else {
-      pinValid = pin === user.pin;
+    if (newPassword.length < 4) {
+      return res
+        .status(400)
+        .json({ error: "Password must be at least 4 characters" });
     }
 
-    if (!pinValid) {
-      return res.status(401).json({ error: "Invalid PIN" });
+    try {
+      const [user] = await db
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, email));
+
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Verify PIN — support both bcrypt and plaintext migration
+      let pinValid = false;
+      if (user.pin.startsWith("$2")) {
+        pinValid = await bcrypt.compare(pin, user.pin);
+      } else {
+        pinValid = pin === user.pin;
+      }
+
+      if (!pinValid) {
+        return res.status(401).json({ error: "Invalid PIN" });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      await db
+        .update(usersTable)
+        .set({
+          password: hashedPassword,
+          updatedAt: Math.floor(Date.now() / 1000),
+        })
+        .where(eq(usersTable.id, user.id));
+
+      return res.json({
+        success: true,
+        message: "Password reset successfully",
+      });
+    } catch (err: any) {
+      console.error("[ResetPassword] Error:", err.message);
+      return res.status(500).json({ error: "Failed to reset password" });
     }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-
-    await db
-      .update(usersTable)
-      .set({ password: hashedPassword, updatedAt: new Date() })
-      .where(eq(usersTable.id, user.id));
-
-    return res.json({ success: true, message: "Password reset successfully" });
-  } catch (err: any) {
-    console.error("[ResetPassword] Error:", err.message);
-    return res.status(500).json({ error: "Failed to reset password" });
-  }
-});
+  },
+);
 
 export default router;

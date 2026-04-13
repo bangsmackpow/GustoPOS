@@ -7,9 +7,9 @@ Current status and future trajectory for GustoPOS.
 ## ✅ Quality Gates - ALL PASSING
 
 **Status:** PRODUCTION READY  
-**Date Updated:** April 8, 2026
+**Date Updated:** April 11, 2026
 
-- ✅ **Linting:** 0 errors, 5 warnings (acceptable placeholders)
+- ✅ **Linting:** Pass (warnings only)
 - ✅ **Type Checking:** API and POS Frontend validate with no errors
 - ✅ **Deployment Modes:** 3 Modes (Cloud/Mobile, Desktop, VirtualBox)
 - ✅ **Desktop App:** DMG builds and runs correctly
@@ -17,18 +17,29 @@ Current status and future trajectory for GustoPOS.
 
 ---
 
-## 🎉 Latest Release: Database Fixes & Packaging
+## 🎉 April 2026 Release: Void Tracking, Language Toggles, System Defaults
 
 **Status:** ✅ **COMPLETE**
 
-Fixed database schema drift and packaging issues that prevented the app from loading.
+New features and fixes for April 2026.
 
-### Key Fixes
+### Key Features Implemented
 
-- ✅ **Path Resolution**: Fixed Electron path issues using `process.cwd()`
-- ✅ **Database Schema**: Updated initial migration with all required columns
-- ✅ **Sentry Graceful Degradation**: Handle missing profiling module
-- ✅ **Test Seeds**: Created bartender test users for QA
+- ✅ **Void Reason Tracking**: Orders marked as voided (not deleted) with reason tracking
+  - Pre-defined reasons: customer_changed_mind, wrong_order, spilled, comp, other
+  - Voided orders display as crossed-out in tab with reason
+  - Voided orders excluded from tab total calculation
+- ✅ **Language Toggles**: Globe icon on Login and PinPad screens for EN/ES switching
+- ✅ **System Defaults (Backend)**: Configurable default values for inventory
+  - `GET /api/settings/defaults` and `PATCH /api/settings/defaults`
+  - Settings: alcohol density, serving size, bottle size, units per case, etc.
+- ✅ **Audit Age Stats**: Endpoint for Dashboard audit reminder alerts
+
+### Database Schema Changes
+
+- Added `voided`, `voidReason`, `voidedByUserId`, `voidedAt` to orders table
+- Added 8 system default columns to settings table
+- Auto-migrations handle schema updates on startup
 
 ---
 
@@ -42,6 +53,9 @@ Fixed database schema drift and packaging issues that prevented the app from loa
 - [x] **Desktop App**: Robust Electron wrapper for local Win/Mac.
 - [x] **Appliance**: VirtualBox .ova with auto-start and offline updates.
 - [x] **Analytics**: New routes for bar performance and staff tracking.
+- [x] **Void Reason Tracking**: Full audit trail for deleted orders.
+- [x] **Bilingual Support**: Language toggles on Login/PinPad screens.
+- [x] **System Defaults**: Configurable defaults API complete.
 
 ---
 
@@ -49,14 +63,18 @@ Fixed database schema drift and packaging issues that prevented the app from loa
 
 ### **Phase 1: Operational Excellence**
 
-- [ ] **Shift-End Reports**: Automatic calculation of cash-on-hand vs. system totals.
+- [x] **Shift-End Reports**: Implemented in Reports.tsx
 - [ ] **Kitchen/Bar Display System (KDS)**: Real-time order tickets for bartenders.
 - [ ] **Printer Integration**: Support for ESC/POS thermal printers for receipts.
+- [ ] **Offline Indicator**: Visual connection status indicator.
+- [ ] **Tab Detail Improvements**: Order filtering, void history.
 
 ### **Phase 2: Analytics & Scale**
 
 - [ ] **Usage-Based Low Stock Integration**: Automatic consumption calculation from sales.
 - [ ] **Multi-Location Sync**: Future PostgreSQL-based cloud synchronization.
+- [ ] **Batch Inventory Audits**: Multi-item audit from Settings → Audit Logs.
+- [ ] **Audit Age Dashboard Alert**: Alert if >4 days since last audit.
 
 ---
 

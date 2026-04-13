@@ -10,10 +10,7 @@ const PIN_REGEX = /^[0-9]{4}$/;
 const PIN_COST_FACTOR = 10;
 
 function isValidPin(pin: string): boolean {
-  if (!PIN_REGEX.test(pin)) return false;
-  const allSame = pin[0] === pin[1] && pin[1] === pin[2] && pin[2] === pin[3];
-  if (allSame) return false;
-  return true;
+  return PIN_REGEX.test(pin);
 }
 
 async function hashPin(pin: string): Promise<string> {
@@ -31,7 +28,7 @@ function formatUser(u: typeof usersTable.$inferSelect) {
     role: u.role as any,
     language: u.language as any,
     isActive: u.isActive,
-    createdAt: u.createdAt.toISOString(),
+    createdAt: u.createdAt,
   };
 }
 
@@ -58,7 +55,22 @@ router.post("/", async (req: Request, res: Response) => {
       password,
     } = req.body;
 
-    if (!firstName || typeof firstName !== "string") {
+    console.log("[createUser] Received data:", {
+      firstName,
+      lastName,
+      username,
+      email,
+      role,
+      language,
+      pin: pin ? "***" : undefined,
+      hasPassword: !!password,
+    });
+
+    if (
+      !firstName ||
+      typeof firstName !== "string" ||
+      firstName.trim() === ""
+    ) {
       return res.status(400).json({ error: "First name is required" });
     }
     if (!role || !["admin", "employee"].includes(role)) {
@@ -75,7 +87,7 @@ router.post("/", async (req: Request, res: Response) => {
     // Validate PIN if provided
     if (pin && !isValidPin(pin)) {
       return res.status(400).json({
-        error: "PIN must be 4 digits and not all the same (e.g., 0000, 1111)",
+        error: "PIN must be exactly 4 digits",
       });
     }
 
@@ -88,9 +100,9 @@ router.post("/", async (req: Request, res: Response) => {
       language: language || "en",
       pin: pin ? await hashPin(pin) : await hashPin("0000"),
       password: password || null,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      isActive: 1,
+      createdAt: Math.floor(Date.now() / 1000),
+      updatedAt: Math.floor(Date.now() / 1000),
     };
 
     const [user] = await db.insert(usersTable).values(insertData).returning();
@@ -123,7 +135,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
 
     const data = parsed.data;
     const updateData: Partial<typeof usersTable.$inferInsert> = {
-      updatedAt: new Date(),
+      updatedAt: Math.floor(Date.now() / 1000),
     };
 
     if (data.firstName !== undefined) updateData.firstName = data.firstName;
@@ -135,7 +147,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     if (data.pin !== undefined) {
       if (data.pin && !isValidPin(data.pin)) {
         return res.status(400).json({
-          error: "PIN must be 4 digits and not all the same (e.g., 0000, 1111)",
+          error: "PIN must be exactly 4 digits",
         });
       }
       updateData.pin = data.pin
@@ -143,7 +155,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
         : await hashPin("0000");
     }
     if (data.isActive !== undefined)
-      updateData.isActive = data.isActive ?? true;
+      updateData.isActive = data.isActive ? 1 : 0;
 
     // Explicitly handle password update
     const rawPassword = (req.body as any).password;
@@ -170,7 +182,8 @@ router.patch("/:id", async (req: Request, res: Response) => {
 router.delete("/:id", async (req: Request, res: Response) => {
   try {
     await db
-      .delete(usersTable)
+      .update(usersTable)
+      .set({ isActive: 0 })
       .where(eq(usersTable.id, req.params.id as string));
     return res.json({ success: true });
   } catch {
@@ -189,7 +202,10 @@ router.post("/:id/reset-password", async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     const [user] = await db
       .update(usersTable)
-      .set({ password: hashedPassword, updatedAt: new Date() })
+      .set({
+        password: hashedPassword,
+        updatedAt: Math.floor(Date.now() / 1000),
+      })
       .where(eq(usersTable.id, req.params.id as string))
       .returning();
     if (!user) return res.status(404).json({ error: "User not found" });

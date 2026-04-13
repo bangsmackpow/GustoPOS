@@ -19,13 +19,16 @@ function formatInventoryItem(item: typeof inventoryItemsTable.$inferSelect) {
     lowStockThreshold: Number(item.lowStockThreshold),
     orderCost: Number(item.orderCost),
     unitsPerCase: Number(item.unitsPerCase),
+    trackingMode: item.trackingMode,
     isOnMenu: item.isOnMenu,
     isDeleted: item.isDeleted,
     bottleSizeMl: item.bottleSizeMl ? Number(item.bottleSizeMl) : null,
     fullBottleWeightG: item.fullBottleWeightG
       ? Number(item.fullBottleWeightG)
       : null,
-    glassWeightG: item.glassWeightG ? Number(item.glassWeightG) : null,
+    containerWeightG: item.containerWeightG
+      ? Number(item.containerWeightG)
+      : null,
     createdAt: new Date(item.createdAt).toISOString(),
     updatedAt: new Date(item.updatedAt).toISOString(),
   };
@@ -69,7 +72,8 @@ router.post("/ingredients", async (req: Request, res: Response) => {
         orderCost: parsed.data.orderCost ?? 0,
         lowStockThreshold: parsed.data.lowStockThreshold ?? 1,
         unitsPerCase: parsed.data.unitsPerCase ?? 1,
-        isOnMenu: parsed.data.isOnMenu ?? false,
+        trackingMode: parsed.data.trackingMode ?? "auto",
+        isOnMenu: (parsed.data.isOnMenu ?? false) ? 1 : 0,
         fullBottleWeightG: parsed.data.fullBottleWeightG ?? null,
       })
       .returning();
@@ -127,7 +131,8 @@ router.patch("/ingredients/:id", async (req: Request, res: Response) => {
       updateData.lowStockThreshold = Number(data.lowStockThreshold);
     if (data.unitsPerCase != null)
       updateData.unitsPerCase = Number(data.unitsPerCase);
-    if (data.isOnMenu != null) updateData.isOnMenu = data.isOnMenu;
+    if (data.trackingMode != null) updateData.trackingMode = data.trackingMode;
+    if (data.isOnMenu != null) updateData.isOnMenu = data.isOnMenu ? 1 : 0;
     if (data.fullBottleWeightG != null)
       updateData.fullBottleWeightG = data.fullBottleWeightG;
 

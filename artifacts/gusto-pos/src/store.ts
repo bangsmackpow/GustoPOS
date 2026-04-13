@@ -37,7 +37,8 @@ export const usePosStore = create<PosState>()(
         language: state.language,
         displayCurrency: state.displayCurrency,
         activeStaff: state.activeStaff,
-        isLocked: state.isLocked,
+        // NOTE: isLocked is NOT persisted - reset to false on every app start
+        // This prevents the app from being stuck in lock screen after restart
       }),
     },
   ),

@@ -33,6 +33,53 @@ async function getExchangeRates() {
   };
 }
 
+async function finalizeTabInventory(tabId: string) {
+  const tabOrders = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.tabId, tabId));
+
+  const activeOrders = tabOrders.filter((o) => !o.voided);
+
+  await db.transaction(async (tx) => {
+    for (const order of activeOrders) {
+      const recipe = await tx
+        .select()
+        .from(recipeIngredientsTable)
+        .where(eq(recipeIngredientsTable.drinkId, order.drinkId));
+
+      for (const item of recipe) {
+        if (!item.ingredientId) continue;
+        const [ing] = await tx
+          .select({ parentItemId: inventoryItemsTable.parentItemId })
+          .from(inventoryItemsTable)
+          .where(eq(inventoryItemsTable.id, item.ingredientId));
+
+        const targetId = ing?.parentItemId || item.ingredientId;
+        const deductionAmount = Number(item.amountInBaseUnit) * order.quantity;
+
+        const [ingredient] = await tx
+          .select()
+          .from(inventoryItemsTable)
+          .where(eq(inventoryItemsTable.id, targetId));
+
+        if (ingredient) {
+          await tx
+            .update(inventoryItemsTable)
+            .set({
+              currentStock: Math.max(
+                0,
+                (ingredient.currentStock ?? 0) - deductionAmount,
+              ),
+              reservedStock: 0,
+            })
+            .where(eq(inventoryItemsTable.id, targetId));
+        }
+      }
+    }
+  });
+}
+
 function formatTab(
   tab: typeof tabsTable.$inferSelect,
   staffUserName?: string | null,
@@ -59,8 +106,8 @@ function formatTab(
     paymentMethod: tab.paymentMethod ?? null,
     currency: tab.currency,
     convertedTotal,
-    openedAt: tab.openedAt.toISOString(),
-    closedAt: tab.closedAt?.toISOString() ?? null,
+    openedAt: tab.openedAt,
+    closedAt: tab.closedAt ?? null,
     notes: tab.notes ?? null,
   };
 }
@@ -76,7 +123,11 @@ function formatOrder(order: typeof ordersTable.$inferSelect) {
     unitPriceMxn: Number(order.unitPriceMxn),
     totalPriceMxn: Number(order.unitPriceMxn) * order.quantity,
     notes: order.notes ?? null,
-    createdAt: order.createdAt.toISOString(),
+    createdAt: order.createdAt,
+    voided: order.voided === 1,
+    voidReason: order.voidReason ?? null,
+    voidedByUserId: order.voidedByUserId ?? null,
+    voidedAt: order.voidedAt ?? null,
   };
 }
 
@@ -85,10 +136,9 @@ async function recalcTabTotal(tabId: string) {
     .select()
     .from(ordersTable)
     .where(eq(ordersTable.tabId, tabId));
-  const total = orders.reduce(
-    (sum, o) => sum + Number(o.unitPriceMxn) * o.quantity,
-    0,
-  );
+  const total = orders
+    .filter((o) => o.voided !== 1)
+    .reduce((sum, o) => sum + Number(o.unitPriceMxn) * o.quantity, 0);
   await db
     .update(tabsTable)
     .set({ totalMxn: total })
@@ -279,7 +329,7 @@ router.post("/tabs/:id/close", async (req: Request, res: Response) => {
         status: "closed",
         paymentMethod:
           payments.length > 1 ? "split" : payments[0].paymentMethod,
-        closedAt: new Date(),
+        closedAt: Math.floor(Date.now() / 1000),
         notes: notes ?? undefined,
         tipMxn: totalTips,
       })
@@ -312,6 +362,7 @@ router.post("/tabs/:id/close", async (req: Request, res: Response) => {
       },
     });
 
+    await finalizeTabInventory(req.params.id as string);
     const rates = await getExchangeRates();
     const [user] = await db
       .select()
@@ -336,12 +387,14 @@ router.post("/tabs/:id/close", async (req: Request, res: Response) => {
       .set({
         status: "closed",
         paymentMethod: paymentMethod as any,
-        closedAt: new Date(),
+        closedAt: Math.floor(Date.now() / 1000),
         notes: notes ?? undefined,
         tipMxn: tipMxn ?? 0,
       })
       .where(eq(tabsTable.id, req.params.id as string))
       .returning();
+
+    await finalizeTabInventory(req.params.id as string);
     if (!tab) {
       res.status(404).json({ error: "Tab not found" });
       return;
@@ -441,19 +494,40 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
   const order = await db.transaction(async (tx) => {
     for (const item of recipe) {
       if (item.ingredientId && item.amountInBaseUnit > 0) {
-        // Find if this item has a parent for pooling
         const [ing] = await tx
-          .select({ parentItemId: inventoryItemsTable.parentItemId })
+          .select()
           .from(inventoryItemsTable)
           .where(eq(inventoryItemsTable.id, item.ingredientId));
-        
+
         const targetId = ing?.parentItemId || item.ingredientId;
+
+        const [ingredient] = await tx
+          .select()
+          .from(inventoryItemsTable)
+          .where(eq(inventoryItemsTable.id, targetId));
+
+        const reserveAmount = item.amountInBaseUnit * quantity;
+
+        const availableStock =
+          (ingredient?.currentStock ?? 0) + (ingredient?.reservedStock ?? 0);
+        if (availableStock < reserveAmount) {
+          throw Object.assign(
+            new Error(
+              `Insufficient stock for ${ingredient?.name || "ingredient"}. Need ${reserveAmount.toFixed(1)}, have ${availableStock.toFixed(1)}`,
+            ),
+            {
+              ingredientId: targetId,
+              needed: reserveAmount,
+              available: availableStock,
+            },
+          );
+        }
 
         await tx
           .update(inventoryItemsTable)
           .set({
-            currentStock:
-              sql`${inventoryItemsTable.currentStock} - ${item.amountInBaseUnit}` as any,
+            reservedStock:
+              sql`COALESCE(${inventoryItemsTable.reservedStock}, 0) + ${reserveAmount}` as any,
           })
           .where(eq(inventoryItemsTable.id, targetId));
       }
@@ -511,7 +585,6 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
         .from(recipeIngredientsTable)
         .where(eq(recipeIngredientsTable.drinkId, existingOrder.drinkId));
 
-      // Only check for stock if increasing quantity
       if (diff > 0) {
         for (const item of recipe) {
           if (!item.ingredientId) continue;
@@ -519,7 +592,7 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
             .select({ parentItemId: inventoryItemsTable.parentItemId })
             .from(inventoryItemsTable)
             .where(eq(inventoryItemsTable.id, item.ingredientId));
-          
+
           const targetId = ing?.parentItemId || item.ingredientId;
 
           const [ingredient] = await tx
@@ -527,7 +600,9 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
             .from(inventoryItemsTable)
             .where(eq(inventoryItemsTable.id, targetId));
           const required = Number(item.amountInBaseUnit) * diff;
-          if (!ingredient || ingredient.currentStock < required) {
+          const available =
+            (ingredient?.currentStock ?? 0) + (ingredient?.reservedStock ?? 0);
+          if (!ingredient || available < required) {
             throw Object.assign(
               new Error("Insufficient stock for ingredient"),
               {
@@ -541,28 +616,18 @@ router.patch("/orders/:id", async (req: Request, res: Response) => {
       for (const item of recipe) {
         if (!item.ingredientId) continue;
         const adjustment = Number(item.amountInBaseUnit) * diff;
-        // Prevent negative inventory
         const [ing] = await tx
           .select({ parentItemId: inventoryItemsTable.parentItemId })
           .from(inventoryItemsTable)
           .where(eq(inventoryItemsTable.id, item.ingredientId));
-        
+
         const targetId = ing?.parentItemId || item.ingredientId;
 
-        const [ingredient] = await tx
-          .select()
-          .from(inventoryItemsTable)
-          .where(eq(inventoryItemsTable.id, targetId));
-        const newStock = (ingredient?.currentStock ?? 0) - adjustment;
-        if (newStock < 0) {
-          throw Object.assign(new Error("Insufficient stock for ingredient"), {
-            ingredientId: item.ingredientId,
-          });
-        }
         await tx
           .update(inventoryItemsTable)
           .set({
-            currentStock: newStock,
+            reservedStock:
+              sql`COALESCE(${inventoryItemsTable.reservedStock}, 0) + ${adjustment}` as any,
           })
           .where(eq(inventoryItemsTable.id, targetId));
       }
@@ -591,8 +656,43 @@ router.delete("/orders/:id", async (req: Request, res: Response) => {
     .from(ordersTable)
     .where(eq(ordersTable.id, req.params.id as string));
   if (!order) {
-    res.status(404).json({ error: "Order not found" });
-    return;
+    return res.status(404).json({ error: "Order not found" });
+  }
+
+  const voidReason = req.body?.reason as string | undefined;
+  const voidedByUserId = req.body?.voidedByUserId as string | undefined;
+  const managerUserId = req.body?.managerUserId as string | undefined;
+  const managerPin = req.body?.managerPin as string | undefined;
+
+  if (!managerUserId || !managerPin) {
+    return res.status(400).json({
+      error: "Manager authorization required",
+      code: "MANAGER_REQUIRED",
+    });
+  }
+
+  const [manager] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, managerUserId))
+    .limit(1);
+
+  if (!manager || manager.role !== "admin") {
+    return res.status(403).json({
+      error: "Manager authorization required",
+      code: "INVALID_MANAGER",
+    });
+  }
+
+  const pinValid = await import("bcryptjs").then((bcrypt) =>
+    bcrypt.compare(managerPin, manager.pin || ""),
+  );
+
+  if (!pinValid) {
+    return res.status(403).json({
+      error: "Invalid manager credentials",
+      code: "INVALID_PIN",
+    });
   }
 
   const recipe = await db
@@ -607,38 +707,32 @@ router.delete("/orders/:id", async (req: Request, res: Response) => {
         .select({ parentItemId: inventoryItemsTable.parentItemId })
         .from(inventoryItemsTable)
         .where(eq(inventoryItemsTable.id, item.ingredientId));
-      
-      const targetId = ing?.parentItemId || item.ingredientId;
 
-      const [ingredient] = await tx
-        .select()
-        .from(inventoryItemsTable)
-        .where(eq(inventoryItemsTable.id, targetId));
-      const addBack = Number(item.amountInBaseUnit) * order.quantity;
-      const newStock = (ingredient?.currentStock ?? 0) + addBack;
-      if (newStock < 0) {
-        throw Object.assign(
-          new Error("Inventory would go negative for ingredient"),
-          {
-            ingredientId: item.ingredientId,
-          },
-        );
-      }
+      const targetId = ing?.parentItemId || item.ingredientId;
+      const releaseAmount = Number(item.amountInBaseUnit) * order.quantity;
+
       await tx
         .update(inventoryItemsTable)
         .set({
-          currentStock: newStock,
+          reservedStock:
+            sql`GREATEST(0, COALESCE(${inventoryItemsTable.reservedStock}, 0) - ${releaseAmount})` as any,
         })
         .where(eq(inventoryItemsTable.id, targetId));
     }
 
     await tx
-      .delete(ordersTable)
+      .update(ordersTable)
+      .set({
+        voided: 1,
+        voidReason: voidReason || null,
+        voidedByUserId: voidedByUserId || null,
+        voidedAt: Math.floor(Date.now() / 1000),
+      })
       .where(eq(ordersTable.id, req.params.id as string));
   });
 
   await recalcTabTotal(order.tabId);
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 
 router.delete("/tabs/:id", async (req: Request, res: Response) => {
@@ -652,6 +746,53 @@ router.delete("/tabs/:id", async (req: Request, res: Response) => {
       return;
     }
     await db.transaction(async (tx) => {
+      const tabOrders = await tx
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.tabId, req.params.id as string));
+
+      const activeOrders = tabOrders.filter((o) => !o.voided);
+
+      for (const order of activeOrders) {
+        const recipe = await tx
+          .select()
+          .from(recipeIngredientsTable)
+          .where(eq(recipeIngredientsTable.drinkId, order.drinkId));
+
+        for (const item of recipe) {
+          if (!item.ingredientId) continue;
+          const [ing] = await tx
+            .select({ parentItemId: inventoryItemsTable.parentItemId })
+            .from(inventoryItemsTable)
+            .where(eq(inventoryItemsTable.id, item.ingredientId));
+
+          const targetId = ing?.parentItemId || item.ingredientId;
+          const releaseAmount = Number(item.amountInBaseUnit) * order.quantity;
+
+          const [ingredient] = await tx
+            .select()
+            .from(inventoryItemsTable)
+            .where(eq(inventoryItemsTable.id, targetId));
+
+          if (ingredient) {
+            const returnToStock = Math.min(
+              releaseAmount,
+              ingredient.reservedStock ?? 0,
+            );
+            await tx
+              .update(inventoryItemsTable)
+              .set({
+                currentStock: (ingredient.currentStock ?? 0) + returnToStock,
+                reservedStock: Math.max(
+                  0,
+                  (ingredient.reservedStock ?? 0) - returnToStock,
+                ),
+              })
+              .where(eq(inventoryItemsTable.id, targetId));
+          }
+        }
+      }
+
       await tx
         .delete(ordersTable)
         .where(eq(ordersTable.tabId, req.params.id as string));

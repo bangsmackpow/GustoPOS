@@ -4,33 +4,41 @@
 export interface InventoryItem {
   id: string;
   name: string;
+  nameEs?: string;
   type: string;
   subtype?: string;
-  trackingType: string;
-  bulkUnit?: string;
-  bulkSize: number;
+  trackingType?: string;
+  trackingMode?: "auto" | "pool" | "collection";
+  baseUnit?: string;
+  baseUnitAmount?: number;
   partialUnit?: string;
   servingSize?: number;
   servingUnit?: string;
   alcoholDensity?: number;
-  glassWeightG?: number;
+  density?: number;
+  containerWeightG?: number;
   fullBottleWeightG?: number;
   sellSingleServing: boolean;
   singleServingPrice?: number;
   bulkCost?: number;
+  orderCost?: number;
   markupFactor: number;
   isOnMenu: boolean;
   lowStockMethod?: string;
   lowStockManualThreshold?: number;
+  lowStockThreshold?: number;
   lowStockPercent?: number;
   lowStockPercentBase?: number;
   lowStockUsageDays?: number;
   currentBulk: number;
   currentPartial: number;
+  currentStock?: number;
+  reservedStock?: number;
   lastAuditedAt?: Date | number;
   lastAuditedByUserId?: string;
   createdAt: Date | number;
   updatedAt: Date | number;
+  isDeleted?: boolean;
 }
 
 export interface InventoryCount {

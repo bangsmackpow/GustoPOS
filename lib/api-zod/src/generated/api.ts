@@ -52,7 +52,7 @@ export const GetUsersResponseItem = zod.object({
   pin: zod.string().optional(),
   password: zod.string().nullish(),
   isActive: zod.boolean(),
-  createdAt: zod.date(),
+  createdAt: zod.string().datetime({}),
 });
 export const GetUsersResponse = zod.array(GetUsersResponseItem);
 
@@ -88,7 +88,7 @@ export const GetUserResponse = zod.object({
   pin: zod.string().optional(),
   password: zod.string().nullish(),
   isActive: zod.boolean(),
-  createdAt: zod.date(),
+  createdAt: zod.string().datetime({}),
 });
 
 /**
@@ -121,7 +121,7 @@ export const UpdateUserResponse = zod.object({
   pin: zod.string().optional(),
   password: zod.string().nullish(),
   isActive: zod.boolean(),
-  createdAt: zod.date(),
+  createdAt: zod.string().datetime({}),
 });
 
 /**
@@ -150,13 +150,20 @@ export const GetIngredientsResponseItem = zod.object({
   sellSingleServing: zod.boolean().optional(),
   singleServingPrice: zod.number().nullish(),
   fullBottleWeightG: zod.number().nullish(),
+  containerWeightG: zod.number().nullish(),
+  density: zod.number().nullish(),
   currentStock: zod.number(),
+  currentBulk: zod.number().optional(),
+  currentPartial: zod.number().optional(),
+  reservedStock: zod.number().optional(),
   orderCost: zod.number(),
   lowStockThreshold: zod.number(),
   unitsPerCase: zod.number(),
+  trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
+  parentItemId: zod.string().nullish(),
   isOnMenu: zod.boolean(),
-  createdAt: zod.date(),
-  updatedAt: zod.date(),
+  createdAt: zod.string().datetime({}),
+  updatedAt: zod.string().datetime({}),
 });
 export const GetIngredientsResponse = zod.array(GetIngredientsResponseItem);
 
@@ -178,6 +185,7 @@ export const CreateIngredientBody = zod.object({
   orderCost: zod.number().optional(),
   lowStockThreshold: zod.number().optional(),
   unitsPerCase: zod.number().optional(),
+  trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
   isOnMenu: zod.boolean().optional(),
 });
 
@@ -200,13 +208,20 @@ export const GetIngredientResponse = zod.object({
   sellSingleServing: zod.boolean().optional(),
   singleServingPrice: zod.number().nullish(),
   fullBottleWeightG: zod.number().nullish(),
+  containerWeightG: zod.number().nullish(),
+  density: zod.number().nullish(),
   currentStock: zod.number(),
+  currentBulk: zod.number().optional(),
+  currentPartial: zod.number().optional(),
+  reservedStock: zod.number().optional(),
   orderCost: zod.number(),
   lowStockThreshold: zod.number(),
   unitsPerCase: zod.number(),
+  trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
+  parentItemId: zod.string().nullish(),
   isOnMenu: zod.boolean(),
-  createdAt: zod.date(),
-  updatedAt: zod.date(),
+  createdAt: zod.string().datetime({}),
+  updatedAt: zod.string().datetime({}),
 });
 
 /**
@@ -231,6 +246,7 @@ export const UpdateIngredientBody = zod.object({
   orderCost: zod.number().nullish(),
   lowStockThreshold: zod.number().nullish(),
   unitsPerCase: zod.number().nullish(),
+  trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
   isOnMenu: zod.boolean().nullish(),
 });
 
@@ -246,13 +262,20 @@ export const UpdateIngredientResponse = zod.object({
   sellSingleServing: zod.boolean().optional(),
   singleServingPrice: zod.number().nullish(),
   fullBottleWeightG: zod.number().nullish(),
+  containerWeightG: zod.number().nullish(),
+  density: zod.number().nullish(),
   currentStock: zod.number(),
+  currentBulk: zod.number().optional(),
+  currentPartial: zod.number().optional(),
+  reservedStock: zod.number().optional(),
   orderCost: zod.number(),
   lowStockThreshold: zod.number(),
   unitsPerCase: zod.number(),
+  trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
+  parentItemId: zod.string().nullish(),
   isOnMenu: zod.boolean(),
-  createdAt: zod.date(),
-  updatedAt: zod.date(),
+  createdAt: zod.string().datetime({}),
+  updatedAt: zod.string().datetime({}),
 });
 
 /**
@@ -294,8 +317,8 @@ export const GetDrinksResponseItem = zod.object({
   ),
   isAvailable: zod.boolean(),
   isOnMenu: zod.boolean(),
-  createdAt: zod.date(),
-  updatedAt: zod.date(),
+  createdAt: zod.string().datetime({}),
+  updatedAt: zod.string().datetime({}),
 });
 export const GetDrinksResponse = zod.array(GetDrinksResponseItem);
 
@@ -353,8 +376,8 @@ export const GetDrinkResponse = zod.object({
   ),
   isAvailable: zod.boolean(),
   isOnMenu: zod.boolean(),
-  createdAt: zod.date(),
-  updatedAt: zod.date(),
+  createdAt: zod.string().datetime({}),
+  updatedAt: zod.string().datetime({}),
 });
 
 /**
@@ -408,8 +431,8 @@ export const UpdateDrinkResponse = zod.object({
   ),
   isAvailable: zod.boolean(),
   isOnMenu: zod.boolean(),
-  createdAt: zod.date(),
-  updatedAt: zod.date(),
+  createdAt: zod.string().datetime({}),
+  updatedAt: zod.string().datetime({}),
 });
 
 /**
@@ -443,8 +466,8 @@ export const GetTabsResponseItem = zod.object({
     .union([zod.literal("cash"), zod.literal("card"), zod.literal(null)])
     .nullish(),
   currency: zod.enum(["MXN", "USD", "CAD"]),
-  openedAt: zod.date(),
-  closedAt: zod.date().nullish(),
+  openedAt: zod.string().datetime({}),
+  closedAt: zod.string().datetime({}).nullish(),
   notes: zod.string().nullish(),
 });
 export const GetTabsResponse = zod.array(GetTabsResponseItem);
@@ -479,8 +502,8 @@ export const GetTabResponse = zod.object({
     .union([zod.literal("cash"), zod.literal("card"), zod.literal(null)])
     .nullish(),
   currency: zod.enum(["MXN", "USD", "CAD"]),
-  openedAt: zod.date(),
-  closedAt: zod.date().nullish(),
+  openedAt: zod.string().datetime({}),
+  closedAt: zod.string().datetime({}).nullish(),
   notes: zod.string().nullish(),
   orders: zod.array(
     zod.object({
@@ -493,7 +516,11 @@ export const GetTabResponse = zod.object({
       unitPriceMxn: zod.number(),
       totalPriceMxn: zod.number(),
       notes: zod.string().nullish(),
-      createdAt: zod.date(),
+      voided: zod.boolean().optional(),
+      voidReason: zod.string().nullish(),
+      voidedByUserId: zod.string().nullish(),
+      voidedAt: zod.string().nullish(),
+      createdAt: zod.string().datetime({}),
     }),
   ),
 });
@@ -523,8 +550,8 @@ export const UpdateTabResponse = zod.object({
     .union([zod.literal("cash"), zod.literal("card"), zod.literal(null)])
     .nullish(),
   currency: zod.enum(["MXN", "USD", "CAD"]),
-  openedAt: zod.date(),
-  closedAt: zod.date().nullish(),
+  openedAt: zod.string().datetime({}),
+  closedAt: zod.string().datetime({}).nullish(),
   notes: zod.string().nullish(),
 });
 
@@ -562,8 +589,8 @@ export const CloseTabResponse = zod.object({
     .union([zod.literal("cash"), zod.literal("card"), zod.literal(null)])
     .nullish(),
   currency: zod.enum(["MXN", "USD", "CAD"]),
-  openedAt: zod.date(),
-  closedAt: zod.date().nullish(),
+  openedAt: zod.string().datetime({}),
+  closedAt: zod.string().datetime({}).nullish(),
   notes: zod.string().nullish(),
 });
 
@@ -602,7 +629,11 @@ export const UpdateOrderResponse = zod.object({
   unitPriceMxn: zod.number(),
   totalPriceMxn: zod.number(),
   notes: zod.string().nullish(),
-  createdAt: zod.date(),
+  voided: zod.boolean().optional(),
+  voidReason: zod.string().nullish(),
+  voidedByUserId: zod.string().nullish(),
+  voidedAt: zod.string().nullish(),
+  createdAt: zod.string().datetime({}),
 });
 
 /**
@@ -622,8 +653,8 @@ export const DeleteOrderResponse = zod.object({
 export const GetShiftsResponseItem = zod.object({
   id: zod.string(),
   name: zod.string(),
-  startedAt: zod.date(),
-  closedAt: zod.date().nullish(),
+  startedAt: zod.string().datetime({}),
+  closedAt: zod.string().datetime({}).nullish(),
   status: zod.enum(["active", "closed"]),
   openedByUserId: zod.string(),
   openedByUserName: zod.string().nullish(),
@@ -649,8 +680,8 @@ export const GetActiveShiftResponse = zod.object({
     .object({
       id: zod.string(),
       name: zod.string(),
-      startedAt: zod.date(),
-      closedAt: zod.date().nullish(),
+      startedAt: zod.string().datetime({}),
+      closedAt: zod.string().datetime({}).nullish(),
       status: zod.enum(["active", "closed"]),
       openedByUserId: zod.string(),
       openedByUserName: zod.string().nullish(),
@@ -676,8 +707,8 @@ export const CloseShiftBody = zod.object({
 export const CloseShiftResponse = zod.object({
   id: zod.string(),
   name: zod.string(),
-  startedAt: zod.date(),
-  closedAt: zod.date().nullish(),
+  startedAt: zod.string().datetime({}),
+  closedAt: zod.string().datetime({}).nullish(),
   status: zod.enum(["active", "closed"]),
   openedByUserId: zod.string(),
   openedByUserName: zod.string().nullish(),
@@ -697,8 +728,8 @@ export const GetEndOfNightReportResponse = zod.object({
   shift: zod.object({
     id: zod.string(),
     name: zod.string(),
-    startedAt: zod.date(),
-    closedAt: zod.date().nullish(),
+    startedAt: zod.string().datetime({}),
+    closedAt: zod.string().datetime({}).nullish(),
     status: zod.enum(["active", "closed"]),
     openedByUserId: zod.string(),
     openedByUserName: zod.string().nullish(),
@@ -781,8 +812,8 @@ export const GetEndOfNightReportResponse = zod.object({
         .union([zod.literal("cash"), zod.literal("card"), zod.literal(null)])
         .nullish(),
       currency: zod.enum(["MXN", "USD", "CAD"]),
-      openedAt: zod.date(),
-      closedAt: zod.date().nullish(),
+      openedAt: zod.string().datetime({}),
+      closedAt: zod.string().datetime({}).nullish(),
       notes: zod.string().nullish(),
     }),
   ),
@@ -810,9 +841,9 @@ export const GetSettingsResponse = zod.object({
   autoBackupEnabled: zod.boolean().optional(),
   autoBackupIntervalMin: zod.number().optional(),
   maxAutoBackups: zod.number().optional(),
-  lastAutoBackup: zod.date().optional(),
-  lastDailyBackup: zod.date().optional(),
-  lastWeeklyBackup: zod.date().optional(),
+  lastAutoBackup: zod.string().datetime({}).optional(),
+  lastDailyBackup: zod.string().datetime({}).optional(),
+  lastWeeklyBackup: zod.string().datetime({}).optional(),
 });
 
 /**
@@ -857,9 +888,9 @@ export const UpdateSettingsResponse = zod.object({
   autoBackupEnabled: zod.boolean().optional(),
   autoBackupIntervalMin: zod.number().optional(),
   maxAutoBackups: zod.number().optional(),
-  lastAutoBackup: zod.date().optional(),
-  lastDailyBackup: zod.date().optional(),
-  lastWeeklyBackup: zod.date().optional(),
+  lastAutoBackup: zod.string().datetime({}).optional(),
+  lastDailyBackup: zod.string().datetime({}).optional(),
+  lastWeeklyBackup: zod.string().datetime({}).optional(),
 });
 
 /**
@@ -873,7 +904,7 @@ export const CreateManualBackupResponse = zod.object({
       filename: zod.string(),
       path: zod.string().optional(),
       size: zod.number(),
-      createdAt: zod.date(),
+      createdAt: zod.string().datetime({}),
       type: zod.enum(["auto", "daily", "weekly", "manual"]),
     })
     .optional(),
@@ -890,7 +921,7 @@ export const ListBackupsResponse = zod.object({
         filename: zod.string(),
         path: zod.string().optional(),
         size: zod.number(),
-        createdAt: zod.date(),
+        createdAt: zod.string().datetime({}),
         type: zod.enum(["auto", "daily", "weekly", "manual"]),
       }),
     )
@@ -926,9 +957,9 @@ export const GetBackupSettingsResponse = zod.object({
   autoBackupEnabled: zod.boolean().optional(),
   autoBackupIntervalMin: zod.number().optional(),
   maxAutoBackups: zod.number().optional(),
-  lastAutoBackup: zod.date().optional(),
-  lastDailyBackup: zod.date().optional(),
-  lastWeeklyBackup: zod.date().optional(),
+  lastAutoBackup: zod.string().datetime({}).optional(),
+  lastDailyBackup: zod.string().datetime({}).optional(),
+  lastWeeklyBackup: zod.string().datetime({}).optional(),
 });
 
 /**
@@ -1029,7 +1060,7 @@ export const GetPromoCodeByCodeResponse = zod.object({
   discountValue: zod.number(),
   maxUses: zod.number().optional(),
   currentUses: zod.number().optional(),
-  expiresAt: zod.date().optional(),
+  expiresAt: zod.string().datetime({}).optional(),
   isActive: zod.boolean().optional(),
 });
 
@@ -1063,10 +1094,10 @@ export const GetStaffShiftsResponseItem = zod.object({
   staffUserId: zod.string(),
   staffName: zod.string(),
   staffRole: zod.string().optional(),
-  clockInAt: zod.date(),
-  clockOutAt: zod.date().optional(),
-  breakStartAt: zod.date().optional(),
-  breakEndAt: zod.date().optional(),
+  clockInAt: zod.string().datetime({}),
+  clockOutAt: zod.string().datetime({}).optional(),
+  breakStartAt: zod.string().datetime({}).optional(),
+  breakEndAt: zod.string().datetime({}).optional(),
   notes: zod.string().nullish(),
   hoursWorked: zod.number().optional(),
   breakMinutes: zod.number().optional(),
@@ -1087,7 +1118,7 @@ export const ClockInStaffResponse = zod.object({
   shift: zod.object({
     id: zod.string(),
     staffName: zod.string(),
-    clockInAt: zod.date(),
+    clockInAt: zod.string().datetime({}),
     notes: zod.string().optional(),
   }),
 });
@@ -1104,8 +1135,8 @@ export const ClockOutStaffResponse = zod.object({
   success: zod.boolean(),
   shift: zod.object({
     staffName: zod.string(),
-    clockInAt: zod.date(),
-    clockOutAt: zod.date(),
+    clockInAt: zod.string().datetime({}),
+    clockOutAt: zod.string().datetime({}),
     hoursWorked: zod.number(),
   }),
 });
@@ -1139,8 +1170,12 @@ export const GetRushesResponseItem = zod.object({
   id: zod.string(),
   title: zod.string(),
   description: zod.string().nullish(),
-  startTime: zod.date(),
-  endTime: zod.date().nullish(),
+  startTime: zod.number(),
+  endTime: zod.number().nullish(),
+  repeatEvent: zod
+    .union([zod.literal(0), zod.literal(1), zod.literal(2), zod.literal(3)])
+    .optional()
+    .describe("0=never, 1=weekly, 2=monthly, 3=daily"),
   impact: zod.enum(["low", "medium", "high"]),
   type: zod.enum(["cruise", "festival", "music", "other"]),
 });
@@ -1152,8 +1187,12 @@ export const GetRushesResponse = zod.array(GetRushesResponseItem);
 export const PostRushesBody = zod.object({
   title: zod.string(),
   description: zod.string().nullish(),
-  startTime: zod.date(),
-  endTime: zod.date().nullish(),
+  startTime: zod.number(),
+  endTime: zod.number().nullish(),
+  repeatEvent: zod
+    .union([zod.literal(0), zod.literal(1), zod.literal(2), zod.literal(3)])
+    .optional()
+    .describe("0=never, 1=weekly, 2=monthly, 3=daily"),
   impact: zod.enum(["low", "medium", "high"]),
   type: zod.enum(["cruise", "festival", "music", "other"]),
 });

@@ -14,6 +14,10 @@ import Reports from "@/pages/Reports";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import NotFound from "@/pages/not-found";
+import InventoryAudit from "@/pages/InventoryAudit";
+import InventoryVariance from "@/pages/InventoryVariance";
+import BatchAudit from "@/pages/BatchAudit";
+import { usePosStore } from "@/store";
 
 // Clear stale persisted cache and force fresh data on app start
 // This ensures compatibility with updated API schemas and prevents stale data issues
@@ -38,6 +42,14 @@ try {
   }
 } catch {
   // localStorage may be unavailable
+}
+
+// Reset lock state on every app start to prevent stuck lock screen
+// This ensures the user sees login or dashboard, not a broken PIN pad
+try {
+  usePosStore.getState().setIsLocked(false);
+} catch {
+  // store may not be available yet
 }
 
 // Initialize Query Client with aggressive stale times for offline resilience
@@ -73,8 +85,11 @@ function Router() {
         <Route path="/tabs/:id" component={TabDetail} />
         <Route path="/drinks" component={Drinks} />
         <Route path="/inventory" component={Inventory} />
+        <Route path="/inventory/:id/audit" component={InventoryAudit} />
+        <Route path="/inventory/variance" component={InventoryVariance} />
         <Route path="/reports" component={Reports} />
         <Route path="/settings" component={Settings} />
+        <Route path="/settings/batch-audit/:id" component={BatchAudit} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

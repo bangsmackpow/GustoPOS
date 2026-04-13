@@ -1,22 +1,22 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
-import type { InventoryItem } from '@/types/inventory';
-import { InventoryAuditModal } from './InventoryAuditModal';
-import { Search, Filter } from 'lucide-react';
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import type { InventoryItem } from "@/types/inventory";
+import { InventoryAuditModal } from "./InventoryAuditModal";
+import { Search, Filter } from "lucide-react";
 
 export function InventoryList() {
-  const [selectedType, setSelectedType] = useState<string>('');
-  const [selectedSubtype, setSelectedSubtype] = useState<string>('');
+  const [selectedType, setSelectedType] = useState<string>("");
+  const [selectedSubtype, setSelectedSubtype] = useState<string>("");
   const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [showAuditModal, setShowAuditModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ['/api/inventory/items'],
+    queryKey: ["/api/inventory/items"],
     queryFn: async () => {
-      const response = await fetch('/api/inventory/items');
-      if (!response.ok) throw new Error('Failed to fetch items');
+      const response = await fetch("/api/inventory/items");
+      if (!response.ok) throw new Error("Failed to fetch items");
       return response.json() as Promise<InventoryItem[]>;
     },
   });
@@ -31,8 +31,8 @@ export function InventoryList() {
           items
             .filter((i) => i.type === selectedType)
             .map((i) => i.subtype)
-            .filter(Boolean)
-        )
+            .filter(Boolean),
+        ),
       )
     : [];
 
@@ -47,13 +47,14 @@ export function InventoryList() {
       return false;
 
     if (showLowStockOnly) {
-      const current = item.currentBulk * item.bulkSize + item.currentPartial;
+      const current =
+        item.currentBulk * (item.baseUnitAmount || 750) + item.currentPartial;
 
-      if (item.lowStockMethod?.includes('manual')) {
+      if (item.lowStockMethod?.includes("manual")) {
         if (current < item.lowStockManualThreshold!) return true;
       }
 
-      if (item.lowStockMethod?.includes('percentage')) {
+      if (item.lowStockMethod?.includes("percentage")) {
         const pct = (current / item.lowStockPercentBase!) * 100;
         if (pct < item.lowStockPercent!) return true;
       }
@@ -99,7 +100,7 @@ export function InventoryList() {
             value={selectedType}
             onChange={(e) => {
               setSelectedType(e.target.value);
-              setSelectedSubtype('');
+              setSelectedSubtype("");
             }}
             className="px-3 py-2 border rounded-lg bg-white"
           >
@@ -162,17 +163,22 @@ export function InventoryList() {
             <tbody>
               {filtered.map((item) => {
                 const current =
-                  item.currentBulk * item.bulkSize + item.currentPartial;
+                  item.currentBulk * (item.baseUnitAmount || 750) +
+                  item.currentPartial;
                 const isLowStock =
-                  (item.lowStockMethod?.includes('manual') &&
+                  (item.lowStockMethod?.includes("manual") &&
                     current < item.lowStockManualThreshold!) ||
-                  (item.lowStockMethod?.includes('percentage') &&
+                  (item.lowStockMethod?.includes("percentage") &&
                     (current / item.lowStockPercentBase!) * 100 <
                       item.lowStockPercent!);
 
                 const lastAuditDate = item.lastAuditedAt
-                  ? new Date(typeof item.lastAuditedAt === 'number' ? item.lastAuditedAt * 1000 : item.lastAuditedAt).toLocaleDateString()
-                  : 'Never';
+                  ? new Date(
+                      typeof item.lastAuditedAt === "number"
+                        ? item.lastAuditedAt * 1000
+                        : item.lastAuditedAt,
+                    ).toLocaleDateString()
+                  : "Never";
 
                 return (
                   <tr key={item.id} className="border-b hover:bg-gray-50">
@@ -182,7 +188,7 @@ export function InventoryList() {
                     </td>
                     <td className="px-4 py-3 text-sm font-mono">
                       {item.currentBulk}
-                      {item.bulkUnit} + {item.currentPartial.toFixed(1)}
+                      {item.baseUnit || "ml"} + {item.currentPartial.toFixed(1)}
                       {item.partialUnit}
                     </td>
                     <td className="px-4 py-3">
