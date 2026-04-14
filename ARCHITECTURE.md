@@ -172,20 +172,21 @@ Customer tabs (checks).
 
 Individual drink orders within a tab.
 
-| Column              | Type        | Description               |
-| ------------------- | ----------- | ------------------------- |
-| `id`                | text (UUID) | Primary key               |
-| `tab_id`            | text        | FK to tabs                |
-| `drink_id`          | text        | FK to drinks              |
-| `drink_name`        | text        | Drink name (denormalized) |
-| `quantity`          | integer     | Order quantity            |
-| `unit_price_mxn`    | real        | Price per unit            |
-| `tax_category`      | text        | Tax category              |
-| `tax_rate`          | real        | Tax rate                  |
-| `voided`            | integer     | 0/1 void flag             |
-| `void_reason`       | text        | Void reason               |
-| `voided_by_user_id` | text        | FK to users               |
-| `voided_at`         | integer     | Unix timestamp            |
+| Column              | Type        | Description                     |
+| ------------------- | ----------- | ------------------------------- |
+| `id`                | text (UUID) | Primary key                     |
+| `tab_id`            | text        | FK to tabs                      |
+| `drink_id`          | text        | FK to drinks                    |
+| `drink_name`        | text        | Drink name (denormalized)       |
+| `quantity`          | integer     | Order quantity                  |
+| `unit_price_mxn`    | real        | Price per unit (after specials) |
+| `discount_mxn`      | real        | Manual discount amount          |
+| `tax_category`      | text        | Tax category                    |
+| `tax_rate`          | real        | Tax rate                        |
+| `voided`            | integer     | 0/1 void flag                   |
+| `void_reason`       | text        | Void reason                     |
+| `voided_by_user_id` | text        | FK to users                     |
+| `voided_at`         | integer     | Unix timestamp                  |
 
 #### Drinks (`drinks`)
 
@@ -305,6 +306,45 @@ Cost of goods sold per item per period.
 | `total_cost`    | real        | Total cost            |
 | `category`      | text        | Item category         |
 
+#### Promo Codes (`promo_codes`)
+
+Discount codes for tab-level discounts.
+
+| Column           | Type        | Description                         |
+| ---------------- | ----------- | ----------------------------------- |
+| `id`             | text (UUID) | Primary key                         |
+| `code`           | text        | Unique code (e.g., "SAVE15")        |
+| `description`    | text        | Admin notes                         |
+| `discount_type`  | text        | `percentage` or `fixed_amount`      |
+| `discount_value` | real        | Amount (% or MXN)                   |
+| `max_uses`       | integer     | Max uses (null = unlimited)         |
+| `uses_count`     | integer     | Times used so far                   |
+| `expires_at`     | integer     | Expiration timestamp (null = never) |
+| `is_active`      | integer     | 0/1 active flag                     |
+| `created_at`     | integer     | Creation timestamp                  |
+
+#### Specials (`specials`)
+
+Time-based drink-level discounts.
+
+| Column           | Type        | Description                                     |
+| ---------------- | ----------- | ----------------------------------------------- |
+| `id`             | text (UUID) | Primary key                                     |
+| `name`           | text        | Special name (e.g., "Happy Hour")               |
+| `type`           | text        | `manual`, `happy_hour`, `promotional`, `bundle` |
+| `apply_to`       | text        | `drink`, `category`, or `all`                   |
+| `drink_id`       | text        | FK to drinks (if apply_to = drink)              |
+| `category`       | text        | Category name (if apply_to = category)          |
+| `discount_type`  | text        | `percentage` or `fixed_amount`                  |
+| `discount_value` | real        | Amount (% or MXN)                               |
+| `days_of_week`   | text        | Comma-separated 0-6 (e.g., "1,2,3,4,5")         |
+| `start_hour`     | integer     | Start hour 0-23                                 |
+| `end_hour`       | integer     | End hour 0-23                                   |
+| `start_date`     | integer     | Start date timestamp (null = no limit)          |
+| `end_date`       | integer     | End date timestamp (null = no limit)            |
+| `is_active`      | integer     | 0/1 active flag                                 |
+| `created_at`     | integer     | Creation timestamp                              |
+
 #### Settings (`settings`)
 
 System configuration (singleton table).
@@ -346,6 +386,8 @@ System configuration (singleton table).
 │   ├── items/           # Inventory CRUD
 │   ├── audits/          # Audit records
 │   └── variance/        # Variance analysis
+├── promo-codes/         # Discount codes (admin CRUD)
+├── specials/            # Time-based specials (admin CRUD)
 ├── periods/             # Accounting periods
 ├── analytics/           # Analytics endpoints
 ├── export/              # CSV exports

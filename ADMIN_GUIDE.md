@@ -259,33 +259,135 @@ The system calculates:
 
 ## Promotions
 
+GustoPOS provides a flexible discount system with three levels:
+
+1. **Promo Codes** - Global discount codes (tab-level)
+2. **Specials** - Automatic drink-level or category-level discounts based on schedule
+3. **Manual Discounts** - Per-order discounts applied by staff during service
+
 ### Creating Promo Codes
 
-1. Go to Settings → Promo Codes
+Promo codes are global discount codes that customers can enter at checkout.
+
+1. Go to Settings → **Promo Codes**
 2. Tap **+ Add Promo Code**
 3. Configure:
-   - Code (e.g., "WELCOME10")
-   - Description
-   - Discount Type: Percentage or Fixed
-   - Discount Value (e.g., 10 for 10%)
-   - Max Uses (optional)
-   - Expiration Date (optional)
-4. Tap **Save**
+   - **Code**: Unique code customers enter (e.g., "WELCOME10", "SAVE15")
+   - **Description**: Internal notes (e.g., "New customer discount")
+   - **Discount Type**:
+     - **Percentage**: Apply as % of total (e.g., 10 = 10% off)
+     - **Fixed Amount**: Apply as flat MXN (e.g., 50 = 50 MXN off)
+   - **Discount Value**: The amount (10 for %, or 50 for MXN)
+   - **Max Uses** (optional): Limit how many times code can be used (e.g., 100). Leave blank for unlimited.
+   - **Expiration Date** (optional): After this date, code cannot be used. Leave blank for no expiration.
+4. Toggle **Active** to enable/disable the code
+5. Tap **Save**
+
+**Example:**
+
+- Code: `CINCO25`
+- Discount Type: Percentage
+- Discount Value: 25
+- Max Uses: 50
+- Expiration Date: May 5, 2026
+- Result: 25% off, up to 50 uses, expires May 5
 
 ### Managing Specials
 
-Create time-based specials:
+Specials are automatic drink-level discounts that apply based on schedule (e.g., happy hour, daily promotions). They can apply to:
 
-1. Go to Settings → Specials
+- **Specific drinks** (e.g., "Margarita happy hour special")
+- **Categories** (e.g., all beer specials)
+- **All drinks** (e.g., "50% off all drinks on Tuesdays")
+
+#### Creating a Special
+
+1. Go to Settings → **Specials**
 2. Tap **+ Add Special**
 3. Configure:
-   - Name
-   - Drink (select from menu)
-   - Discount Type & Value
-   - Days of Week
-   - Start/End Hours
-   - Start/End Dates
-4. Tap **Save**
+   - **Name**: Description of special (e.g., "Happy Hour", "Margarita Monday")
+   - **Type**:
+     - **manual**: Manually enable/disable (no schedule)
+     - **happy_hour**: Traditional happy hour pricing
+     - **promotional**: Limited-time promotion
+     - **bundle**: Bundle deal (multiple items)
+   - **Apply To**:
+     - **Specific Drink**: Select a drink from menu
+     - **Category**: Apply to all drinks in category (e.g., "beer", "spirits")
+     - **Global**: Apply to all drinks
+   - **Discount Type**: Percentage or Fixed Amount
+   - **Discount Value**: The amount (e.g., 25 for 25% off, or 50 for 50 MXN off)
+   - **Days of Week**: Select which days special applies
+   - **Start Hour & End Hour**: Time range (24-hour format, 0-23)
+   - **Start Date & End Date** (optional): Calendar date range
+
+4. Toggle **Active** to enable/disable
+5. Tap **Save**
+
+**How Specials Work:**
+
+When a staff member adds an order to a tab, the system automatically checks if any specials apply:
+
+- Matches the drink or category
+- Today is in selected days of week
+- Current time is between start/end hours
+- Current date is within date range (if set)
+- Special is marked Active
+
+If multiple specials match, the highest discount applies automatically.
+
+**Example - Happy Hour Special:**
+
+- Name: `Happy Hour - 5-7pm`
+- Apply To: Category → `All Spirits`
+- Type: happy_hour
+- Discount: 30% off
+- Days: Monday, Tuesday, Wednesday, Thursday, Friday
+- Hours: 17:00 - 19:00 (5pm-7pm)
+- Dates: No limit
+- Result: All spirit drinks 30% off on weekdays 5-7pm
+
+**Example - Daily Promotion:**
+
+- Name: `Margarita Monday`
+- Apply To: Specific Drink → `Margarita`
+- Type: promotional
+- Discount: 50 MXN off
+- Days: Monday
+- Hours: 10:00 - 23:59 (all day)
+- Result: 50 MXN off margaritas every Monday
+
+### Manual Order Discounts
+
+Staff can apply additional discounts to individual orders during service (beyond automatic specials):
+
+1. In the **Tab Detail** page, tap the **discount icon** on any order
+2. Choose a preset:
+   - **Quick buttons**: $2, $5, $10, 10%, 15%, 20%
+   - **Custom amount**: Enter any dollar amount or percentage
+3. The discount is applied immediately
+4. Tap elsewhere to close the discount modal
+
+**Note:** If a special is already applied to an order, the system keeps whichever is **greater** (special or manual discount). This prevents accidentally reducing a customer's savings.
+
+### Discount Priority
+
+When multiple discounts could apply, the system uses this priority:
+
+1. **Order-level discounts** are applied first (special + manual)
+2. **Tab-level discounts** (promo codes) are applied to the final total
+3. **Tax** is calculated on discounted amount
+4. **Tip** is added last
+
+**Example:**
+
+- Margarita: 200 MXN
+- Special: 30% off = 60 MXN off → 140 MXN
+- Staff applies: 20 MXN more off → 120 MXN subtotal
+- Customer applies promo code: 10% off tab → 108 MXN
+- Tax (16%): 17.28 MXN
+- Tip: Customer adds 20 MXN
+- **Total: 145.28 MXN**
 
 ---
 

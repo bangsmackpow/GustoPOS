@@ -107,13 +107,46 @@ To split a tab among multiple people:
 4. See per-person amount in real-time
 5. Process each payment separately
 
-### Discounts
+### Automatic Discounts (Specials)
 
-If a customer has a discount code:
+The system automatically applies any active specials when you add orders to a tab. For example:
 
-1. Tap **Add Discount** on the tab
-2. Enter the promo code
-3. Discount applies to subtotal
+- **Happy Hour**: If ordering spirits during happy hour (5-7pm), price already includes the discount
+- **Daily Promotions**: If ordering a margarita on Monday, the discount is already applied
+- **Category Specials**: If ordering beer during a "Beer Special", discount is automatic
+
+**You don't need to do anything** - the system checks specials based on the time and what you're ordering.
+
+### Manual Order Discounts
+
+To apply an additional discount to a single order:
+
+1. In the **Tab Detail** page, find the order you want to discount
+2. Tap the **discount icon** (percentage or dollar symbol) on the order
+3. Choose a discount amount:
+   - Quick buttons: $2, $5, $10, 10%, 15%, 20%
+   - Custom: Enter any amount or percentage
+4. Discount applies immediately
+5. Tap elsewhere to close
+
+**Note:** You cannot accidentally reduce a special's savings. If an order already has a special and you apply a manual discount, the system keeps whichever saves the customer more money.
+
+### Tab-Level Promo Codes
+
+If a customer has a promo code:
+
+1. When **closing the tab**, look for **Promo Code** field
+2. Enter the code (e.g., "SAVE15", "WELCOME10")
+3. If valid, discount applies to the entire tab subtotal
+4. Confirm the new total before charging
+
+**Common codes:**
+
+- "WELCOME10" = 10% off for new customers
+- "CINCO25" = 25% off on Cinco de Mayo
+- "SAVE15" = 15 MXN off orders over 100 MXN
+
+Ask your manager if you don't know current codes.
 
 ---
 
