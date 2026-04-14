@@ -79,7 +79,7 @@ export function InventoryAuditModal({
   // For pool items, currentPartial is stored in grams (from weighing)
   // Convert to ml using density for display
   const expectedPartialMl = hasWeights
-    ? Math.round(item.currentPartial * density)
+    ? Math.round(item.currentPartial / density)
     : Math.round(item.currentPartial);
 
   const { mutate: saveAudit } = useMutation({

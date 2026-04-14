@@ -255,9 +255,9 @@ export default function Inventory() {
       return liquidWeight > 0 ? `${liquidWeight.toFixed(0)}g` : "0g";
     }
 
-    // Estimate: partialWeight * density (no valid weights) - show ~Xml
+    // Estimate: partialWeight / density (no valid weights) - show ~Xml
     if (!hasValidWeights && item.currentPartial > 0) {
-      const estimatedMl = item.currentPartial * density;
+      const estimatedMl = item.currentPartial / density;
       return `~${estimatedMl.toFixed(0)}ml`;
     }
 
@@ -300,10 +300,10 @@ export default function Inventory() {
 
     if (hasWeights) {
       const liquidWeight = fullBottleWeightG - containerWeightG;
-      const expectedMl = Math.round(liquidWeight * d);
+      const expectedMl = Math.round(liquidWeight / d);
       return `${fullBottles} full + ${expectedMl}ml`;
     } else {
-      const estimatedMl = Math.round(currentPartial * d);
+      const estimatedMl = Math.round(currentPartial / d);
       return `${fullBottles} full + ~${estimatedMl}ml`;
     }
   };
@@ -944,12 +944,12 @@ export default function Inventory() {
                               <span className="font-mono block">
                                 {item.containerWeightG.toFixed(0)}g container
                               </span>
-                            ) : item.density ? (
-                              <span className="opacity-40">
-                                {item.density} density
-                              </span>
                             ) : (
-                              <span className="opacity-40">—</span>
+                              <span className="opacity-40 text-[10px]">
+                                {language === "es"
+                                  ? "Sin datos de peso"
+                                  : "No weight data"}
+                              </span>
                             )}
                           </div>
                         </td>
@@ -1454,12 +1454,14 @@ export default function Inventory() {
                             onChange={(e) => {
                               const weight = parseFloat(e.target.value) || 0;
                               setPartialBottleWeight(weight);
-                              if (editingItem.fullBottleWeightG) {
+                              // Only calculate if we have valid container AND full weights
+                              if (
+                                editingItem.fullBottleWeightG &&
+                                editingItem.containerWeightG
+                              ) {
                                 const size = editingItem.bottleSizeMl || 750;
                                 const den = editingItem.density || 0.94;
-                                const glass =
-                                  editingItem.glassWeightG ||
-                                  editingItem.fullBottleWeightG - size * den;
+                                const glass = editingItem.containerWeightG;
                                 const liquid = Math.max(0, weight - glass);
                                 const partialMl = liquid / den;
                                 const fulls = Math.floor(

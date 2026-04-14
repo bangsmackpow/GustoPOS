@@ -99,8 +99,8 @@ export default function Dashboard() {
         }
       }) || [];
 
-    // Always limit to 5 events for dashboard
-    return filtered.slice(0, 5);
+    // Default to showing 3 events, expand to show all
+    return filtered;
   }, [rushes, rushFilter]);
 
   return (
@@ -239,7 +239,10 @@ export default function Dashboard() {
           </div>
 
           <div className="glass rounded-3xl overflow-hidden divide-y divide-white/5 border border-white/5 min-h-[300px]">
-            {upcomingRushes.map((rush) => {
+            {(rushesCollapsed
+              ? upcomingRushes.slice(0, 3)
+              : upcomingRushes
+            ).map((rush) => {
               const Icon =
                 TYPE_ICONS[rush.type as keyof typeof TYPE_ICONS] || MapPin;
               return (
@@ -271,6 +274,25 @@ export default function Dashboard() {
                 </div>
               );
             })}
+
+            {/* Show More / Show Less Button */}
+            {upcomingRushes.length > 3 && (
+              <div className="p-3 border-t border-white/5">
+                <button
+                  onClick={() => setRushesCollapsed(!rushesCollapsed)}
+                  className="w-full text-center text-sm text-primary hover:text-primary/80 transition-colors py-2"
+                >
+                  {rushesCollapsed
+                    ? language === "es"
+                      ? `Mostrar más (${upcomingRushes.length - 3})`
+                      : `Show More (${upcomingRushes.length - 3})`
+                    : language === "es"
+                      ? "Ver menos"
+                      : "Show Less"}
+                </button>
+              </div>
+            )}
+
             {upcomingRushes.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center py-12 text-muted-foreground italic">
                 <Calendar size={48} className="mb-4 opacity-20" />

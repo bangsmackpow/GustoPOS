@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, rushesTable } from "@workspace/db";
-import { desc, and, gte, eq } from "drizzle-orm";
+import { desc, and, gte, lt, eq } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -84,7 +84,7 @@ router.get("/rushes", async (req: Request, res: Response) => {
         .where(
           and(
             gte(rushesTable.startTime, now),
-            gte(rushesTable.startTime, futureWindow),
+            lt(rushesTable.startTime, futureWindow),
           ),
         )
         .orderBy(desc(rushesTable.startTime));

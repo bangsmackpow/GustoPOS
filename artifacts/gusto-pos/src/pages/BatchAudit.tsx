@@ -200,7 +200,7 @@ export default function BatchAudit() {
     }
 
     if (partial > 0) {
-      const estimatedMl = partial * density;
+      const estimatedMl = partial / density;
       return `~${estimatedMl.toFixed(0)}ml`;
     }
 
