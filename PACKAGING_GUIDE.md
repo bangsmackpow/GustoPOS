@@ -1,8 +1,39 @@
 # GustoPOS Desktop App Packaging Guide
 
-**Last Updated**: April 13, 2026  
+**Last Updated**: April 13, 2026 (20:17)  
 **Current Version**: 0.1.0  
-**Build Status**: ✅ Production Ready
+**Build Status**: ✅ Production Ready  
+**Build Date**: April 13, 2026  
+**MD5 Checksum**: `b4938785cedecaee0f88882b0c745273`  
+**Latest Build Includes**: Critical lock state fix + all features
+
+---
+
+## 🔧 Latest Build Updates (April 13, 2026)
+
+### Critical Security Fix Included
+
+**PIN Pad Lockout Prevention** ✅
+
+- Fixed issue where auto-lock triggered during inactivity
+- Lock state no longer persists across app restarts
+- Users can always authenticate when app is opened fresh
+- Inactivity timeout lock still works during active session
+- **Commit**: `63100af` - Removed persisted lock state from localStorage
+
+### All 7 Reported Issues Verified
+
+Complete audit conducted on previously reported issues:
+
+- ✅ Schedule events filter - Working correctly
+- ✅ Batch audit system - Fully functional
+- ✅ PIN pad entry - Fixed lockout issue
+- ✅ Bulk ingredient import - Working (all item types)
+- ✅ Add item tracking mode - Responsive fields work
+- ✅ Edit item stock display - Shows current inventory
+- ✅ System defaults - ml/oz toggle functional
+
+See `ISSUE_AUDIT_APRIL_13_2026.md` for detailed investigation results.
 
 ---
 
@@ -456,6 +487,27 @@ pnpm --filter @workspace/desktop-app run dev
    pnpm run build:desktop
    ```
 
+### Critical Fixes (April 13, 2026)
+
+**PIN Pad Lockout Prevention**:
+
+- ✅ Auto-lock no longer persists across app restarts
+- ✅ Users can always authenticate on app startup
+- ✅ Lock state resets when app is closed/reopened
+- ✅ Inactivity timeout still works during active session
+- **Impact**: Fixes issue where users would be permanently locked out after inactivity
+
+**All Issues Verified**:
+See `ISSUE_AUDIT_APRIL_13_2026.md` for complete verification of 7 reported issues:
+
+- Schedule events filter - ✅ Working
+- Batch audit system - ✅ Working
+- PIN pad entry - ✅ Fixed
+- Bulk import - ✅ Working
+- Tracking mode fields - ✅ Working
+- Current stock display - ✅ Working
+- System defaults - ✅ Working
+
 ### Known Limitations
 
 - ⚠️ **Code signing**: Unsigned - accept warning on first launch
@@ -509,10 +561,19 @@ GustoPOS Desktop App Structure:
 
 ## Changelog
 
-### April 13, 2026 - Current Build
+### April 13, 2026 - Final Build (20:17)
 
-- ✅ Discount/Specials system fully integrated
-- ✅ Dashboard enhancements (rush event filters)
+**Critical Fixes**:
+
+- ✅ **PIN PAD LOCKOUT FIXED** - Removed persisted lock state preventing permanent lockouts
+- ✅ All 7 reported issues verified and resolved
+
+**Features**:
+
+- ✅ Discount/Specials system fully integrated (3-level discounting)
+- ✅ Dashboard enhancements (rush event filters, collapsible sections)
+- ✅ Batch audit system (full session management)
+- ✅ Inventory tracking (pool & collection modes, auditing)
 - ✅ All linting errors fixed
 - ✅ TypeCheck passes cleanly
 - ✅ DMG packaged successfully (107 MB)
@@ -521,12 +582,22 @@ GustoPOS Desktop App Structure:
 
 ### What's Included
 
-- Complete discount system (promo codes, specials, manual discounts)
-- Inventory management with auditing
-- Shift tracking and reporting
-- Analytics and void tracking
-- Staff management
-- Full offline support via SQLite
+- Complete three-level discount system (promo codes, specials, manual discounts)
+- Inventory management with auditing and variance analysis
+- Batch audit sessions for efficient inventory reconciliation
+- Shift tracking and reporting with detailed analytics
+- Void tracking and analytics (reason, staff, drink analysis)
+- Staff management with PIN/password authentication
+- Auto-lock on inactivity with PIN pad unlock
+- Full offline support via SQLite (no internet required)
+- Bilingual interface (English/Spanish)
+- Complete import system (CSV bulk import, markdown format)
+
+**Latest Build Improvements**:
+
+- Lock state no longer persists across sessions (fixes lockout bug)
+- Inactivity timeout still works during active sessions
+- All critical and major bugs verified as fixed or working correctly
 
 ---
 
