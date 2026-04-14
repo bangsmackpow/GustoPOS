@@ -37,8 +37,7 @@ export const usePosStore = create<PosState>()(
         language: state.language,
         displayCurrency: state.displayCurrency,
         activeStaff: state.activeStaff,
-        isLocked: state.isLocked,
-        // isLocked IS now persisted to maintain lock state across sessions
+        // isLocked is NOT persisted to prevent lockout issues across sessions
       }),
     },
   ),
