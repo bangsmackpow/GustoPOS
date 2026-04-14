@@ -230,8 +230,10 @@ GustoPOS supports English and Spanish:
   - ✅ Batch audit functionality
   - ✅ Full inventory management
   - ✅ Accounting & reporting features
+  - ✅ Rush Events display fix (3 default, Show More/Less)
+  - ✅ Inventory weight calculation fix (formula corrected)
   - **Build**: GustoPOS-0.1.0.dmg (107 MB)
-  - **MD5**: b4938785cedecaee0f88882b0c745273
+  - **MD5**: bf007734c8d1a4b6965e45ed9b09d372
 
 - **Earlier Versions**: Development builds with core POS features
 
@@ -249,7 +251,7 @@ GustoPOS supports English and Spanish:
 | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | Deployment & operations    |
 | [TESTING_GUIDE.md](TESTING_GUIDE.md)       | Testing procedures         |
 
-### Latest Updates (April 13, 2026)
+### Latest Updates (April 13, 2026 - 21:00)
 
 | Document                                                                             | Description                          |
 | ------------------------------------------------------------------------------------ | ------------------------------------ |
@@ -257,10 +259,10 @@ GustoPOS supports English and Spanish:
 | [ISSUE_AUDIT_APRIL_13_2026.md](ISSUE_AUDIT_APRIL_13_2026.md)                         | Issue audit & fixes report           |
 | [docs/DISCOUNTS_IMPLEMENTATION_SUMMARY.md](docs/DISCOUNTS_IMPLEMENTATION_SUMMARY.md) | Discount system overview             |
 
-**Latest Build**: April 13, 2026 (20:17)  
+**Latest Build**: April 13, 2026 (21:00)  
 **Status**: ✅ Production Ready  
-**MD5**: `b4938785cedecaee0f88882b0c745273`  
-**Critical Fixes**: PIN pad lockout prevention, all 7 reported issues verified
+**MD5**: `bf007734c8d1a4b6965e45ed9b09d372`  
+**Critical Fixes**: Rush Events display/filter, Inventory weight formula (\*→/ density), legacy field fix
 
 ---
 

@@ -1,33 +1,42 @@
 # GustoPOS Desktop App Packaging Guide
 
-**Last Updated**: April 13, 2026 (20:17)  
+**Last Updated**: April 13, 2026 (21:00)  
 **Current Version**: 0.1.0  
 **Build Status**: ✅ Production Ready  
 **Build Date**: April 13, 2026  
-**MD5 Checksum**: `b4938785cedecaee0f88882b0c745273`  
-**Latest Build Includes**: Critical lock state fix + all features
+**MD5 Checksum**: `bf007734c8d1a4b6965e45ed9b09d372`  
+**Latest Build Includes**: Rush Events fix + Inventory weight fixes + all previous fixes
 
 ---
 
-## 🔧 Latest Build Updates (April 13, 2026)
+## 🔧 Latest Build Updates (April 13, 2026 - 21:00)
 
-### Critical Security Fix Included
+### Rush Events Fix ✅
 
-**PIN Pad Lockout Prevention** ✅
+- **Default View**: Shows 3 events (not 5)
+- **Show More/Less**: Added expand/collapse button with bilingual support
+- **API Filter**: Fixed `gte` → `lt` in rushes.ts to correctly show next 7 days
+- **Previous Behavior**: Was showing all 52 weekly recurrences of events
 
-- Fixed issue where auto-lock triggered during inactivity
-- Lock state no longer persists across app restarts
-- Users can always authenticate when app is opened fresh
-- Inactivity timeout lock still works during active session
-- **Commit**: `63100af` - Removed persisted lock state from localStorage
+**Commit**: `50bfac1`
 
-### All 7 Reported Issues Verified
+### Inventory Weight Calculation Fixes ✅
 
-Complete audit conducted on previously reported issues:
+- **Formula Fix**: Changed `* density` to `/ density` in all locations
+  - Inventory.tsx (3 locations)
+  - InventoryAuditModal.tsx
+  - BatchAudit.tsx
+- **Display Fix**: Shows "No weight data" instead of density value
+- **Legacy Field**: Fixed `glassWeightG` → `containerWeightG`
+- **Validation**: Prevents negative container weights when no valid weights exist
+- **Root Cause**: The -374998g issue was caused by formula error and fallback using wrong field
 
-- ✅ Schedule events filter - Working correctly
-- ✅ Batch audit system - Fully functional
-- ✅ PIN pad entry - Fixed lockout issue
+**Commit**: `50bfac1`
+
+### Previous Fixes Still Included
+
+- **PIN Pad Lockout Prevention**: Lock state not persisted across sessions
+- **All 7 Previously Reported Issues**: Verified and working
 - ✅ Bulk ingredient import - Working (all item types)
 - ✅ Add item tracking mode - Responsive fields work
 - ✅ Edit item stock display - Shows current inventory
@@ -561,12 +570,14 @@ GustoPOS Desktop App Structure:
 
 ## Changelog
 
-### April 13, 2026 - Final Build (20:17)
+### April 13, 2026 - Latest Build (21:00)
 
 **Critical Fixes**:
 
-- ✅ **PIN PAD LOCKOUT FIXED** - Removed persisted lock state preventing permanent lockouts
-- ✅ All 7 reported issues verified and resolved
+- ✅ **PIN PAD LOCKOUT FIXED** - Lock state not persisted across sessions
+- ✅ **RUSH EVENTS FIXED** - Default shows 3 events, Show More/Less button working
+- ✅ **INVENTORY WEIGHT FIXED** - Formula corrected (\* → / density), display shows "No weight data"
+- ✅ **LEGACY FIELD FIXED** - glassWeightG → containerWeightG with validation
 
 **Features**:
 
@@ -593,11 +604,15 @@ GustoPOS Desktop App Structure:
 - Bilingual interface (English/Spanish)
 - Complete import system (CSV bulk import, markdown format)
 
-**Latest Build Improvements**:
+**Latest Build Improvements (April 13, 2026 - 21:00)**:
 
-- Lock state no longer persists across sessions (fixes lockout bug)
-- Inactivity timeout still works during active sessions
-- All critical and major bugs verified as fixed or working correctly
+- Rush Events: Default shows 3 events, "Show More/Less" button (bilingual)
+- Rush Events API: Filter fixed to show next 7 days (not 52 weeks)
+- Inventory: Formula corrected (grams → ml uses division, not multiplication)
+- Inventory: Display shows "No weight data" instead of density value
+- Inventory: Legacy field glassWeightG → containerWeightG with validation
+- Inventory: Validation prevents negative container weights when no valid data
+- All previous fixes still included (PIN lockout, etc.)
 
 ---
 
