@@ -617,7 +617,19 @@ To clear specific data types, contact developer or use database tools.
 
 ## Related Documentation
 
+### User & System Guides
+
 - [README.md](README.md) - Project overview
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical details
 - [USER_GUIDE.md](USER_GUIDE.md) - Staff user guide
 - [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) - Deployment guide
+
+### Technical Documentation
+
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical details
+- [PACKAGING_GUIDE.md](PACKAGING_GUIDE.md) - Desktop app packaging
+- [ISSUE_AUDIT_APRIL_13_2026.md](ISSUE_AUDIT_APRIL_13_2026.md) - Issue investigation & fixes
+
+### Feature Documentation
+
+- [docs/DISCOUNTS_IMPLEMENTATION_SUMMARY.md](docs/DISCOUNTS_IMPLEMENTATION_SUMMARY.md) - Discount system overview
+- [docs/DISCOUNTS_QUICK_REFERENCE.md](docs/DISCOUNTS_QUICK_REFERENCE.md) - Quick reference guide

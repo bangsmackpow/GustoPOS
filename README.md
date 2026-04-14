@@ -223,13 +223,23 @@ GustoPOS supports English and Spanish:
 
 ## Version History
 
-- **v0.3.0+**: Production-ready with inventory auditing, accounting periods, void tracking
-- **v0.2.0**: Core POS with tabs, orders, inventory
-- **v0.1.0**: Initial release
+- **v0.1.0 (April 13, 2026)**:
+  - ✅ Critical fix: PIN pad lockout prevention
+  - ✅ All 7 reported issues verified & fixed
+  - ✅ Complete discount/specials system
+  - ✅ Batch audit functionality
+  - ✅ Full inventory management
+  - ✅ Accounting & reporting features
+  - **Build**: GustoPOS-0.1.0.dmg (107 MB)
+  - **MD5**: b4938785cedecaee0f88882b0c745273
+
+- **Earlier Versions**: Development builds with core POS features
 
 ---
 
 ## Documentation
+
+### Core Documentation
 
 | Document                                   | Description                |
 | ------------------------------------------ | -------------------------- |
@@ -238,6 +248,19 @@ GustoPOS supports English and Spanish:
 | [ARCHITECTURE.md](ARCHITECTURE.md)         | Technical architecture     |
 | [OPERATIONS_GUIDE.md](OPERATIONS_GUIDE.md) | Deployment & operations    |
 | [TESTING_GUIDE.md](TESTING_GUIDE.md)       | Testing procedures         |
+
+### Latest Updates (April 13, 2026)
+
+| Document                                                                             | Description                          |
+| ------------------------------------------------------------------------------------ | ------------------------------------ |
+| [PACKAGING_GUIDE.md](PACKAGING_GUIDE.md)                                             | Desktop app packaging & distribution |
+| [ISSUE_AUDIT_APRIL_13_2026.md](ISSUE_AUDIT_APRIL_13_2026.md)                         | Issue audit & fixes report           |
+| [docs/DISCOUNTS_IMPLEMENTATION_SUMMARY.md](docs/DISCOUNTS_IMPLEMENTATION_SUMMARY.md) | Discount system overview             |
+
+**Latest Build**: April 13, 2026 (20:17)  
+**Status**: ✅ Production Ready  
+**MD5**: `b4938785cedecaee0f88882b0c745273`  
+**Critical Fixes**: PIN pad lockout prevention, all 7 reported issues verified
 
 ---
 
