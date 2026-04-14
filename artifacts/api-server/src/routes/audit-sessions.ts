@@ -14,6 +14,23 @@ function getId(req: Request): string {
   return req.params.id as string;
 }
 
+// GET /api/inventory/audit-sessions - List all audit sessions
+router.get("/", async (_req: Request, res: Response) => {
+  try {
+    const sessions = await db
+      .select()
+      .from(auditSessionsTable)
+      .orderBy(sql`${auditSessionsTable.startedAt} desc`)
+      .limit(50);
+    return res.json(sessions);
+  } catch (err: any) {
+    console.error("[GET /audit-sessions] Error:", err.message);
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to list audit sessions" });
+  }
+});
+
 // POST /api/inventory/audit-sessions - Create new audit session
 router.post("/", async (req: Request, res: Response) => {
   try {

@@ -26,6 +26,7 @@ import {
   Music,
   MapPin,
   X,
+  ChevronDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es as esLocale } from "date-fns/locale/es";
@@ -64,20 +65,43 @@ export default function Dashboard() {
     tabs?.reduce((sum, tab) => sum + Number(tab.totalMxn), 0) || 0;
 
   const activeShiftData = activeShift?.shift;
+  const [rushFilter, setRushFilter] = useState<
+    "today" | "tomorrow" | "week" | "all"
+  >("week");
+  const [rushesCollapsed, setRushesCollapsed] = useState(false);
 
-  // Only show upcoming or ongoing rushes (next 24 hours)
+  // Filter upcoming rushes based on selected time range
   const upcomingRushes = useMemo(() => {
-    // eslint-disable-next-line react-hooks/purity
-    const now = Date.now();
-    return (
-      rushes
-        ?.filter((r) => {
-          const startTime = new Date(r.startTime).getTime();
-          return startTime > now - 1000 * 60 * 60 * 4; // Show started in last 4 hours or upcoming
-        })
-        .slice(0, 5) || []
-    );
-  }, [rushes]);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStart = today.getTime();
+    const tomorrowStart = todayStart + 24 * 60 * 60 * 1000;
+    const weekStart = todayStart + 7 * 24 * 60 * 60 * 1000;
+
+    const filtered =
+      rushes?.filter((r) => {
+        const startTime = new Date(r.startTime).getTime();
+
+        switch (rushFilter) {
+          case "today":
+            return startTime >= todayStart && startTime < tomorrowStart;
+          case "tomorrow":
+            return (
+              startTime >= tomorrowStart &&
+              startTime < tomorrowStart + 24 * 60 * 60 * 1000
+            );
+          case "week":
+            return startTime >= todayStart && startTime < weekStart;
+          case "all":
+            return startTime >= todayStart;
+          default:
+            return startTime >= todayStart && startTime < weekStart;
+        }
+      }) || [];
+
+    // Always limit to 5 events for dashboard
+    return filtered.slice(0, 5);
+  }, [rushes, rushFilter]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -166,10 +190,54 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Local Events Section (Dynamic Rushes) */}
         <div className="space-y-4">
-          <h3 className="text-xl font-display font-bold flex items-center gap-2">
-            <Zap size={20} className="text-primary" />{" "}
-            {getTranslation("pv_rushes", language)}
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-display font-bold flex items-center gap-2">
+              <Zap size={20} className="text-primary" />
+              {getTranslation("pv_rushes", language)}
+            </h3>
+            <button
+              onClick={() => setRushesCollapsed(!rushesCollapsed)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              title={rushesCollapsed ? "Expand" : "Collapse"}
+            >
+              <ChevronDown
+                size={18}
+                className={`transition-transform ${rushesCollapsed ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
+
+          {/* Filter Buttons */}
+          <div className="flex gap-2 flex-wrap">
+            {(["today", "tomorrow", "week", "all"] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setRushFilter(filter)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  rushFilter === filter
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary border border-white/10 hover:bg-white/5"
+                }`}
+              >
+                {filter === "today"
+                  ? language === "es"
+                    ? "Hoy"
+                    : "Today"
+                  : filter === "tomorrow"
+                    ? language === "es"
+                      ? "Mañana"
+                      : "Tomorrow"
+                    : filter === "week"
+                      ? language === "es"
+                        ? "Esta Semana"
+                        : "This Week"
+                      : language === "es"
+                        ? "Todos"
+                        : "All"}
+              </button>
+            ))}
+          </div>
+
           <div className="glass rounded-3xl overflow-hidden divide-y divide-white/5 border border-white/5 min-h-[300px]">
             {upcomingRushes.map((rush) => {
               const Icon =
@@ -206,7 +274,15 @@ export default function Dashboard() {
             {upcomingRushes.length === 0 && (
               <div className="h-full flex flex-col items-center justify-center py-12 text-muted-foreground italic">
                 <Calendar size={48} className="mb-4 opacity-20" />
-                <p>{getTranslation("no_events_24h", language)}</p>
+                <p>
+                  {rushFilter === "today"
+                    ? language === "es"
+                      ? "No hay eventos hoy"
+                      : "No events today"
+                    : language === "es"
+                      ? "No hay eventos programados"
+                      : "No upcoming events"}
+                </p>
                 <Link href="/settings">
                   <Button
                     variant="link"

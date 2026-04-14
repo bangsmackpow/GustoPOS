@@ -22,6 +22,8 @@ function formatSettings(s: typeof settingsTable.$inferSelect) {
     smtpFromEmail: s.smtpFromEmail ?? "",
     enableLitestream: Boolean(s.enableLitestream),
     enableUsbBackup: Boolean(s.enableUsbBackup),
+    usbBackupPath: s.usbBackupPath ?? "",
+    reportExportPath: s.reportExportPath ?? "",
     pinLockTimeoutMin: s.pinLockTimeoutMin ?? 5,
     autoBackupEnabled: Boolean(s.autoBackupEnabled),
     autoBackupIntervalMin: s.autoBackupIntervalMin ?? 15,
@@ -95,6 +97,10 @@ router.patch("/", requireRole("admin"), async (req: Request, res: Response) => {
       updateData.enableLitestream = data.enableLitestream ? 1 : 0;
     if (data.enableUsbBackup !== undefined)
       updateData.enableUsbBackup = data.enableUsbBackup ? 1 : 0;
+    if (data.usbBackupPath !== undefined)
+      updateData.usbBackupPath = data.usbBackupPath || null;
+    if (data.reportExportPath !== undefined)
+      updateData.reportExportPath = data.reportExportPath || null;
     if (data.pinLockTimeoutMin !== undefined)
       updateData.pinLockTimeoutMin = Number(data.pinLockTimeoutMin) || 5;
     if (data.autoBackupEnabled !== undefined)
@@ -119,7 +125,7 @@ router.patch("/", requireRole("admin"), async (req: Request, res: Response) => {
   }
 });
 
-router.get("/settings/defaults", async (req: Request, res: Response) => {
+router.get("/defaults", async (req: Request, res: Response) => {
   try {
     const settings = await ensureSettings();
     return res.json({
@@ -141,7 +147,7 @@ router.get("/settings/defaults", async (req: Request, res: Response) => {
 });
 
 router.patch(
-  "/settings/defaults",
+  "/defaults",
   requireRole("admin"),
   async (req: Request, res: Response) => {
     try {

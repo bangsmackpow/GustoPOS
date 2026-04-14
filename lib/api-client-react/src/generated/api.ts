@@ -39,6 +39,7 @@ import type {
   Drink,
   EndOfNightReport,
   GetCurrentAuthUserResponse,
+  GetRushesParams,
   GetTabsParams,
   GetTaxConfigResponse,
   GetTaxRatesResponse,
@@ -4187,43 +4188,41 @@ export function useGetStaffPerformance<
 /**
  * @summary List local events and rushes
  */
-export const getGetRushesUrl = (params?: {
-  days?: number;
-  includePast?: boolean;
-}) => {
-  const url = new URL("/api/rushes", window.location.origin);
-  if (params?.days) {
-    url.searchParams.set("days", params.days.toString());
-  }
-  if (params?.includePast) {
-    url.searchParams.set("includePast", "true");
-  }
-  return url.pathname + url.search;
+export const getGetRushesUrl = (params?: GetRushesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/rushes?${stringifiedParams}`
+    : `/api/rushes`;
 };
 
 export const getRushes = async (
-  params?: { days?: number; includePast?: boolean },
+  params?: GetRushesParams,
   options?: RequestInit,
 ): Promise<Rush[]> => {
-  const url = getGetRushesUrl(params);
-  return customFetch<Rush[]>(url, {
+  return customFetch<Rush[]>(getGetRushesUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetRushesQueryKey = (params?: {
-  days?: number;
-  includePast?: boolean;
-}) => {
-  return [`/api/rushes`, params?.days?.toString() ?? "7"] as const;
+export const getGetRushesQueryKey = (params?: GetRushesParams) => {
+  return [`/api/rushes`, ...(params ? [params] : [])] as const;
 };
 
 export const getGetRushesQueryOptions = <
   TData = Awaited<ReturnType<typeof getRushes>>,
   TError = ErrorType<unknown>,
 >(
-  params?: { days?: number; includePast?: boolean },
+  params?: GetRushesParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getRushes>>,
@@ -4261,7 +4260,7 @@ export function useGetRushes<
   TData = Awaited<ReturnType<typeof getRushes>>,
   TError = ErrorType<unknown>,
 >(
-  params?: { days?: number; includePast?: boolean },
+  params?: GetRushesParams,
   options?: {
     query?: UseQueryOptions<
       Awaited<ReturnType<typeof getRushes>>,

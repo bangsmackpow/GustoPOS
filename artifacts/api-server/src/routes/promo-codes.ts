@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, promoCodesTable, tabsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, desc } from "drizzle-orm";
 import {
   GetPromoCodeByCodeParams,
   GetPromoCodeByCodeResponse,
@@ -9,8 +9,241 @@ import {
   ApplyPromoCodeToTabResponse,
 } from "@workspace/api-zod";
 import { logEvent } from "../lib/auditLog";
+import { requireRole } from "../middlewares/authMiddleware";
 
 const router: IRouter = Router();
+
+/**
+ * POST /api/promo-codes
+ * Create a new promo code (admin only)
+ */
+router.post(
+  "/promo-codes",
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    const {
+      code,
+      description,
+      discountType,
+      discountValue,
+      maxUses,
+      expiresAt,
+    } = req.body;
+
+    if (!code || !discountType || !discountValue) {
+      res
+        .status(400)
+        .json({ error: "Code, discountType, and discountValue are required" });
+      return;
+    }
+
+    if (!["percentage", "fixed_amount"].includes(discountType)) {
+      res
+        .status(400)
+        .json({ error: "discountType must be 'percentage' or 'fixed_amount'" });
+      return;
+    }
+
+    // Check for duplicate code
+    const [existing] = await db
+      .select()
+      .from(promoCodesTable)
+      .where(eq(promoCodesTable.code, code.toUpperCase()));
+
+    if (existing) {
+      res.status(400).json({ error: "Promo code already exists" });
+      return;
+    }
+
+    try {
+      const [promo] = await db
+        .insert(promoCodesTable)
+        .values({
+          code: code.toUpperCase(),
+          description: description || null,
+          discountType,
+          discountValue: Number(discountValue),
+          maxUses: maxUses ? Number(maxUses) : null,
+          expiresAt: expiresAt
+            ? Math.floor(new Date(expiresAt).getTime() / 1000)
+            : null,
+          isActive: 1,
+        })
+        .returning();
+
+      res.json({
+        id: promo.id,
+        code: promo.code,
+        description: promo.description,
+        discountType: promo.discountType,
+        discountValue: promo.discountValue,
+        maxUses: promo.maxUses,
+        currentUses: promo.currentUses,
+        expiresAt: promo.expiresAt
+          ? new Date(promo.expiresAt * 1000).toISOString()
+          : null,
+        isActive: promo.isActive === 1,
+      });
+    } catch (err: any) {
+      console.error("Error creating promo code:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+/**
+ * GET /api/promo-codes
+ * List all promo codes (admin only)
+ */
+router.get(
+  "/promo-codes",
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    try {
+      const promos = await db
+        .select()
+        .from(promoCodesTable)
+        .orderBy(desc(promoCodesTable.createdAt));
+
+      res.json(
+        promos.map((p) => ({
+          id: p.id,
+          code: p.code,
+          description: p.description,
+          discountType: p.discountType,
+          discountValue: p.discountValue,
+          maxUses: p.maxUses,
+          currentUses: p.currentUses,
+          expiresAt: p.expiresAt
+            ? new Date(p.expiresAt * 1000).toISOString()
+            : null,
+          isActive: p.isActive === 1,
+          createdAt: new Date(p.createdAt * 1000).toISOString(),
+        })),
+      );
+    } catch (err: any) {
+      console.error("Error listing promo codes:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+/**
+ * PATCH /api/promo-codes/:id
+ * Update a promo code (admin only)
+ */
+router.patch(
+  "/promo-codes/:id",
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+    const {
+      code,
+      description,
+      discountType,
+      discountValue,
+      maxUses,
+      expiresAt,
+      isActive,
+    } = req.body;
+
+    const [existing] = await db
+      .select()
+      .from(promoCodesTable)
+      .where(eq(promoCodesTable.id, id));
+
+    if (!existing) {
+      res.status(404).json({ error: "Promo code not found" });
+      return;
+    }
+
+    // Check for duplicate code if changing
+    if (code && code.toUpperCase() !== existing.code) {
+      const [duplicate] = await db
+        .select()
+        .from(promoCodesTable)
+        .where(eq(promoCodesTable.code, code.toUpperCase()));
+      if (duplicate) {
+        res.status(400).json({ error: "Promo code already exists" });
+        return;
+      }
+    }
+
+    try {
+      const [updated] = await db
+        .update(promoCodesTable)
+        .set({
+          code: code ? code.toUpperCase() : undefined,
+          description: description !== undefined ? description : undefined,
+          discountType: discountType || undefined,
+          discountValue: discountValue ? Number(discountValue) : undefined,
+          maxUses:
+            maxUses !== undefined
+              ? maxUses
+                ? Number(maxUses)
+                : null
+              : undefined,
+          expiresAt:
+            expiresAt !== undefined
+              ? expiresAt
+                ? Math.floor(new Date(expiresAt).getTime() / 1000)
+                : null
+              : undefined,
+          isActive: isActive !== undefined ? (isActive ? 1 : 0) : undefined,
+          updatedAt: Math.floor(Date.now() / 1000),
+        })
+        .where(eq(promoCodesTable.id, id))
+        .returning();
+
+      res.json({
+        id: updated.id,
+        code: updated.code,
+        description: updated.description,
+        discountType: updated.discountType,
+        discountValue: updated.discountValue,
+        maxUses: updated.maxUses,
+        currentUses: updated.currentUses,
+        expiresAt: updated.expiresAt
+          ? new Date(updated.expiresAt * 1000).toISOString()
+          : null,
+        isActive: updated.isActive === 1,
+      });
+    } catch (err: any) {
+      console.error("Error updating promo code:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
+
+/**
+ * DELETE /api/promo-codes/:id
+ * Delete a promo code (admin only)
+ */
+router.delete(
+  "/promo-codes/:id",
+  requireRole("admin"),
+  async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+
+    const [existing] = await db
+      .select()
+      .from(promoCodesTable)
+      .where(eq(promoCodesTable.id, id));
+
+    if (!existing) {
+      res.status(404).json({ error: "Promo code not found" });
+      return;
+    }
+
+    try {
+      await db.delete(promoCodesTable).where(eq(promoCodesTable.id, id));
+      res.json({ success: true, message: "Promo code deleted" });
+    } catch (err: any) {
+      console.error("Error deleting promo code:", err);
+      res.status(500).json({ error: err.message });
+    }
+  },
+);
 
 /**
  * GET /api/promo-codes/:code

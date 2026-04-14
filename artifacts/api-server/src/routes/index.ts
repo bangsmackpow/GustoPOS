@@ -23,6 +23,7 @@ import staffShiftsRouter from "./staff-shifts";
 import staffPerformanceRouter from "./staff-performance";
 import periodsRouter from "./periods";
 import exportRouter from "./export";
+import specialsRouter from "./specials";
 import { requireRole } from "../middlewares/authMiddleware";
 
 const router: IRouter = Router();
@@ -53,6 +54,7 @@ router.use("/staff-shifts", staffShiftsRouter);
 router.use("/staff-performance", staffPerformanceRouter);
 router.use("/periods", periodsRouter);
 router.use("/export", requireRole("admin"), exportRouter);
+router.use("/specials", specialsRouter);
 router.use("/audit-logs", requireRole("admin"), auditLogsRouter);
 (async () => {
   if ((process.env.ADMIN_SEED_ENABLED || "false").toLowerCase() === "true") {

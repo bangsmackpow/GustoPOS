@@ -11,11 +11,14 @@ import {
   usePostRushes,
   useDeleteRushesId,
   useGetCurrentAuthUser,
+  useGetDrinks,
 } from "@workspace/api-client-react";
 import { usePosStore } from "@/store";
 import { getTranslation } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { PromoCodesSection } from "@/components/PromoCodesSection";
+import { SpecialsSection } from "@/components/SpecialsSection";
 import {
   Save,
   Users,
@@ -66,32 +69,32 @@ const BRAND_ICONS = [
 const APP_COLUMNS = [
   {
     key: "name",
-    label: "Name",
+    label: "name",
     required: true,
     suggest: ["name", "item", "product", "description"],
   },
   {
     key: "type",
-    label: "Type",
+    label: "type",
     required: true,
     suggest: ["type", "category", "kind"],
   },
   {
     key: "subtype",
-    label: "Subtype",
+    label: "subtype",
     required: false,
     suggest: ["subtype", "sub-category", "variety", "style"],
   },
   {
     key: "trackingMode",
-    label: "Tracking Mode",
+    label: "trackingMode",
     required: false,
     hint: "Pool, Collection, or Auto",
     suggest: ["trackingmode", "tracking mode", "tracking_mode"],
   },
   {
     key: "bottleSizeMl",
-    label: "Container Size",
+    label: "bottleSizeMl",
     required: false,
     hint: "Pool: ml per bottle | Collection: units per case",
     suggest: [
@@ -106,7 +109,7 @@ const APP_COLUMNS = [
   },
   {
     key: "fullBottleWeightG",
-    label: "Full Bottle Weight (g)",
+    label: "fullBottleWeightG",
     required: false,
     hint: "Pool only - total weight of full bottle",
     suggest: [
@@ -119,7 +122,7 @@ const APP_COLUMNS = [
   },
   {
     key: "containerWeightG",
-    label: "Container Weight (g)",
+    label: "containerWeightG",
     required: false,
     hint: "Pool only - empty container weight",
     suggest: [
@@ -133,14 +136,14 @@ const APP_COLUMNS = [
   },
   {
     key: "density",
-    label: "Density",
+    label: "density",
     required: false,
     hint: "Liquid density (default: 0.94)",
     suggest: ["density", "specific gravity"],
   },
   {
     key: "servingSize",
-    label: "Serving Size",
+    label: "servingSize",
     required: false,
     hint: "Pool: oz per serving | Collection: units per serving",
     suggest: [
@@ -155,7 +158,7 @@ const APP_COLUMNS = [
   },
   {
     key: "orderCost",
-    label: "Order Cost",
+    label: "orderCost",
     required: false,
     hint: "Price per bottle/case",
     suggest: [
@@ -169,7 +172,7 @@ const APP_COLUMNS = [
   },
   {
     key: "lowStockThreshold",
-    label: "Low Stock Alert",
+    label: "lowStockThreshold",
     required: false,
     hint: "Minimum stock before alert",
     suggest: [
@@ -182,14 +185,14 @@ const APP_COLUMNS = [
   },
   {
     key: "isOnMenu",
-    label: "On Menu",
+    label: "isOnMenu",
     required: false,
     hint: "Available for sale",
     suggest: ["is_on_menu", "onmenu", "available", "active"],
   },
   {
     key: "currentSealed",
-    label: "Sealed Containers",
+    label: "currentSealed",
     required: false,
     hint: "Pool: full bottles | Collection: unopened cases",
     suggest: [
@@ -204,7 +207,7 @@ const APP_COLUMNS = [
   },
   {
     key: "currentPartial",
-    label: "Open Weight (g)",
+    label: "currentPartial",
     required: false,
     hint: "Pool: partial bottle weight in grams | Collection: loose units",
     suggest: [
@@ -229,9 +232,13 @@ export default function Settings() {
   const [showAllRushes, setShowAllRushes] = useState(false);
   const { data: settings } = useGetSettings();
   const { data: users, refetch: refetchUsers } = useGetUsers();
+  const { data: drinks } = useGetDrinks();
   const { data: rushes, refetch: refetchRushes } = useGetRushes({
     days: showAllRushes ? 365 : rushDays,
   });
+
+  const [promoCodes, setPromoCodes] = useState<any[]>([]);
+  const [specials, setSpecials] = useState<any[]>([]);
 
   const updateSettings = useUpdateSettings();
   const updateUser = useUpdateUser();
@@ -243,6 +250,19 @@ export default function Settings() {
   const { data: auth } = useGetCurrentAuthUser();
   const isAdmin = auth?.user?.role === "admin";
   const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetch("/api/promo-codes", { credentials: "include" })
+        .then((res) => res.json())
+        .then(setPromoCodes)
+        .catch(console.error);
+      fetch("/api/specials", { credentials: "include" })
+        .then((res) => res.json())
+        .then(setSpecials)
+        .catch(console.error);
+    }
+  }, [isAdmin]);
 
   const [formData, setFormData] = useState({
     barName: "",
@@ -258,6 +278,8 @@ export default function Settings() {
     inventoryAlertEmail: "",
     enableLitestream: false,
     enableUsbBackup: false,
+    usbBackupPath: "",
+    reportExportPath: "",
     pinLockTimeoutMin: 5,
     autoBackupEnabled: true,
     autoBackupIntervalMin: 15,
@@ -297,6 +319,9 @@ export default function Settings() {
     "all" | "tab" | "inventory" | "user"
   >("all");
   const [batchAuditLoading, setBatchAuditLoading] = useState(false);
+  const [auditSessions, setAuditSessions] = useState<any[]>([]);
+  const [auditSessionsLoading, setAuditSessionsLoading] = useState(false);
+  const [servingSizeUnit, setServingSizeUnit] = useState<"ml" | "oz">("ml");
   const [recipePreview, setRecipePreview] = useState<any[]>([]);
 
   const [showIngredientImport, setShowIngredientImport] = useState(false);
@@ -360,6 +385,7 @@ export default function Settings() {
       });
       if (!res.ok) throw new Error("Failed to create audit session");
       const session = await res.json();
+      fetchAuditSessions();
       setLocation("/settings/batch-audit/" + session.id);
     } catch (err: any) {
       toast({
@@ -371,6 +397,24 @@ export default function Settings() {
       setBatchAuditLoading(false);
     }
   };
+
+  const fetchAuditSessions = async () => {
+    setAuditSessionsLoading(true);
+    try {
+      const res = await fetch("/api/inventory/audit-sessions");
+      if (!res.ok) throw new Error("Failed to fetch audit sessions");
+      const data = await res.json();
+      setAuditSessions(data);
+    } catch (err: any) {
+      console.error("Failed to fetch audit sessions:", err);
+    } finally {
+      setAuditSessionsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAuditSessions();
+  }, []);
 
   useEffect(() => {
     if (settings && !formData.barName) {
@@ -388,6 +432,8 @@ export default function Settings() {
         inventoryAlertEmail: settings.inventoryAlertEmail || "",
         enableLitestream: settings.enableLitestream,
         enableUsbBackup: settings.enableUsbBackup,
+        usbBackupPath: settings.usbBackupPath || "",
+        reportExportPath: settings.reportExportPath || "",
         pinLockTimeoutMin: settings.pinLockTimeoutMin ?? 5,
         autoBackupEnabled: settings.autoBackupEnabled ?? true,
         autoBackupIntervalMin: settings.autoBackupIntervalMin ?? 15,
@@ -1605,6 +1651,114 @@ export default function Settings() {
         )}
       </section>
 
+      {/* Batch Audit Sessions */}
+      <section className="glass rounded-3xl p-6 space-y-6">
+        <div className="flex justify-between items-center border-b border-white/5 pb-2">
+          <h3 className="text-lg font-medium text-primary flex items-center gap-2">
+            <ClipboardList size={18} /> Batch Audit Sessions
+          </h3>
+          <Button size="sm" variant="outline" onClick={fetchAuditSessions}>
+            <RefreshCw
+              size={14}
+              className={auditSessionsLoading ? "animate-spin" : ""}
+            />
+          </Button>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          View and resume incomplete batch audit sessions.
+        </p>
+        {auditSessionsLoading ? (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading...
+          </div>
+        ) : auditSessions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No batch audit sessions yet.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-white/5 text-muted-foreground">
+                  <th className="p-3 font-medium">Date</th>
+                  <th className="p-3 font-medium">Type</th>
+                  <th className="p-3 font-medium">Status</th>
+                  <th className="p-3 font-medium">Items</th>
+                  <th className="p-3 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {auditSessions.map((session: any) => (
+                  <tr key={session.id} className="hover:bg-white/5">
+                    <td className="p-3">
+                      {session.startedAt
+                        ? format(
+                            new Date(session.startedAt * 1000),
+                            "MMM d, yyyy",
+                          )
+                        : "—"}
+                    </td>
+                    <td className="p-3 capitalize">
+                      {session.typeFilter || "all"}
+                    </td>
+                    <td className="p-3">
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-500/20 text-yellow-400">
+                        {session.status}
+                      </span>
+                    </td>
+                    <td className="p-3 font-mono">{session.itemCount || 0}</td>
+                    <td className="p-3 text-right">
+                      {session.status === "in_progress" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setLocation("/settings/batch-audit/" + session.id)
+                          }
+                        >
+                          Resume
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {isAdmin && (
+        <>
+          <section className="glass rounded-3xl p-6 space-y-6">
+            <PromoCodesSection
+              promoCodes={promoCodes}
+              isAdmin={isAdmin}
+              onRefetch={() => {
+                fetch("/api/promo-codes", { credentials: "include" })
+                  .then((res) => res.json())
+                  .then(setPromoCodes)
+                  .catch(console.error);
+              }}
+            />
+          </section>
+
+          <section className="glass rounded-3xl p-6 space-y-6">
+            <SpecialsSection
+              specials={specials}
+              drinks={drinks || []}
+              isAdmin={isAdmin}
+              onRefetch={() => {
+                fetch("/api/specials", { credentials: "include" })
+                  .then((res) => res.json())
+                  .then(setSpecials)
+                  .catch(console.error);
+              }}
+            />
+          </section>
+        </>
+      )}
+
       {/* Staff Management */}
       <section className="glass rounded-3xl p-6 space-y-6">
         <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -1895,6 +2049,90 @@ export default function Settings() {
                 />
                 <span className="text-xs font-medium">Enable USB Backup</span>
               </label>
+              {formData.enableUsbBackup && (
+                <>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={async () => {
+                        try {
+                          const input = document.createElement("input");
+                          input.type = "file";
+                          input.webkitdirectory = true;
+                          input.onchange = async () => {
+                            const files = input.files;
+                            if (files && files.length > 0) {
+                              const path =
+                                files[0].webkitRelativePath || files[0].name;
+                              const dirPath = path.split("/")[0] || "";
+                              setFormData({
+                                ...formData,
+                                usbBackupPath: dirPath,
+                              });
+                            }
+                          };
+                          input.click();
+                        } catch (err) {
+                          console.error("Failed to select directory:", err);
+                        }
+                      }}
+                    >
+                      Choose USB Location
+                    </Button>
+                    {formData.usbBackupPath && (
+                      <span className="text-xs text-muted-foreground">
+                        Selected: {formData.usbBackupPath}
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+          <div className="w-10 h-10 rounded-xl bg-green-500/20 flex items-center justify-center text-green-400 shrink-0">
+            <FileSpreadsheet size={20} />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-medium text-sm">Nightly Report Export</h4>
+            <p className="text-xs text-muted-foreground mt-1">
+              Choose where to save nightly sales reports
+            </p>
+            <div className="mt-3 flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.webkitdirectory = true;
+                    input.onchange = async () => {
+                      const files = input.files;
+                      if (files && files.length > 0) {
+                        const path =
+                          files[0].webkitRelativePath || files[0].name;
+                        const dirPath = path.split("/")[0] || "";
+                        setFormData({ ...formData, reportExportPath: dirPath });
+                      }
+                    };
+                    input.click();
+                  } catch (err) {
+                    console.error("Failed to select directory:", err);
+                  }
+                }}
+              >
+                Choose Report Location
+              </Button>
+              {formData.reportExportPath && (
+                <span className="text-xs text-muted-foreground">
+                  Selected: {formData.reportExportPath}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1935,22 +2173,75 @@ export default function Settings() {
             </p>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">
-              Default Serving Size (ml)
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">
+                Default Serving Size
+              </label>
+              <div className="flex bg-secondary/50 rounded-lg p-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (servingSizeUnit === "oz") {
+                      setServingSizeUnit("ml");
+                      setSystemDefaults({
+                        ...systemDefaults,
+                        defaultServingSizeMl:
+                          systemDefaults.defaultServingSizeMl * 29.5735,
+                      });
+                    }
+                  }}
+                  className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
+                    servingSizeUnit === "ml"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  ml
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (servingSizeUnit === "ml") {
+                      setServingSizeUnit("oz");
+                      setSystemDefaults({
+                        ...systemDefaults,
+                        defaultServingSizeMl:
+                          systemDefaults.defaultServingSizeMl / 29.5735,
+                      });
+                    }
+                  }}
+                  className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
+                    servingSizeUnit === "oz"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  oz
+                </button>
+              </div>
+            </div>
             <input
               type="number"
               step="0.1"
-              value={systemDefaults.defaultServingSizeMl}
-              onChange={(e) =>
+              value={
+                servingSizeUnit === "oz"
+                  ? (systemDefaults.defaultServingSizeMl / 29.5735).toFixed(2)
+                  : systemDefaults.defaultServingSizeMl
+              }
+              onChange={(e) => {
+                const val = parseFloat(e.target.value) || 0;
                 setSystemDefaults({
                   ...systemDefaults,
-                  defaultServingSizeMl: parseFloat(e.target.value) || 44.36,
-                })
-              }
+                  defaultServingSizeMl:
+                    servingSizeUnit === "oz" ? val * 29.5735 : val,
+                });
+              }}
               className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
             />
-            <p className="text-xs text-muted-foreground"> 1.5oz = 44.36ml</p>
+            <p className="text-xs text-muted-foreground">
+              Only for Pool (weight-based) tracking. Collection uses 1
+              unit/serving.
+            </p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">

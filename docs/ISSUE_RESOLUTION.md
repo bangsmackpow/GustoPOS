@@ -19,6 +19,12 @@
 - **Status:** Route works correctly at `/api/inventory/audit-sessions`
 - **Status:** COMPLETE (already functional)
 
+### ✅ Issue 10: System Defaults Save (Fixed Route Path)
+
+- **File:** `artifacts/api-server/src/routes/settings.ts`
+- **Fix:** Changed `/settings/defaults` to `/defaults` to avoid double `/settings/settings/defaults`
+- **Status:** COMPLETE
+
 ### ✅ Issue 4: Staff Delete (Soft Delete)
 
 - **File:** users.ts

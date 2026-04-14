@@ -677,6 +677,7 @@ export default function Inventory() {
                 nameEs: "",
                 type: "spirit",
                 subtype: "",
+                trackingMode: "auto",
                 baseUnit: "ml",
                 baseUnitAmount: 750,
                 bottleSizeMl: 750,
@@ -1530,7 +1531,63 @@ export default function Inventory() {
                     </div>
                   </div>
 
-                  {/* Calculated Stats Summary */}
+                  {/* Current Inventory Display (Read-only - use Audit to update) */}
+                  {editingItem.id && (
+                    <div className="col-span-2 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-bold text-amber-400 uppercase tracking-widest">
+                          Current Inventory
+                        </span>
+                        <button
+                          onClick={() => {
+                            setShowAuditItem(editingItem);
+                            setEditingItem(null);
+                          }}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {language === "es" ? "Auditar" : "Audit"} →
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 text-sm">
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
+                            {isPool ? "Sealed (Full)" : "Unopened Cases"}
+                          </span>
+                          <span className="text-lg font-bold">
+                            {editingItem.currentBulk || 0}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
+                            {isPool ? "Open (Partial)" : "Loose Units"}
+                          </span>
+                          <span className="text-lg font-bold">
+                            {isPool
+                              ? editingItem.currentPartial
+                                ? `${(editingItem.currentPartial - (editingItem.containerWeightG || 0)).toFixed(0)}g`
+                                : "0g"
+                              : editingItem.currentPartial || 0}
+                          </span>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-widest">
+                            Total
+                          </span>
+                          <span className="text-lg font-bold text-primary">
+                            {(editingItem.currentStock || 0).toFixed(0)}{" "}
+                            {isPool ? "ml" : "units"}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground mt-2 italic">
+                        {language === "es"
+                          ? "Usa Auditar para actualizar el inventario"
+                          : "Use Audit to update inventory counts"}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Calculated Stats Summary (for new items or when editing) */}
                   <div className="col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-primary/5 border border-primary/10">
                     <div className="flex flex-col">
                       <span className="text-[9px] text-primary/60 uppercase font-bold tracking-widest">
@@ -1538,13 +1595,7 @@ export default function Inventory() {
                       </span>
                       <span className="text-sm font-bold">
                         {(editingItem.currentStock || 0).toFixed(0)}{" "}
-                        {editingItem.trackingMode === "pool" ||
-                        (editingItem.trackingMode === "auto" &&
-                          editingItem.type === "spirit") ||
-                        (editingItem.trackingMode === "auto" &&
-                          editingItem.type === "mixer")
-                          ? "ml"
-                          : "units"}
+                        {isPool ? "ml" : "units"}
                       </span>
                     </div>
                     <div className="flex flex-col items-center">

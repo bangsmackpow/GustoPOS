@@ -514,6 +514,7 @@ export const GetTabResponse = zod.object({
       drinkNameEs: zod.string().nullish(),
       quantity: zod.number(),
       unitPriceMxn: zod.number(),
+      discountMxn: zod.number().optional(),
       totalPriceMxn: zod.number(),
       notes: zod.string().nullish(),
       voided: zod.boolean().optional(),
@@ -627,6 +628,7 @@ export const UpdateOrderResponse = zod.object({
   drinkNameEs: zod.string().nullish(),
   quantity: zod.number(),
   unitPriceMxn: zod.number(),
+  discountMxn: zod.number().optional(),
   totalPriceMxn: zod.number(),
   notes: zod.string().nullish(),
   voided: zod.boolean().optional(),
@@ -841,6 +843,8 @@ export const GetSettingsResponse = zod.object({
   autoBackupEnabled: zod.boolean().optional(),
   autoBackupIntervalMin: zod.number().optional(),
   maxAutoBackups: zod.number().optional(),
+  usbBackupPath: zod.string().nullish(),
+  reportExportPath: zod.string().nullish(),
   lastAutoBackup: zod.string().datetime({}).optional(),
   lastDailyBackup: zod.string().datetime({}).optional(),
   lastWeeklyBackup: zod.string().datetime({}).optional(),
@@ -867,6 +871,8 @@ export const UpdateSettingsBody = zod.object({
   autoBackupEnabled: zod.boolean().nullish(),
   autoBackupIntervalMin: zod.number().nullish(),
   maxAutoBackups: zod.number().nullish(),
+  usbBackupPath: zod.string().nullish(),
+  reportExportPath: zod.string().nullish(),
 });
 
 export const UpdateSettingsResponse = zod.object({
@@ -888,6 +894,8 @@ export const UpdateSettingsResponse = zod.object({
   autoBackupEnabled: zod.boolean().optional(),
   autoBackupIntervalMin: zod.number().optional(),
   maxAutoBackups: zod.number().optional(),
+  usbBackupPath: zod.string().nullish(),
+  reportExportPath: zod.string().nullish(),
   lastAutoBackup: zod.string().datetime({}).optional(),
   lastDailyBackup: zod.string().datetime({}).optional(),
   lastWeeklyBackup: zod.string().datetime({}).optional(),
@@ -1166,6 +1174,15 @@ export const GetStaffPerformanceResponse = zod.array(
 /**
  * @summary List local events and rushes
  */
+export const getRushesQueryDaysDefault = 7;
+
+export const GetRushesQueryParams = zod.object({
+  days: zod.coerce
+    .number()
+    .default(getRushesQueryDaysDefault)
+    .describe("Number of days to look ahead (default 7)"),
+});
+
 export const GetRushesResponseItem = zod.object({
   id: zod.string(),
   title: zod.string(),

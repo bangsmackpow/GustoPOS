@@ -949,6 +949,14 @@ paths:
       operationId: getRushes
       tags: [rushes]
       summary: List local events and rushes
+      parameters:
+        - name: days
+          in: query
+          description: Number of days to look ahead (default 7)
+          required: false
+          schema:
+            type: integer
+            default: 7
       responses:
         "200":
           description: List of rushes
@@ -1583,6 +1591,8 @@ components:
           type: integer
         unitPriceMxn:
           type: number
+        discountMxn:
+          type: number
         totalPriceMxn:
           type: number
         notes:
@@ -1879,6 +1889,10 @@ components:
           type: integer
         maxAutoBackups:
           type: integer
+        usbBackupPath:
+          type: ["string", "null"]
+        reportExportPath:
+          type: ["string", "null"]
         lastAutoBackup:
           type: string
           format: date-time
@@ -1934,6 +1948,10 @@ components:
           type: ["integer", "null"]
         maxAutoBackups:
           type: ["integer", "null"]
+        usbBackupPath:
+          type: ["string", "null"]
+        reportExportPath:
+          type: ["string", "null"]
 
     Rush:
       type: object

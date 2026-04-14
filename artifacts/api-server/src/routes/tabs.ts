@@ -9,6 +9,7 @@ import {
   inventoryItemsTable,
   settingsTable,
   tabPaymentsTable,
+  specialsTable,
 } from "@workspace/db";
 import { eq, desc, sql, inArray } from "drizzle-orm";
 import {
@@ -31,6 +32,81 @@ async function getExchangeRates() {
     usdToMxn: settings ? Number(settings.usdToMxnRate) : 17.5,
     cadToMxn: settings ? Number(settings.cadToMxnRate) : 12.8,
   };
+}
+
+function isSpecialActiveNow(
+  special: typeof specialsTable.$inferSelect,
+): boolean {
+  const now = new Date();
+  const dayOfWeek = now.getDay();
+  const hour = now.getHours();
+  const nowUnix = Math.floor(now.getTime() / 1000);
+
+  if (special.isActive !== 1) return false;
+
+  if (special.daysOfWeek) {
+    const days = special.daysOfWeek
+      .split(",")
+      .map((d) => parseInt(d.trim(), 10));
+    if (!days.includes(dayOfWeek)) return false;
+  }
+
+  if (special.startHour !== null && special.startHour !== undefined) {
+    if (hour < special.startHour) return false;
+  }
+
+  if (special.endHour !== null && special.endHour !== undefined) {
+    if (hour > special.endHour) return false;
+  }
+
+  if (special.startDate && nowUnix < special.startDate) return false;
+  if (special.endDate && nowUnix > special.endDate) return false;
+
+  return true;
+}
+
+async function getActiveSpecialForDrink(
+  drinkId: string,
+  drinkCategory: string,
+): Promise<{
+  discountType: string;
+  discountValue: number;
+  name: string;
+} | null> {
+  const allSpecials = await db.select().from(specialsTable);
+  const activeSpecials = allSpecials.filter(isSpecialActiveNow);
+
+  if (activeSpecials.length === 0) return null;
+
+  let bestSpecial: {
+    discountType: string;
+    discountValue: number;
+    name: string;
+  } | null = null;
+
+  for (const special of activeSpecials) {
+    let applies = false;
+
+    if (special.drinkId && special.drinkId === drinkId) {
+      applies = true;
+    } else if (special.category && special.category === drinkCategory) {
+      applies = true;
+    } else if (!special.drinkId && !special.category) {
+      applies = true;
+    }
+
+    if (applies) {
+      if (!bestSpecial || special.discountValue > bestSpecial.discountValue) {
+        bestSpecial = {
+          discountType: special.discountType,
+          discountValue: special.discountValue,
+          name: special.name || "Special",
+        };
+      }
+    }
+  }
+
+  return bestSpecial;
 }
 
 async function finalizeTabInventory(tabId: string) {
@@ -113,6 +189,7 @@ function formatTab(
 }
 
 function formatOrder(order: typeof ordersTable.$inferSelect) {
+  const discountMxn = Number(order.discountMxn) || 0;
   return {
     id: order.id,
     tabId: order.tabId,
@@ -121,7 +198,8 @@ function formatOrder(order: typeof ordersTable.$inferSelect) {
     drinkNameEs: order.drinkNameEs ?? null,
     quantity: order.quantity,
     unitPriceMxn: Number(order.unitPriceMxn),
-    totalPriceMxn: Number(order.unitPriceMxn) * order.quantity,
+    discountMxn,
+    totalPriceMxn: Number(order.unitPriceMxn) * order.quantity - discountMxn,
     notes: order.notes ?? null,
     createdAt: order.createdAt,
     voided: order.voided === 1,
@@ -138,7 +216,13 @@ async function recalcTabTotal(tabId: string) {
     .where(eq(ordersTable.tabId, tabId));
   const total = orders
     .filter((o) => o.voided !== 1)
-    .reduce((sum, o) => sum + Number(o.unitPriceMxn) * o.quantity, 0);
+    .reduce(
+      (sum, o) =>
+        sum +
+        Number(o.unitPriceMxn) * o.quantity -
+        (Number(o.discountMxn) || 0),
+      0,
+    );
   await db
     .update(tabsTable)
     .set({ totalMxn: total })
@@ -488,8 +572,22 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
   }, 0);
   const markupFactor = Number(drink.markupFactor);
   const suggestedPrice = costPerDrink * markupFactor;
-  const unitPriceMxn =
+  let unitPriceMxn =
     drink.actualPrice != null ? Number(drink.actualPrice) : suggestedPrice;
+
+  const activeSpecial = await getActiveSpecialForDrink(
+    drinkId,
+    drink.category || "",
+  );
+  let appliedSpecialName: string | null = null;
+  if (activeSpecial) {
+    const specialDiscount =
+      activeSpecial.discountType === "percentage"
+        ? (unitPriceMxn * activeSpecial.discountValue) / 100
+        : activeSpecial.discountValue;
+    unitPriceMxn = Math.max(0, unitPriceMxn - specialDiscount);
+    appliedSpecialName = activeSpecial.name;
+  }
 
   const order = await db.transaction(async (tx) => {
     for (const item of recipe) {
@@ -804,6 +902,74 @@ router.delete("/tabs/:id", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Error deleting tab:", err);
     res.status(500).json({ error: "Failed to delete tab" });
+  }
+});
+
+router.patch("/orders/:id/discount", async (req: Request, res: Response) => {
+  const { discountType, discountValue } = req.body;
+
+  if (!discountType || discountValue === undefined) {
+    res
+      .status(400)
+      .json({ error: "discountType and discountValue are required" });
+    return;
+  }
+
+  if (!["percentage", "fixed_amount"].includes(discountType)) {
+    res
+      .status(400)
+      .json({ error: "discountType must be 'percentage' or 'fixed_amount'" });
+    return;
+  }
+
+  const [order] = await db
+    .select()
+    .from(ordersTable)
+    .where(eq(ordersTable.id, req.params.id as string));
+
+  if (!order) {
+    res.status(404).json({ error: "Order not found" });
+    return;
+  }
+
+  if (order.voided === 1) {
+    res.status(400).json({ error: "Cannot discount a voided order" });
+    return;
+  }
+
+  const basePrice = Number(order.unitPriceMxn) * order.quantity;
+  const specialDiscount = Number(order.discountMxn) || 0;
+
+  let newDiscount: number;
+  if (discountType === "percentage") {
+    newDiscount = (basePrice * Number(discountValue)) / 100;
+  } else {
+    newDiscount = Number(discountValue);
+  }
+
+  newDiscount = Math.min(newDiscount, basePrice);
+
+  if (newDiscount > specialDiscount) {
+    await db
+      .update(ordersTable)
+      .set({
+        discountMxn: newDiscount,
+      })
+      .where(eq(ordersTable.id, req.params.id as string));
+
+    await recalcTabTotal(order.tabId);
+
+    res.json({
+      success: true,
+      discountMxn: newDiscount,
+      message: "Discount applied (greater discount)",
+    });
+  } else {
+    res.json({
+      success: true,
+      discountMxn: specialDiscount,
+      message: "Existing discount is greater, keeping current",
+    });
   }
 });
 

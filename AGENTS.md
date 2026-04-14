@@ -88,6 +88,15 @@ Legacy documentation archived in: `docs/archive/`
 
 ## ⚠️ Known Issues
 
+### Tool Limitation: JSX in Edit Tool
+
+The edit/write tools fail when content contains JSX elements (strings with `<`, `>`, or `/>`). This affects:
+
+- Adding React components to TSX files
+- Inserting JSX anywhere in component files
+
+**Workaround**: Use bash with heredocs or external scripts to modify files containing JSX.
+
 ### Schema Auto-Fix (Implemented)
 
 The database initialization (`lib/db/src/index.ts`) now automatically adds missing columns on startup:
@@ -730,3 +739,252 @@ New "Stats" tab with:
 - **Recipe Tooltip**: Modal approach works well for touch interfaces
 - **Additional Keyboard Shortcuts**: Ctrl+K for search already exists
 - **Low Stock Quick Audit**: Already shown on Dashboard
+
+---
+
+## 📝 Discount/Specials Feature Implementation (April 2026)
+
+### Overview
+
+Complete three-level discount system implementation allowing discounts at drink level (specials), order level (manual), and tab level (promo codes).
+
+### Database Changes
+
+**Orders Table:**
+
+- Added `discountMxn` column (real, default 0) for per-order discounts
+- Auto-migration handles existing installations
+
+**Specials Table:**
+
+- Added `category` column (text) for category-level specials
+- Enables specials on: specific drinks, drink categories, or globally
+
+### Backend APIs - Complete ✅
+
+**Promo Codes CRUD:**
+
+- `POST /api/promo-codes` - Create code (admin only)
+- `GET /api/promo-codes` - List all codes (admin only)
+- `PATCH /api/promo-codes/:id` - Update code (admin only)
+- `DELETE /api/promo-codes/:id` - Delete code (admin only)
+- `GET /api/promo-codes/:code` - Validate code (existing)
+- `PATCH /api/tabs/:id/apply-code` - Apply code to tab (existing)
+
+**Specials CRUD:**
+
+- `POST /api/specials` - Create special with schedule (admin only)
+- `GET /api/specials` - List all specials (admin only)
+- `GET /api/specials/active` - Get active specials NOW based on schedule
+- `PATCH /api/specials/:id` - Update special (admin only)
+- `DELETE /api/specials/:id` - Delete special (admin only)
+
+**Order Discounts:**
+
+- `PATCH /api/orders/:id/discount` - Apply manual discount to order
+- Discount types: `percentage` or `fixed_amount`
+- Automatically picks greater discount (special vs manual)
+
+**Pricing Flow:**
+
+1. Order creation: Check active specials, apply to unitPriceMxn
+2. Manual discount: Staff can apply $ or % discount to individual orders
+3. Tab close: Apply promo codes or manager override to final total
+4. Calculation: `(unitPriceMxn - orderDiscount) × quantity` for each order, then apply tab discount
+
+### Frontend Components - Complete ✅
+
+**DiscountModal.tsx** (New)
+
+- Modal for applying per-order discounts
+- Dollar amount or percentage discount
+- Preset buttons: $2, $5, $10, 10%, 15%, 20%
+- Real-time price preview
+- Shows current discount to prevent double-applying
+
+**PromoCodesSection.tsx** (New)
+
+- Admin management panel in Settings
+- List, create, edit, delete promo codes
+- Toggle enable/disable
+- Shows usage count vs max uses
+- Displays discount type and value
+
+**SpecialsSection.tsx** (New)
+
+- Admin management panel in Settings
+- Create drink-specific, category, or global specials
+- Schedule: days of week, hours, date ranges
+- Types: manual, happy_hour, promotional, bundle
+- Discount type and value
+- Shows "Active Now" indicator
+
+**TabDetail Integration** (Updated)
+
+- Discount button on each order (tag icon)
+- Shows applied discount below price
+- Opens DiscountModal on click
+- Updates tab total in real-time
+
+**Settings Integration** (Updated)
+
+- Promo Codes section in admin panel
+- Specials section in admin panel
+- Auto-fetches on admin login
+- Real-time updates
+
+### Key Features
+
+**Greater Discount Rule:**
+When a special is already applied and staff tries to apply manual discount:
+
+- System keeps whichever discount is greater
+- Prevents accidental discount reduction
+
+**Schedule Filtering:**
+Specials check:
+
+- Day of week (0-6)
+- Start/end hour (0-23)
+- Start/end date (optional)
+- Active flag
+
+**No Stacking:**
+
+- Only highest discount applies per order
+- Prevents exploiting multiple discounts
+
+### Files Created/Modified
+
+**Backend:**
+
+- `artifacts/api-server/src/routes/promo-codes.ts` - CRUD + validation
+- `artifacts/api-server/src/routes/specials.ts` - CRUD + active filtering
+- `artifacts/api-server/src/routes/tabs.ts` - Special application, order discount, recalcTabTotal
+- `artifacts/api-server/src/routes/index.ts` - Mount specials router
+- `lib/db/src/schema/gusto.ts` - Add columns
+- `lib/db/src/index.ts` - Auto-migrations
+- `lib/api-spec/openapi.yaml` - API specs
+
+**Frontend:**
+
+- `artifacts/gusto-pos/src/components/DiscountModal.tsx` - Modal UI
+- `artifacts/gusto-pos/src/components/PromoCodesSection.tsx` - Admin panel
+- `artifacts/gusto-pos/src/components/SpecialsSection.tsx` - Admin panel
+- `artifacts/gusto-pos/src/pages/TabDetail.tsx` - Discount button, modal
+- `artifacts/gusto-pos/src/pages/Settings.tsx` - Admin sections
+
+### Verification
+
+- ✅ All files exist
+- ✅ Database schema updated with auto-migrations
+- ✅ All 4 routers mounted
+- ✅ All endpoints implemented
+- ✅ TabDetail integrated with DiscountModal rendering
+- ✅ Settings integrated with admin panels
+- ✅ TypeCheck passes
+- ✅ All components created and imported
+
+### Known Limitation (Fixed)
+
+**Edit Tool JSX Issue:**
+Initially couldn't add DiscountModal rendering to TabDetail due to tool limitations with JSX syntax. **Fixed** using Python script to safely inject the JSX component rendering.
+
+## 📝 Session Updates (May 2026 - Issue Resolution)
+
+### High Priority Fixes
+
+#### 1. PIN Pad Login Flow
+
+**Files Modified:**
+
+- `artifacts/gusto-pos/src/components/PinPad.tsx`
+- `artifacts/gusto-pos/src/store.ts`
+- `artifacts/gusto-pos/src/App.tsx`
+
+Changes:
+
+- Added "Use Password Login" button to PIN pad to switch to login screen
+- Fixed auto-lock reset on app restart - isLocked state now persists across sessions
+- Removed automatic unlock on app start to maintain security
+
+#### 2. Tab Payment Selection Flow
+
+**File:** `artifacts/gusto-pos/src/pages/TabDetail.tsx`
+
+Changes:
+
+- Cash/Card buttons now show selection state (highlighted) when clicked
+- Added "Confirm Payment" button that appears after payment method is selected
+- Added payment confirmation dialog showing:
+  - Payment method selected
+  - Subtotal, discount, tip, and total
+  - Confirm/Back buttons
+
+### Medium Priority Fixes
+
+#### 3. Inventory Add/Edit Modal - Current Stock Display
+
+**File:** `artifacts/gusto-pos/src/pages/Inventory.tsx`
+
+Changes:
+
+- Added "Current Inventory" section at top of edit modal showing:
+  - Sealed containers (full bottles/cases)
+  - Open containers (partial weight or loose units)
+  - Total in display units
+- Fields are read-only with note "Use Audit to update"
+- Added "Audit This Item" button (when item exists)
+
+#### 4. Tracking Mode Field Logic
+
+**File:** `artifacts/gusto-pos/src/pages/Inventory.tsx`
+
+Changes:
+
+- Added `trackingMode: "auto"` to default new item state
+- Fields below tracking mode dropdown now properly reflect pool vs collection:
+  - Pool: shows ml, bottle weights, density
+  - Collection: shows units per case
+
+#### 5. System Defaults - Serving Size Toggle
+
+**File:** `artifacts/gusto-pos/src/pages/Settings.tsx`
+
+Changes:
+
+- Added ml/oz toggle button for default serving size
+- Auto-converts value when switching units (oz ↔ ml)
+- Added note: "Only for Pool (weight-based) tracking. Collection uses 1 unit/serving."
+
+### Low Priority Fixes
+
+#### 6. Dashboard Schedule Events (Rush Events)
+
+**File:** `artifacts/gusto-pos/src/pages/Dashboard.tsx`
+
+Changes:
+
+- Added filter buttons: Today, Tomorrow, This Week, All
+- Default filter is now "This Week" (7 days)
+- Always shows max 5 events (already had slice(0,5))
+- Added bilingual labels for filter buttons
+- Shows contextual "No events today" / "No upcoming events" message
+
+### Pending Issues (Not Completed)
+
+1. **Bulk Import**: Beer-only import issue - requires additional debugging of CSV parsing
+2. **Batch Audit**: Session creation/listing improvements - requires API changes
+3. **Discounts/Specials**: New feature requiring database schema, API endpoints, and UI
+
+### Files Modified This Session
+
+| File                                            | Changes                                       |
+| ----------------------------------------------- | --------------------------------------------- |
+| `artifacts/gusto-pos/src/components/PinPad.tsx` | Added password login button, LogIn icon       |
+| `artifacts/gusto-pos/src/store.ts`              | Persist isLocked state                        |
+| `artifacts/gusto-pos/src/App.tsx`               | Removed auto-unlock on startup                |
+| `artifacts/gusto-pos/src/pages/TabDetail.tsx`   | Two-step payment confirmation                 |
+| `artifacts/gusto-pos/src/pages/Inventory.tsx`   | Current stock display, tracking mode defaults |
+| `artifacts/gusto-pos/src/pages/Settings.tsx`    | Serving size ml/oz toggle                     |
+| `artifacts/gusto-pos/src/pages/Dashboard.tsx`   | Rush event filters (Today/Tomorrow/Week/All)  |

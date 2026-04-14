@@ -468,6 +468,7 @@ export interface Order {
   drinkNameEs?: string | null;
   quantity: number;
   unitPriceMxn: number;
+  discountMxn?: number;
   totalPriceMxn: number;
   /** @nullable */
   notes?: string | null;
@@ -699,6 +700,10 @@ export interface AppSettings {
   autoBackupEnabled?: boolean;
   autoBackupIntervalMin?: number;
   maxAutoBackups?: number;
+  /** @nullable */
+  usbBackupPath?: string | null;
+  /** @nullable */
+  reportExportPath?: string | null;
   lastAutoBackup?: string;
   lastDailyBackup?: string;
   lastWeeklyBackup?: string;
@@ -739,6 +744,10 @@ export interface UpdateSettingsBody {
   autoBackupIntervalMin?: number | null;
   /** @nullable */
   maxAutoBackups?: number | null;
+  /** @nullable */
+  usbBackupPath?: string | null;
+  /** @nullable */
+  reportExportPath?: string | null;
 }
 
 /**
@@ -1013,4 +1022,11 @@ export const GetTabsStatus = {
 export type CloseShiftBody = {
   force?: boolean;
   actualCashMxn?: number;
+};
+
+export type GetRushesParams = {
+  /**
+   * Number of days to look ahead (default 7)
+   */
+  days?: number;
 };

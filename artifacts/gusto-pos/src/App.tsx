@@ -44,14 +44,6 @@ try {
   // localStorage may be unavailable
 }
 
-// Reset lock state on every app start to prevent stuck lock screen
-// This ensures the user sees login or dashboard, not a broken PIN pad
-try {
-  usePosStore.getState().setIsLocked(false);
-} catch {
-  // store may not be available yet
-}
-
 // Initialize Query Client with aggressive stale times for offline resilience
 const queryClient = new QueryClient({
   defaultOptions: {

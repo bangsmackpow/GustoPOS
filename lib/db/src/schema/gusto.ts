@@ -136,6 +136,7 @@ export const ordersTable = sqliteTable("orders", {
   drinkNameEs: text("drink_name_es"),
   quantity: integer("quantity").notNull().default(1),
   unitPriceMxn: real("unit_price_mxn").notNull(),
+  discountMxn: real("discount_mxn").notNull().default(0),
   taxCategory: text("tax_category").notNull().default("standard"),
   taxRate: real("tax_rate").notNull().default(0),
   notes: text("notes"),
@@ -165,6 +166,8 @@ export const settingsTable = sqliteTable("settings", {
   inventoryAlertEmail: text("inventory_alert_email"),
   enableLitestream: integer("enable_litestream").notNull().default(0),
   enableUsbBackup: integer("enable_usb_backup").notNull().default(0),
+  usbBackupPath: text("usb_backup_path"),
+  reportExportPath: text("report_export_path"),
   pinLockTimeoutMin: integer("pin_lock_timeout_min").notNull().default(5),
   autoBackupEnabled: integer("auto_backup_enabled").notNull().default(1),
   autoBackupIntervalMin: integer("auto_backup_interval_min")
@@ -293,6 +296,7 @@ export const specialsTable = sqliteTable("specials", {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   drinkId: text("drink_id").references(() => drinksTable.id),
+  category: text("category"),
   specialType: text("special_type").notNull().default("manual"),
   discountType: text("discount_type").notNull(),
   discountValue: real("discount_value").notNull(),

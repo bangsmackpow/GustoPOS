@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Delete, X, Lock, Globe } from "lucide-react";
+import { Delete, X, Lock, Globe, LogIn } from "lucide-react";
+import { useLocation } from "wouter";
 import { Button } from "./ui/button";
 import { useGetUsers } from "@workspace/api-client-react";
 import { usePosStore } from "@/store";
@@ -15,6 +16,7 @@ export function PinPad({
   onLogin?: () => void;
   lockScreen?: boolean;
 }) {
+  const [, setLocation] = useLocation();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -208,6 +210,18 @@ export function PinPad({
             <Delete size={24} />
           </Button>
         </div>
+
+        <Button
+          variant="ghost"
+          className="w-full mt-4 text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            setLocation("/login");
+            onClose();
+          }}
+        >
+          <LogIn size={16} className="mr-2" />
+          {language === "es" ? "Usar contraseña" : "Use Password Login"}
+        </Button>
       </motion.div>
     </div>
   );

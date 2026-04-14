@@ -552,6 +552,20 @@ export async function initializeDatabase() {
           );
           console.log("[Initialize] Added column: default_audit_method");
         }
+        // USB backup path column
+        if (!setColNames.includes("usb_backup_path")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN usb_backup_path text`,
+          );
+          console.log("[Initialize] Added column: usb_backup_path");
+        }
+        // Report export path column
+        if (!setColNames.includes("report_export_path")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN report_export_path text`,
+          );
+          console.log("[Initialize] Added column: report_export_path");
+        }
 
         // Rushes columns
         const rushCols = await db.all(sql`PRAGMA table_info(rushes)`);
@@ -600,6 +614,12 @@ export async function initializeDatabase() {
           await db.run(sql`ALTER TABLE orders ADD COLUMN voided_at integer`);
           console.log("[Initialize] Added column: voided_at");
         }
+        if (!orderColNames.includes("discount_mxn")) {
+          await db.run(
+            sql`ALTER TABLE orders ADD COLUMN discount_mxn real DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: discount_mxn");
+        }
 
         // Specials table
         const specialsTables = await db.all(
@@ -609,6 +629,7 @@ export async function initializeDatabase() {
           await db.run(sql`CREATE TABLE specials (
             id text PRIMARY KEY,
             drink_id text REFERENCES drinks(id),
+            category text,
             special_type text NOT NULL DEFAULT 'manual',
             discount_type text NOT NULL,
             discount_value real NOT NULL,
@@ -630,6 +651,14 @@ export async function initializeDatabase() {
           await db.run(
             sql`CREATE INDEX idx_specials_is_active ON specials(is_active)`,
           );
+        } else {
+          // Check if category column exists in specials table
+          const specialsInfo = await db.all(sql`PRAGMA table_info(specials)`);
+          const specialsColNames = specialsInfo.map((c: any) => c.name);
+          if (!specialsColNames.includes("category")) {
+            await db.run(sql`ALTER TABLE specials ADD COLUMN category text`);
+            console.log("[Initialize] Added column: specials.category");
+          }
         }
 
         console.log("[Initialize] ✓ Migration columns verified.");

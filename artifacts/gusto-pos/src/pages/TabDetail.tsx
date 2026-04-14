@@ -31,7 +31,9 @@ import {
   Plus,
   Minus,
   Users,
+  Tag,
 } from "lucide-react";
+import { DiscountModal } from "@/components/DiscountModal";
 
 const CATEGORY_ICONS: Record<string, any> = {
   cocktail: Wine,
@@ -77,6 +79,12 @@ export default function TabDetail() {
   >({});
   const [splitMode, setSplitMode] = useState<"single" | "split">("single");
   const [splitCount, setSplitCount] = useState<number>(2);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
+    "cash" | "card" | null
+  >(null);
+  const [showPaymentConfirmation, setShowPaymentConfirmation] = useState(false);
+  const [discountingOrder, setDiscountingOrder] = useState<any>(null);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
 
   const getSelectedQuantity = (drinkId: string) =>
     selectedQuantities[drinkId] || 1;
@@ -385,9 +393,24 @@ export default function TabDetail() {
                   <div className="flex items-center gap-3">
                     <span className="font-bold">
                       {formatMoney(order.totalPriceMxn)}
+                      {order.discountMxn && order.discountMxn > 0 && (
+                        <span className="text-xs text-green-400 ml-1 block">
+                          (-{formatMoney(order.discountMxn)})
+                        </span>
+                      )}
                     </span>
                     {!order.voided && (
                       <>
+                        <button
+                          onClick={() => {
+                            setDiscountingOrder(order);
+                            setShowDiscountModal(true);
+                          }}
+                          className="w-8 h-8 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Apply Discount"
+                        >
+                          <Tag size={14} />
+                        </button>
                         <button
                           onClick={() => setEditingOrder(order)}
                           className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
@@ -570,55 +593,151 @@ export default function TabDetail() {
                 )}
 
                 <div className="grid grid-cols-2 gap-3 pt-4">
-                  <Button
-                    size="lg"
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => handleCloseTab("cash")}
-                    disabled={closeTab.isPending}
-                  >
-                    <Banknote className="mr-2" size={18} />{" "}
-                    {splitMode === "split"
-                      ? `${formatMoney(getSplitAmount())} Cash`
-                      : getTranslation("cash", language)}
-                  </Button>
-                  <Button
-                    size="lg"
-                    variant="secondary"
-                    onClick={() => handleCloseTab("card")}
-                    disabled={closeTab.isPending}
-                  >
-                    <CreditCard className="mr-2" size={18} />{" "}
-                    {splitMode === "split"
-                      ? `${formatMoney(getSplitAmount())} Card`
-                      : getTranslation("card", language)}
-                  </Button>
+                  {!showPaymentConfirmation ? (
+                    <>
+                      <Button
+                        size="lg"
+                        className={
+                          selectedPaymentMethod === "cash"
+                            ? "bg-emerald-600 ring-2 ring-white text-white"
+                            : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                        }
+                        onClick={() => setSelectedPaymentMethod("cash")}
+                      >
+                        <Banknote className="mr-2" size={18} />
+                        {splitMode === "split"
+                          ? `${formatMoney(getSplitAmount())} Cash`
+                          : getTranslation("cash", language)}
+                      </Button>
+                      <Button
+                        size="lg"
+                        variant="secondary"
+                        className={
+                          selectedPaymentMethod === "card"
+                            ? "ring-2 ring-primary"
+                            : ""
+                        }
+                        onClick={() => setSelectedPaymentMethod("card")}
+                      >
+                        <CreditCard className="mr-2" size={18} />
+                        {splitMode === "split"
+                          ? `${formatMoney(getSplitAmount())} Card`
+                          : getTranslation("card", language)}
+                      </Button>
 
-                  {splitMode === "single" && (
-                    <Button
-                      variant="outline"
-                      className="col-span-2"
-                      onClick={() => {
-                        setSplitMode("split");
-                        setSplitCount(2);
-                      }}
-                    >
-                      <Users className="mr-2" size={18} />
-                      Split Bill
-                    </Button>
+                      {selectedPaymentMethod && (
+                        <Button
+                          size="lg"
+                          className="col-span-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                          onClick={() => setShowPaymentConfirmation(true)}
+                        >
+                          {language === "es"
+                            ? "Confirmar Pago"
+                            : "Confirm Payment"}
+                        </Button>
+                      )}
+
+                      {splitMode === "single" && (
+                        <Button
+                          variant="outline"
+                          className="col-span-2"
+                          onClick={() => {
+                            setSplitMode("split");
+                            setSplitCount(2);
+                          }}
+                        >
+                          <Users className="mr-2" size={18} />
+                          Split Bill
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        className="col-span-2"
+                        onClick={() => {
+                          setShowCloseDialog(false);
+                          setTipAmount(0);
+                          setSplitMode("single");
+                          setSelectedPaymentMethod(null);
+                          setShowPaymentConfirmation(false);
+                        }}
+                        disabled={closeTab.isPending}
+                      >
+                        Cancel
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="col-span-2 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {language === "es"
+                              ? "Método de pago"
+                              : "Payment Method"}
+                          </span>
+                          <span className="font-bold capitalize">
+                            {selectedPaymentMethod}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">
+                            {language === "es" ? "Subtotal" : "Subtotal"}
+                          </span>
+                          <span>{formatMoney(tabData.totalMxn)}</span>
+                        </div>
+                        {appliedDiscount > 0 && (
+                          <div className="flex justify-between text-sm text-emerald-400">
+                            <span>
+                              {language === "es" ? "Descuento" : "Discount"}
+                            </span>
+                            <span>-{formatMoney(appliedDiscount)}</span>
+                          </div>
+                        )}
+                        {tipAmount > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">
+                              {language === "es" ? "Propina" : "Tip"}
+                            </span>
+                            <span>{formatMoney(tipAmount)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-bold text-lg pt-2 border-t border-white/10">
+                          <span>{language === "es" ? "Total" : "Total"}</span>
+                          <span className="text-primary">
+                            {formatMoney(getGrandTotal())}
+                          </span>
+                        </div>
+                      </div>
+
+                      <Button
+                        size="lg"
+                        className="col-span-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => {
+                          if (selectedPaymentMethod) {
+                            handleCloseTab(selectedPaymentMethod);
+                          }
+                        }}
+                        disabled={closeTab.isPending}
+                      >
+                        {closeTab.isPending
+                          ? language === "es"
+                            ? "Procesando..."
+                            : "Processing..."
+                          : language === "es"
+                            ? `Pagar ${formatMoney(getGrandTotal())}`
+                            : `Pay ${formatMoney(getGrandTotal())}`}
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        className="col-span-2"
+                        onClick={() => setShowPaymentConfirmation(false)}
+                        disabled={closeTab.isPending}
+                      >
+                        {language === "es" ? "Atrás" : "Back"}
+                      </Button>
+                    </>
                   )}
-
-                  <Button
-                    variant="ghost"
-                    className="col-span-2"
-                    onClick={() => {
-                      setShowCloseDialog(false);
-                      setTipAmount(0);
-                      setSplitMode("single");
-                    }}
-                    disabled={closeTab.isPending}
-                  >
-                    Cancel
-                  </Button>
                 </div>
               </div>
             ) : (
@@ -629,6 +748,8 @@ export default function TabDetail() {
                 onClick={() => {
                   setSplitMode("single");
                   setShowCloseDialog(true);
+                  setSelectedPaymentMethod(null);
+                  setShowPaymentConfirmation(false);
                 }}
               >
                 {getTranslation("close_tab", language)}
@@ -1062,6 +1183,24 @@ export default function TabDetail() {
             </div>
           </div>
         </div>
+      )}
+
+      {showDiscountModal && discountingOrder && (
+        <DiscountModal
+          orderId={discountingOrder.id}
+          drinkName={discountingOrder.drinkName}
+          currentPrice={discountingOrder.unitPriceMxn * discountingOrder.quantity}
+          currentDiscount={discountingOrder.discountMxn || 0}
+          isOpen={true}
+          onClose={() => {
+            setShowDiscountModal(false);
+            setDiscountingOrder(null);
+          }}
+          onSuccess={() => {
+            refetch();
+            setShowDiscountModal(false);
+          }}
+        />
       )}
     </div>
   );
