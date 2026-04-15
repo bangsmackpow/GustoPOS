@@ -269,3 +269,4 @@ GustoPOS supports English and Spanish:
 ## License
 
 MIT
+# GUSTOPOS
