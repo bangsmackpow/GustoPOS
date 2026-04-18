@@ -513,6 +513,35 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
 
+  /orders/{id}/modify-ingredient:
+    patch:
+      operationId: modifyOrderIngredient
+      tags: [orders]
+      summary: Substitute an ingredient in an order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModifyIngredientBody"
+      responses:
+        "200":
+          description: Updated order with ingredient modification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          description: Invalid request or insufficient stock
+        "404":
+          description: Order or ingredient not found
+
   /shifts:
     get:
       operationId: getShifts
@@ -1193,6 +1222,8 @@ components:
           type: ["string", "null"]
         isOnMenu:
           type: boolean
+        menuPricePerServing:
+          type: ["number", "null"]
         createdAt:
           type: string
           format: date-time
@@ -1252,6 +1283,8 @@ components:
           enum: [auto, pool, collection]
         isOnMenu:
           type: boolean
+        menuPricePerServing:
+          type: ["number", "null"]
       required:
         - name
         - baseUnit
@@ -1295,6 +1328,8 @@ components:
           enum: [auto, pool, collection]
         isOnMenu:
           type: ["boolean", "null"]
+        menuPricePerServing:
+          type: ["number", "null"]
 
     RecipeIngredient:
       type: object
@@ -1639,6 +1674,22 @@ components:
         notes:
           type: ["string", "null"]
 
+    ModifyIngredientBody:
+      type: object
+      required:
+        - recipeLineIndex
+        - newIngredientId
+      properties:
+        recipeLineIndex:
+          type: integer
+          description: Index of the recipe item to replace (0-based)
+        newIngredientId:
+          type: string
+          description: ID of the new ingredient to substitute
+        notes:
+          type: string
+          description: Optional reason for the substitution
+
     Shift:
       type: object
       properties:
@@ -1685,6 +1736,9 @@ components:
           type: string
         openedByUserId:
           type: string
+        expectedCashMxn:
+          type: number
+          description: Starting cash amount in the register (optional)
       required:
         - name
         - openedByUserId

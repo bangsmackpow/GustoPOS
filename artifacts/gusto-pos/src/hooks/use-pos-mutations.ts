@@ -8,6 +8,7 @@ import {
   closeShift,
   createDrink,
   updateDrink,
+  modifyOrderIngredient,
   getGetTabsQueryKey,
   getGetTabQueryKey,
   getGetShiftsQueryKey,
@@ -95,8 +96,7 @@ export function useAddOrderMutation() {
       if (ingredientId && Array.isArray(ingredients)) {
         const found = ingredients.find((i) => i.id === ingredientId);
         if (found) {
-          ingredientName =
-            found.name || found.ingredientName || found.nameEn || found.nameEs;
+          ingredientName = found.name || found.ingredientName;
         }
       }
       if (ingredientId && ingredientName) {
@@ -130,6 +130,8 @@ export function useDeleteOrderMutation() {
       tabId: string;
       reason?: string;
       voidedByUserId?: string;
+      managerUserId?: string;
+      managerPin?: string;
     }) =>
       fetch(`/api/orders/${variables.id}`, {
         method: "DELETE",
@@ -137,6 +139,8 @@ export function useDeleteOrderMutation() {
         body: JSON.stringify({
           reason: variables.reason,
           voidedByUserId: variables.voidedByUserId,
+          managerUserId: variables.managerUserId,
+          managerPin: variables.managerPin,
         }),
       }).then((res) => {
         if (!res.ok) throw new Error("Failed to void order");
@@ -238,6 +242,28 @@ export function useSaveIngredientMutation() {
       toast({
         variant: "destructive",
         title: "Failed to save item",
+        description: err.message || "Unknown error occurred",
+      });
+    },
+  });
+}
+
+// Orders
+export function useModifyOrderIngredientMutation() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  return useMutation({
+    mutationFn: (variables: {
+      id: string;
+      data: Parameters<typeof modifyOrderIngredient>[1];
+    }) => modifyOrderIngredient(variables.id, variables.data),
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: getGetTabQueryKey(variables.id) });
+    },
+    onError: (err: any) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to modify order ingredient",
         description: err.message || "Unknown error occurred",
       });
     },

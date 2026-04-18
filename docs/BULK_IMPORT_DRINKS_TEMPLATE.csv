@@ -1,0 +1,8 @@
+name,category,actualPrice,sourceType,ingredient1_name,ingredient1_amount,ingredient2_name,ingredient2_amount,ingredient3_name,ingredient3_amount
+"Margarita","cocktail",80,standard,"Tequila","2","Triple Sec","1","Lime Juice","1"
+"Vodka & Tonic","cocktail",60,standard,"Vodka","2","Tonic Water","4","",""
+"Tequila Shot","shot",60,standard,"Tequila","2","","","","",""
+"Mexican Flag Shot","shot_specialty",90,standard,"Tequila","1","Cazadores","1","Cointreau","0.5"
+"House Margarita","cocktail_specialty",75,standard,"House Tequila","2","Lime Juice","1","Agave Syrup","0.5"
+"Pacifico Beer","beer",40,standard,"Pacifico","1","","","","",""
+"Virgin Mojito","beverage",35,standard,"Mint Leaves","8","Lime Juice","1","Simple Syrup","0.5"

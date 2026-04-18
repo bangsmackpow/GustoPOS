@@ -4,7 +4,7 @@
 export interface InventoryItem {
   id: string;
   name: string;
-  nameEs?: string;
+
   type: string;
   subtype?: string;
   trackingType?: string;
@@ -24,6 +24,7 @@ export interface InventoryItem {
   orderCost?: number;
   markupFactor: number;
   isOnMenu: boolean;
+  menuPricePerServing?: number;
   lowStockMethod?: string;
   lowStockManualThreshold?: number;
   lowStockThreshold?: number;

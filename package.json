@@ -10,7 +10,14 @@
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --if-present run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "build:desktop": "pnpm --filter @workspace/gusto-pos run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/desktop-app run build && pnpm --filter @workspace/desktop-app run package:mac"
+    "build:desktop": "pnpm --filter @workspace/gusto-pos run build && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/desktop-app run build && pnpm --filter @workspace/desktop-app run package:mac",
+    "test": "node --test tests/unit/*.test.ts",
+    "test:unit": "node --test tests/unit/*.test.ts",
+    "test:integration": "node --test tests/integration/*.test.ts",
+    "test:e2e": "playwright test",
+    "test:all": "pnpm run test:unit && pnpm run test:integration",
+    "test:watch": "node --watch --test tests/unit/*.test.ts",
+    "test:coverage": "node --experimental-test-coverage --test tests/unit/*.test.ts"
   },
   "private": true,
   "engines": {

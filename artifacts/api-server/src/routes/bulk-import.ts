@@ -81,9 +81,7 @@ const IngredientRowSchema = z.object({
 
 const DrinkRowSchema = z.object({
   name: z.string().min(1, "Name is required").trim(),
-  nameEs: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
-  descriptionEs: z.string().optional().nullable(),
   category: z.string().default("cocktail"),
   markupFactor: z.coerce.number().positive().default(3.0),
   actualPrice: z.coerce.number().optional().nullable(),
@@ -482,16 +480,35 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
               } as any)
               .returning();
 
+            // Map inventory type to drink category
+            const getCategoryForType = (itemType: string, itemName: string): string => {
+              const nameLower = itemName.toLowerCase();
+              if (itemType === "spirit") {
+                // Vino/sparkling wine gets wine category
+                if (nameLower.includes("vino") || nameLower.includes("wine") || nameLower.includes("champagne") || nameLower.includes("espumoso")) {
+                  return "wine";
+                }
+                return "shot";
+              }
+              if (itemType === "mixer") return "beverage";
+              if (itemType === "beer") return "beer";
+              if (itemType === "merch") return "other";
+              return "other";
+            };
+
             // Create drinks for new item
             if (isOnMenu) {
+              const drinkCategory = getCategoryForType(type, name);
               await tx.insert(drinksTable).values({
                 id: inserted.id,
                 name: name,
-                category: type,
+                category: drinkCategory,
                 actualPrice: 0,
+                menuPrice: 0,
+                priceSource: "auto",
+                sourceType: "inventory_single",
                 isAvailable: 1,
                 isOnMenu: 1,
-                sourceType: "inventory_single",
               });
 
               // Auto-create recipe: add 1 serving of the item to itself
@@ -503,14 +520,17 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
             }
 
             if (sellSingleServing) {
+              const shotCategory = getCategoryForType(type, name);
               await tx.insert(drinksTable).values({
                 id: `${inserted.id}-single`,
                 name: `${name} (Shot)`,
-                category: type,
+                category: shotCategory,
                 actualPrice: singleServingPrice || 0,
+                menuPrice: singleServingPrice || 0,
+                priceSource: "auto",
+                sourceType: "inventory_single",
                 isAvailable: 1,
                 isOnMenu: 1,
-                sourceType: "inventory_single",
               });
             }
 
@@ -611,9 +631,7 @@ router.post("/bulk-drinks", async (req: Request, res: Response) => {
             .update(drinksTable)
             .set({
               name: item.name,
-              nameEs: item.nameEs || null,
               description: item.description || null,
-              descriptionEs: item.descriptionEs || null,
               category: item.category || "cocktail",
               actualPrice: item.actualPrice
                 ? Number(item.actualPrice)
@@ -628,9 +646,7 @@ router.post("/bulk-drinks", async (req: Request, res: Response) => {
             .insert(drinksTable)
             .values({
               name: item.name,
-              nameEs: item.nameEs || null,
               description: item.description || null,
-              descriptionEs: item.descriptionEs || null,
               category: item.category || "cocktail",
               markupFactor: Number(item.markupFactor) || 3.0,
               actualPrice: item.actualPrice

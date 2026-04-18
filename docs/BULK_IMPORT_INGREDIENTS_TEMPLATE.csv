@@ -1,0 +1,6 @@
+name,type,subtype,baseUnit,baseUnitAmount,servingSize,servingUnit,orderCost,productPrice,isOnMenu,trackingMode,alcoholDensity,lowStockThreshold,unitsPerCase,bottleSizeMl,fullBottleWeightG
+"Example Tequila","spirit","Tequila","ml",750,44.36,"ml",14.00,60,TRUE,auto,0.94,2,1,750,650
+"Example Vodka","spirit","Vodka","ml",1000,44.36,"ml",20.00,80,TRUE,auto,0.94,3,1,1000,950
+"Example Beer","beer","CervezaNacional","case",24,1,"unit",50.00,120,TRUE,auto,,10,24,, 
+"Simple Syrup","mixer","Mezcladores","case",28.4,0.5,"oz",5.00,15,FALSE,auto,,1,1,,
+"Orange Juice","mixer","Jugos","bottle",1000,4,"oz",8.00,25,FALSE,auto,,2,1,1000,550

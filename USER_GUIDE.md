@@ -1,82 +1,71 @@
 # GustoPOS User Guide
 
-This guide covers day-to-day operations for bartenders and staff using GustoPOS.
+Day-to-day operations for bartenders and staff.
 
 ---
 
-## Getting Started
+## Logging In
 
-### Logging In
-
-1. Launch GustoPOS
-2. Enter your 4-digit PIN
-3. Press the green checkmark button
-
-If you forget your PIN, contact your manager.
+1. Enter your 4-digit PIN
+2. Press the green checkmark
+3. If PIN fails repeatedly, tap "Use Password Login" to use admin credentials
 
 ### Language Selection
 
-On the login screen, tap the globe icon to switch between English and Spanish. Your language preference will be saved for future sessions.
+Tap the globe icon on the login screen to switch between English and Spanish. Your preference is saved.
 
 ---
 
 ## Dashboard
 
-The dashboard is your home screen. It shows:
+Shows:
 
-- **Open Tabs**: Number of open tabs
-- **Today's Sales**: Total sales for today
-- **Active Shift**: Current shift status
-- **Low Stock Alerts**: Items needing attention
+- Open Tabs count
+- Today's Sales
+- Active Shift status
+- Low Stock Alerts
 
-### Quick Actions
+Quick actions:
 
-From the dashboard, you can:
-
-- Tap **+ New Tab** to open a new customer tab
+- **+ New Tab** opens a new customer tab
 - Tap any widget to navigate to that section
 
 ---
 
-## Tabs (Open Checks)
+## Tabs (Customer Checks)
 
 ### Opening a New Tab
 
-1. From Dashboard or Tabs page, tap **+ New Tab**
-2. Enter a nickname (e.g., "Table 5", "John")
+1. From Dashboard or Tabs, tap **+ New Tab**
+2. Enter nickname (e.g., "Table 5", "Mike")
 3. Tap **Open Tab**
 
 ### Adding Orders
 
 1. From an open tab, tap **Add Drinks**
-2. Browse drinks by category or search
+2. Browse or search for drinks
 3. Tap a drink to add it
-4. Use **+** and **-** buttons to change quantity
+4. Use **+** and **-** to change quantity
 5. Tap **Add to Tab**
 
 ### Stock Status Indicators
 
-Drink cards show real-time availability:
-
-| Indicator       | Meaning                      |
-| --------------- | ---------------------------- |
-| Green dot       | Good stock (15+ servings)    |
-| Yellow dot      | Medium stock (5-14 servings) |
-| Red pulsing dot | Low stock (<5 servings)      |
-| Gray + "OUT"    | Out of stock                 |
+| Indicator       | Meaning                   |
+| --------------- | ------------------------- |
+| Green dot       | Good stock (15+ servings) |
+| Yellow dot      | Medium stock (5-14)       |
+| Red pulsing dot | Low stock (<5)            |
+| Gray + "OUT"    | Out of stock              |
 
 ### Order Quantity
 
-- Tap **-** or **+** buttons on drink cards to select quantity (1-20)
-- Selected quantity persists for that drink during the session
+Tap **-** or **+** on drink cards to select quantity (1-20). Selected quantity persists for that drink.
 
 ### Voiding Orders
 
-To void (cancel) an order:
-
 1. Tap the order in the tab
 2. Tap **Void**
-3. Select a reason:
+3. Select reason:
    - Customer Changed Mind
    - Wrong Order
    - Spilled
@@ -84,22 +73,20 @@ To void (cancel) an order:
    - Other
 4. Confirm void
 
-Voided orders appear crossed out and are tracked for reporting.
+Voided orders appear crossed out and are tracked.
 
 ### Closing a Tab
 
-1. Tap **Close Tab** on an open tab
-2. Review the total
+1. Tap **Close Tab**
+2. Review total
 3. Add tip (optional)
 4. Select payment method:
-   - Cash
-   - Card
-   - Other
-5. Tap **Complete Sale**
+   - **Cash** or **Card** (select one, shows highlighted)
+5. Tap **Confirm Payment**
+6. Review confirmation dialog
+7. Tap **Complete Sale**
 
 ### Split Bill
-
-To split a tab among multiple people:
 
 1. Tap **Close Tab**
 2. Tap **Split Bill**
@@ -107,93 +94,73 @@ To split a tab among multiple people:
 4. See per-person amount in real-time
 5. Process each payment separately
 
+---
+
+## Discounts
+
 ### Automatic Discounts (Specials)
 
-The system automatically applies any active specials when you add orders to a tab. For example:
+The system automatically applies active specials when adding orders:
 
-- **Happy Hour**: If ordering spirits during happy hour (5-7pm), price already includes the discount
-- **Daily Promotions**: If ordering a margarita on Monday, the discount is already applied
-- **Category Specials**: If ordering beer during a "Beer Special", discount is automatic
+- Happy Hour: Spirits during 5-7pm get discount
+- Daily Promotions: e.g., "Margarita Monday"
+- Category Specials: e.g., "Beer Special"
 
-**You don't need to do anything** - the system checks specials based on the time and what you're ordering.
+**Nothing to do** - system checks time and order automatically.
 
 ### Manual Order Discounts
 
-To apply an additional discount to a single order:
+To discount a single order:
 
-1. In the **Tab Detail** page, find the order you want to discount
-2. Tap the **discount icon** (percentage or dollar symbol) on the order
-3. Choose a discount amount:
-   - Quick buttons: $2, $5, $10, 10%, 15%, 20%
-   - Custom: Enter any amount or percentage
+1. In Tab Detail, tap the **discount icon** on the order
+2. Choose preset: $2, $5, $10, 10%, 15%, 20%
+3. Or enter custom amount/percentage
 4. Discount applies immediately
 5. Tap elsewhere to close
 
-**Note:** You cannot accidentally reduce a special's savings. If an order already has a special and you apply a manual discount, the system keeps whichever saves the customer more money.
+**Note:** If special already applied, system keeps greater discount.
 
-### Tab-Level Promo Codes
+### Promo Codes
 
-If a customer has a promo code:
+If customer has a promo code:
 
-1. When **closing the tab**, look for **Promo Code** field
-2. Enter the code (e.g., "SAVE15", "WELCOME10")
-3. If valid, discount applies to the entire tab subtotal
-4. Confirm the new total before charging
+1. When closing tab, find **Promo Code** field
+2. Enter code (e.g., "SAVE15")
+3. If valid, discount applies to tab subtotal
+4. Confirm before charging
 
-**Common codes:**
-
-- "WELCOME10" = 10% off for new customers
-- "CINCO25" = 25% off on Cinco de Mayo
-- "SAVE15" = 15 MXN off orders over 100 MXN
-
-Ask your manager if you don't know current codes.
+Ask manager for current codes.
 
 ---
 
 ## Drinks Menu
 
-The Drinks page shows all menu items.
+Browse by category or search. Toggle "Show Available Only" to hide out-of-stock items.
 
-### Browsing Drinks
-
-- Use category filters (Spirits, Beer, Wine, Cocktails, etc.)
-- Use search to find drinks by name
-- Toggle "Show Available Only" to hide out-of-stock items
-
-### Drink Details
-
-Tap a drink to see:
-
-- Description
-- Price
-- Recipe ingredients
-- Current stock availability
+Tap a drink to see description, price, recipe, and stock.
 
 ---
 
 ## Inventory
 
-### Viewing Inventory
+### Viewing Stock
 
-The Inventory page shows all stock items:
+The Inventory page shows:
 
 | Column | Description         |
 | ------ | ------------------- |
 | Menu   | Checkbox if on menu |
 | Name   | Item name           |
-| Stock  | Current stock level |
+| Stock  | Current level       |
 | Cost   | Cost per serving    |
 | Type   | Item type           |
 
 ### Stock Display
 
-- **Pool items** (spirits, mixers): Shows in ml (e.g., "750ml", "3 full + 375ml")
-- **Collection items** (beer, merch): Shows in units (e.g., "12 units")
+- **Pool** (spirits, mixers): Shows ml (e.g., "3 full + 375ml")
+- **Collection** (beer, merch): Shows units
 
-The format shows full bottles plus partial:
-
-- "3 full + 375ml" = Exact measurement
-- "3 full + ~375ml" = Estimated (no weight data)
+"~375ml" indicates estimated (no weight data).
 
 ### Stock Status Colors
 
@@ -201,20 +168,13 @@ The format shows full bottles plus partial:
 | ------ | ------------------------- |
 | Green  | Stock OK                  |
 | Yellow | Approaching low threshold |
-| Red    | Below low stock threshold |
+| Red    | Below low threshold       |
 
-### Low Stock Filter
+### Quick Filters
 
-Quick filters on the left show:
-
-- All Items
-- Low Stock
-- Out of Stock
-- Never Audited
+Left sidebar shows: All Items, Low Stock, Out of Stock, Never Audited
 
 ### Auditing Inventory
-
-To perform an inventory audit:
 
 1. Navigate to Inventory
 2. Tap an item row
@@ -224,13 +184,11 @@ To perform an inventory audit:
    - Partial bottle weight (grams)
 5. Tap **Save Audit**
 
-The system calculates variance between physical count and system record.
+System calculates variance.
 
 ### Variance Analysis
 
-To view variance trends:
-
-1. From Inventory, tap **Variance Analysis** in the left sidebar
+1. From Inventory, tap **Variance Analysis** in sidebar
 2. View:
    - Total audits
    - Items with variance
@@ -242,8 +200,6 @@ To view variance trends:
 
 ## Reports
 
-The Reports page provides analytics and sales data.
-
 ### Analytics Tab
 
 **Quick Date Filters:**
@@ -254,7 +210,7 @@ The Reports page provides analytics and sales data.
 - Last 7 Days, Last 30 Days, Last 90 Days
 - Year to Date
 
-**Charts show:**
+**Charts:**
 
 - Sales over time
 - Top selling drinks
@@ -264,31 +220,20 @@ The Reports page provides analytics and sales data.
 
 **Business Summary:**
 
-- Total Sales
-- Tabs Closed
-- Average Ticket
-- Total Tips
+- Total Sales, Tabs Closed, Average Ticket, Total Tips
 
 **Staff Performance Table:**
-| Column | Description |
-|--------|-------------|
-| Staff | Employee name |
-| Sales | Total sales amount |
-| Tabs | Number of tabs |
-| Avg Ticket | Average per tab |
-| Tips | Total tips received |
+
+- Staff name, Sales, Tabs, Avg Ticket, Tips
 
 **Void Analysis:**
 
-- Total voids
-- Void value
-- Void rate (% of orders)
-- Voids by reason breakdown
+- Total voids, Void value, Void rate
+- Voids by reason
 
 **Top Sellers:**
 
-- Ranked list by revenue
-- Units sold
+- Ranked by revenue with units sold
 
 ---
 
@@ -300,7 +245,6 @@ The Reports page provides analytics and sales data.
 2. Tap your name
 3. Tap **Change PIN**
 4. Enter new 4-digit PIN
-5. Confirm new PIN
 
 ### Language Preference
 
@@ -314,28 +258,25 @@ The Reports page provides analytics and sales data.
 
 ### Starting a Shift
 
-1. Log in with your PIN
-2. If no active shift, you're prompted to start one
+1. Log in with PIN
+2. If no active shift, prompted to start one
 3. Confirm or enter cash in drawer
 
 ### Ending a Shift
 
-1. Ensure all tabs are closed
-2. Go to Dashboard or Tabs page
+1. Ensure all tabs closed
+2. Go to Dashboard or Tabs
 3. Tap **End Shift**
 4. Count actual cash in drawer
 5. Enter actual amount
-6. System shows variance (expected vs. actual)
-7. Confirm to close shift
+6. System shows variance
+7. Confirm to close
 
 ### Shift Report
 
-After closing a shift, you receive a report showing:
+After closing, report shows:
 
-- Total sales
-- Total tabs
-- Total tips
-- Total voids
+- Total sales, tabs, tips, voids
 - Cash variance
 
 ---
@@ -344,29 +285,29 @@ After closing a shift, you receive a report showing:
 
 ### App is Slow
 
-- Check your internet connection
+- Check internet connection
 - Refresh the page (Ctrl+R / Cmd+R)
 
 ### Can't Find a Drink
 
-- Check if it's marked as available
+- Check availability
 - Check inventory stock
 - Search by name
 
 ### Stock Shows Incorrectly
 
-- Perform an audit to reconcile
-- Contact manager to check settings
+- Perform audit to reconcile
+- Contact manager
 
 ### PIN Not Working
 
-- Verify you're using your correct PIN
-- Contact manager to reset PIN
+- Verify correct PIN
+- Contact manager to reset
 
 ### Payment Failed
 
-- Check card reader connection
-- Try alternative payment method
+- Check card reader
+- Try alternative method
 - Contact manager
 
 ---
@@ -383,12 +324,12 @@ After closing a shift, you receive a report showing:
 
 ## Need Help?
 
-Contact your manager for:
+Contact manager for:
 
 - PIN resets
-- System configuration changes
-- Adding new drinks or inventory
-- Troubleshooting issues
+- System configuration
+- Adding drinks or inventory
+- Troubleshooting
 
 ---
 

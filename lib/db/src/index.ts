@@ -306,6 +306,12 @@ export async function initializeDatabase() {
             invColNames.includes(name),
           );
 
+          // Check if audit_sessions table exists
+          const auditSessionsTables = await db.all(
+            sql`SELECT name FROM sqlite_master WHERE type='table' AND name='audit_sessions'`,
+          );
+          const hasAuditSessions = auditSessionsTables.length > 0;
+
           // Check settings for all required columns
           const settingsColumns = await db.all(
             sql`PRAGMA table_info(settings)`,
@@ -344,7 +350,8 @@ export async function initializeDatabase() {
             hasAllInvCols &&
             hasAllSettingsCols &&
             hasVoidColumns &&
-            hasTabsCols
+            hasTabsCols &&
+            hasAuditSessions
           ) {
             console.log(
               "[Initialize] ✓ Schema is complete - skipping migrations",
@@ -416,19 +423,12 @@ export async function initializeDatabase() {
         const invCols = await db.all(sql`PRAGMA table_info(inventory_items)`);
         const colNames = invCols.map((c: any) => c.name);
 
-        // sell_single_serving (was in original 0000 but may be missing)
-        if (!colNames.includes("sell_single_serving")) {
+        // product_price (replaces single_serving_price)
+        if (!colNames.includes("product_price")) {
           await db.run(
-            sql`ALTER TABLE inventory_items ADD COLUMN sell_single_serving integer DEFAULT 0`,
+            sql`ALTER TABLE inventory_items ADD COLUMN product_price real`,
           );
-          console.log("[Initialize] Added column: sell_single_serving");
-        }
-        // single_serving_price (was in original 0000 but may be missing)
-        if (!colNames.includes("single_serving_price")) {
-          await db.run(
-            sql`ALTER TABLE inventory_items ADD COLUMN single_serving_price real`,
-          );
-          console.log("[Initialize] Added column: single_serving_price");
+          console.log("[Initialize] Added column: product_price");
         }
         // Migration 0001 columns
         if (!colNames.includes("alcohol_density")) {
@@ -456,6 +456,13 @@ export async function initializeDatabase() {
             sql`ALTER TABLE inventory_items ADD COLUMN tracking_mode text DEFAULT 'auto'`,
           );
           console.log("[Initialize] Added column: tracking_mode");
+        }
+        // Menu price per serving column
+        if (!colNames.includes("menu_price_per_serving")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN menu_price_per_serving real`,
+          );
+          console.log("[Initialize] Added column: menu_price_per_serving");
         }
 
         // Stock tracking columns (may be missing from older databases)
@@ -577,6 +584,40 @@ export async function initializeDatabase() {
           console.log("[Initialize] Added column: repeat_event");
         }
 
+        // Promo codes columns (schedule support)
+        const promoCols = await db.all(sql`PRAGMA table_info(promo_codes)`);
+        const promoColNames = promoCols.map((c: any) => c.name);
+        if (!promoColNames.includes("days_of_week")) {
+          await db.run(
+            sql`ALTER TABLE promo_codes ADD COLUMN days_of_week text`,
+          );
+          console.log("[Initialize] Added column: days_of_week");
+        }
+        if (!promoColNames.includes("start_hour")) {
+          await db.run(
+            sql`ALTER TABLE promo_codes ADD COLUMN start_hour integer`,
+          );
+          console.log("[Initialize] Added column: start_hour");
+        }
+        if (!promoColNames.includes("end_hour")) {
+          await db.run(
+            sql`ALTER TABLE promo_codes ADD COLUMN end_hour integer`,
+          );
+          console.log("[Initialize] Added column: end_hour");
+        }
+        if (!promoColNames.includes("start_date")) {
+          await db.run(
+            sql`ALTER TABLE promo_codes ADD COLUMN start_date integer`,
+          );
+          console.log("[Initialize] Added column: start_date");
+        }
+        if (!promoColNames.includes("end_date")) {
+          await db.run(
+            sql`ALTER TABLE promo_codes ADD COLUMN end_date integer`,
+          );
+          console.log("[Initialize] Added column: end_date");
+        }
+
         // Tabs columns (closeType, compReason)
         const tabCols = await db.all(sql`PRAGMA table_info(tabs)`);
         const tabColNames = tabCols.map((c: any) => c.name);
@@ -621,6 +662,52 @@ export async function initializeDatabase() {
           console.log("[Initialize] Added column: discount_mxn");
         }
 
+        // Recipe ingredients columns (default ingredient tracking)
+        const recipeCols = await db.all(
+          sql`PRAGMA table_info(recipe_ingredients)`,
+        );
+        const recipeColNames = recipeCols.map((c: any) => c.name);
+        if (!recipeColNames.includes("is_default")) {
+          await db.run(
+            sql`ALTER TABLE recipe_ingredients ADD COLUMN is_default integer DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: is_default");
+        }
+        if (!recipeColNames.includes("default_cost")) {
+          await db.run(
+            sql`ALTER TABLE recipe_ingredients ADD COLUMN default_cost real`,
+          );
+          console.log("[Initialize] Added column: default_cost");
+        }
+        if (!recipeColNames.includes("product_price")) {
+          await db.run(
+            sql`ALTER TABLE recipe_ingredients ADD COLUMN product_price real`,
+          );
+          console.log("[Initialize] Added column: product_price");
+        }
+
+        // Drinks table columns (menu pricing)
+        const drinksCols = await db.all(sql`PRAGMA table_info(drinks)`);
+        const drinksColNames = drinksCols.map((c: any) => c.name);
+        if (!drinksColNames.includes("menu_price")) {
+          await db.run(
+            sql`ALTER TABLE drinks ADD COLUMN menu_price real DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: menu_price");
+        }
+        if (!drinksColNames.includes("price_source")) {
+          await db.run(
+            sql`ALTER TABLE drinks ADD COLUMN price_source text DEFAULT 'auto'`,
+          );
+          console.log("[Initialize] Added column: price_source");
+        }
+        if (!drinksColNames.includes("source_type")) {
+          await db.run(
+            sql`ALTER TABLE drinks ADD COLUMN source_type text DEFAULT 'standard'`,
+          );
+          console.log("[Initialize] Added column: source_type");
+        }
+
         // Specials table
         const specialsTables = await db.all(
           sql`SELECT name FROM sqlite_master WHERE type='table' AND name='specials'`,
@@ -648,17 +735,97 @@ export async function initializeDatabase() {
           await db.run(
             sql`CREATE INDEX idx_specials_drink_id ON specials(drink_id)`,
           );
+        }
+
+        // Event logs table (audit trail)
+        const eventLogsTables = await db.all(
+          sql`SELECT name FROM sqlite_master WHERE type='table' AND name='event_logs'`,
+        );
+        if (eventLogsTables.length === 0) {
+          await db.run(sql`CREATE TABLE event_logs (
+            id text PRIMARY KEY,
+            user_id text NOT NULL,
+            action text NOT NULL,
+            entity_type text NOT NULL,
+            entity_id text NOT NULL,
+            old_value text,
+            new_value text,
+            reason text,
+            created_at integer NOT NULL DEFAULT (strftime('%s', 'now'))
+          )`);
+          console.log("[Initialize] Created table: event_logs");
+          // Create indexes
           await db.run(
-            sql`CREATE INDEX idx_specials_is_active ON specials(is_active)`,
+            sql`CREATE INDEX idx_event_logs_entity ON event_logs(entity_type, entity_id)`,
           );
-        } else {
-          // Check if category column exists in specials table
-          const specialsInfo = await db.all(sql`PRAGMA table_info(specials)`);
-          const specialsColNames = specialsInfo.map((c: any) => c.name);
-          if (!specialsColNames.includes("category")) {
-            await db.run(sql`ALTER TABLE specials ADD COLUMN category text`);
-            console.log("[Initialize] Added column: specials.category");
-          }
+          await db.run(
+            sql`CREATE INDEX idx_event_logs_user ON event_logs(user_id)`,
+          );
+        }
+
+        // Audit sessions table (for batch audit workflow)
+        const auditSessionsTables = await db.all(
+          sql`SELECT name FROM sqlite_master WHERE type='table' AND name='audit_sessions'`,
+        );
+        if (auditSessionsTables.length === 0) {
+          await db.run(sql`CREATE TABLE audit_sessions (
+            id text PRIMARY KEY,
+            status text NOT NULL DEFAULT 'in_progress',
+            category_filter text,
+            type_filter text,
+            started_by_user_id text NOT NULL,
+            completed_by_user_id text,
+            started_at integer,
+            completed_at integer,
+            item_count integer DEFAULT 0,
+            completed_count integer DEFAULT 0,
+            created_at integer NOT NULL DEFAULT (strftime('%s', 'now'))
+          )`);
+          console.log("[Initialize] Created table: audit_sessions");
+        }
+
+        // Inventory audits table - add session_id column if missing
+        const auditCols = await db.all(
+          sql`PRAGMA table_info(inventory_audits)`,
+        );
+        const auditColNames = auditCols.map((c: any) => c.name);
+        if (!auditColNames.includes("session_id")) {
+          await db.run(
+            sql`ALTER TABLE inventory_audits ADD COLUMN session_id text`,
+          );
+          console.log(
+            "[Initialize] Added column: session_id to inventory_audits",
+          );
+        }
+
+        // Order modifications table
+        const orderModsTables = await db.all(
+          sql`SELECT name FROM sqlite_master WHERE type='table' AND name='order_modifications'`,
+        );
+        if (orderModsTables.length === 0) {
+          await db.run(sql`CREATE TABLE order_modifications (
+             id text PRIMARY KEY,
+             order_id text NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+             recipe_line_index integer NOT NULL,
+             original_ingredient_id text NOT NULL,
+             original_ingredient_name text NOT NULL,
+             original_amount real NOT NULL,
+             replacement_ingredient_id text NOT NULL,
+             replacement_ingredient_name text NOT NULL,
+             replacement_amount real NOT NULL,
+             price_difference_mxn real NOT NULL,
+             modified_by_user_id text NOT NULL,
+             modified_at integer NOT NULL DEFAULT (unixepoch()),
+             notes text
+           )`);
+          console.log("[Initialize] Created table: order_modifications");
+          // Create indexes
+          await db.run(
+            sql`CREATE INDEX idx_order_modifications_order_id ON order_modifications(order_id)`,
+          );
+          await db.run(
+            sql`CREATE INDEX idx_order_modifications_modified_by ON order_modifications(modified_by_user_id)`,
+          );
         }
 
         console.log("[Initialize] ✓ Migration columns verified.");

@@ -12,7 +12,6 @@ export const _ingredientsTable = sqliteTable("ingredients", {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
-  nameEs: text("name_es"),
   unit: text("unit").notNull(),
   unitSize: real("unit_size").notNull(),
   costPerUnit: real("cost_per_unit").notNull(),
@@ -32,13 +31,13 @@ export const drinksTable = sqliteTable("drinks", {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
-  nameEs: text("name_es"),
   description: text("description"),
-  descriptionEs: text("description_es"),
   category: text("category").notNull().default("other"),
   taxCategory: text("tax_category").notNull().default("standard"),
   taxRate: real("tax_rate").notNull().default(0),
   actualPrice: real("actual_price").notNull().default(0),
+  menuPrice: real("menu_price").notNull().default(0),
+  priceSource: text("price_source").notNull().default("auto"),
   markupFactor: real("markup_factor").notNull().default(3.0),
   sourceType: text("source_type").notNull().default("standard"),
   isAvailable: integer("is_available").notNull().default(1),
@@ -64,6 +63,9 @@ export const recipeIngredientsTable = sqliteTable("recipe_ingredients", {
     .references(() => inventoryItemsTable.id, { onDelete: "cascade" }),
   amountInMl: real("amount_in_ml").notNull().default(0),
   amountInBaseUnit: real("amount_in_base_unit").notNull().default(0),
+  isDefault: integer("is_default").default(0),
+  defaultCost: real("default_cost"),
+  productPrice: real("product_price"),
 });
 
 export const shiftsTable = sqliteTable("shifts", {
@@ -133,7 +135,6 @@ export const ordersTable = sqliteTable("orders", {
     .notNull()
     .references(() => drinksTable.id),
   drinkName: text("drink_name").notNull(),
-  drinkNameEs: text("drink_name_es"),
   quantity: integer("quantity").notNull().default(1),
   unitPriceMxn: real("unit_price_mxn").notNull(),
   discountMxn: real("discount_mxn").notNull().default(0),
@@ -147,6 +148,28 @@ export const ordersTable = sqliteTable("orders", {
   voidReason: text("void_reason"),
   voidedByUserId: text("voided_by_user_id"),
   voidedAt: integer("voided_at"),
+});
+
+export const orderModificationsTable = sqliteTable("order_modifications", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  orderId: text("order_id")
+    .notNull()
+    .references(() => ordersTable.id, { onDelete: "cascade" }),
+  recipeLineIndex: integer("recipe_line_index").notNull(), // Which recipe item was modified
+  originalIngredientId: text("original_ingredient_id").notNull(),
+  originalIngredientName: text("original_ingredient_name").notNull(),
+  originalAmount: real("original_amount").notNull(),
+  replacementIngredientId: text("replacement_ingredient_id").notNull(),
+  replacementIngredientName: text("replacement_ingredient_name").notNull(),
+  replacementAmount: real("replacement_amount").notNull(),
+  priceDifferenceMxn: real("price_difference_mxn").notNull(), // Positive or negative
+  modifiedByUserId: text("modified_by_user_id").notNull(),
+  modifiedAt: integer("modified_at")
+    .notNull()
+    .default(sql`(unixepoch())`),
+  notes: text("notes"), // Optional explanation for the substitution
 });
 
 export const settingsTable = sqliteTable("settings", {
@@ -283,6 +306,11 @@ export const promoCodesTable = sqliteTable("promo_codes", {
   currentUses: integer("current_uses").notNull().default(0),
   expiresAt: integer("expires_at"),
   isActive: integer("is_active").notNull().default(1),
+  daysOfWeek: text("days_of_week"),
+  startHour: integer("start_hour"),
+  endHour: integer("end_hour"),
+  startDate: integer("start_date"),
+  endDate: integer("end_date"),
   createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
@@ -346,6 +374,10 @@ export type InsertTab = typeof tabsTable.$inferInsert;
 
 export type Order = typeof ordersTable.$inferSelect;
 export type InsertOrder = typeof ordersTable.$inferInsert;
+
+export type OrderModification = typeof orderModificationsTable.$inferSelect;
+export type InsertOrderModification =
+  typeof orderModificationsTable.$inferInsert;
 
 export type Shift = typeof shiftsTable.$inferSelect;
 export type InsertShift = typeof shiftsTable.$inferInsert;

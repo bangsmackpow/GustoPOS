@@ -28,6 +28,11 @@ router.post(
       discountValue,
       maxUses,
       expiresAt,
+      daysOfWeek,
+      startHour,
+      endHour,
+      startDate,
+      endDate,
     } = req.body;
 
     if (!code || !discountType || !discountValue) {
@@ -68,6 +73,15 @@ router.post(
             ? Math.floor(new Date(expiresAt).getTime() / 1000)
             : null,
           isActive: 1,
+          daysOfWeek: daysOfWeek || null,
+          startHour: startHour ? Number(startHour) : null,
+          endHour: endHour ? Number(endHour) : null,
+          startDate: startDate
+            ? Math.floor(new Date(startDate).getTime() / 1000)
+            : null,
+          endDate: endDate
+            ? Math.floor(new Date(endDate).getTime() / 1000)
+            : null,
         })
         .returning();
 
@@ -83,6 +97,15 @@ router.post(
           ? new Date(promo.expiresAt * 1000).toISOString()
           : null,
         isActive: promo.isActive === 1,
+        daysOfWeek: promo.daysOfWeek,
+        startHour: promo.startHour,
+        endHour: promo.endHour,
+        startDate: promo.startDate
+          ? new Date(promo.startDate * 1000).toISOString()
+          : null,
+        endDate: promo.endDate
+          ? new Date(promo.endDate * 1000).toISOString()
+          : null,
       });
     } catch (err: any) {
       console.error("Error creating promo code:", err);
@@ -145,6 +168,11 @@ router.patch(
       maxUses,
       expiresAt,
       isActive,
+      daysOfWeek,
+      startHour,
+      endHour,
+      startDate,
+      endDate,
     } = req.body;
 
     const [existing] = await db
@@ -190,6 +218,31 @@ router.patch(
                 : null
               : undefined,
           isActive: isActive !== undefined ? (isActive ? 1 : 0) : undefined,
+          daysOfWeek: daysOfWeek !== undefined ? daysOfWeek : undefined,
+          startHour:
+            startHour !== undefined
+              ? startHour
+                ? Number(startHour)
+                : null
+              : undefined,
+          endHour:
+            endHour !== undefined
+              ? endHour
+                ? Number(endHour)
+                : null
+              : undefined,
+          startDate:
+            startDate !== undefined
+              ? startDate
+                ? Math.floor(new Date(startDate).getTime() / 1000)
+                : null
+              : undefined,
+          endDate:
+            endDate !== undefined
+              ? endDate
+                ? Math.floor(new Date(endDate).getTime() / 1000)
+                : null
+              : undefined,
           updatedAt: Math.floor(Date.now() / 1000),
         })
         .where(eq(promoCodesTable.id, id))
@@ -207,6 +260,15 @@ router.patch(
           ? new Date(updated.expiresAt * 1000).toISOString()
           : null,
         isActive: updated.isActive === 1,
+        daysOfWeek: updated.daysOfWeek,
+        startHour: updated.startHour,
+        endHour: updated.endHour,
+        startDate: updated.startDate
+          ? new Date(updated.startDate * 1000).toISOString()
+          : null,
+        endDate: updated.endDate
+          ? new Date(updated.endDate * 1000).toISOString()
+          : null,
       });
     } catch (err: any) {
       console.error("Error updating promo code:", err);

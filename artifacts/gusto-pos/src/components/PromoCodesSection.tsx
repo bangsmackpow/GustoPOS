@@ -22,6 +22,11 @@ interface PromoCode {
   expiresAt?: string | null;
   isActive: boolean;
   createdAt: string;
+  daysOfWeek?: string | null;
+  startHour?: number | null;
+  endHour?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
 }
 
 interface PromoCodesSectionProps {
@@ -44,6 +49,11 @@ export function PromoCodesSection({
     discountValue: "",
     maxUses: "",
     expiresAt: "",
+    daysOfWeek: [] as string[],
+    startHour: "",
+    endHour: "",
+    startDate: "",
+    endDate: "",
   });
 
   const queryClient = useQueryClient();
@@ -62,6 +72,20 @@ export function PromoCodesSection({
           maxUses: formData.maxUses ? parseInt(formData.maxUses) : undefined,
           expiresAt: formData.expiresAt
             ? new Date(formData.expiresAt).toISOString()
+            : undefined,
+          daysOfWeek:
+            formData.daysOfWeek.length > 0
+              ? formData.daysOfWeek.join(",")
+              : undefined,
+          startHour: formData.startHour
+            ? parseInt(formData.startHour)
+            : undefined,
+          endHour: formData.endHour ? parseInt(formData.endHour) : undefined,
+          startDate: formData.startDate
+            ? new Date(formData.startDate).toISOString()
+            : undefined,
+          endDate: formData.endDate
+            ? new Date(formData.endDate).toISOString()
             : undefined,
         }),
       });
@@ -98,6 +122,20 @@ export function PromoCodesSection({
             ? new Date(formData.expiresAt).toISOString()
             : undefined,
           isActive: true,
+          daysOfWeek:
+            formData.daysOfWeek.length > 0
+              ? formData.daysOfWeek.join(",")
+              : undefined,
+          startHour: formData.startHour
+            ? parseInt(formData.startHour)
+            : undefined,
+          endHour: formData.endHour ? parseInt(formData.endHour) : undefined,
+          startDate: formData.startDate
+            ? new Date(formData.startDate).toISOString()
+            : undefined,
+          endDate: formData.endDate
+            ? new Date(formData.endDate).toISOString()
+            : undefined,
         }),
       });
       if (!response.ok) throw new Error(await response.text());
@@ -170,6 +208,11 @@ export function PromoCodesSection({
       discountValue: "",
       maxUses: "",
       expiresAt: "",
+      daysOfWeek: [],
+      startHour: "",
+      endHour: "",
+      startDate: "",
+      endDate: "",
     });
     setShowModal(true);
   };
@@ -183,6 +226,11 @@ export function PromoCodesSection({
       discountValue: String(code.discountValue),
       maxUses: code.maxUses ? String(code.maxUses) : "",
       expiresAt: code.expiresAt ? code.expiresAt.split("T")[0] : "",
+      daysOfWeek: code.daysOfWeek ? code.daysOfWeek.split(",") : [],
+      startHour: code.startHour ? String(code.startHour) : "",
+      endHour: code.endHour ? String(code.endHour) : "",
+      startDate: code.startDate ? code.startDate.split("T")[0] : "",
+      endDate: code.endDate ? code.endDate.split("T")[0] : "",
     });
     setShowModal(true);
   };
@@ -282,9 +330,12 @@ export function PromoCodesSection({
       )}
 
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
           <div className="glass p-6 rounded-3xl w-full max-w-md border border-white/10">
-            <button onClick={closeModal} className="absolute top-4 right-4">
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 z-[70] p-1 hover:bg-white/10 rounded-full"
+            >
               <X size={20} />
             </button>
             <h3 className="text-xl font-display mb-4">
@@ -361,6 +412,80 @@ export function PromoCodesSection({
                 }
                 className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
               />
+              <div className="border-t border-white/10 pt-4 mt-2">
+                <p className="text-sm font-medium mb-2">Schedule (Optional)</p>
+                <div className="flex gap-1 flex-wrap mb-3">
+                  {[
+                    { value: "0", label: "Sun" },
+                    { value: "1", label: "Mon" },
+                    { value: "2", label: "Tue" },
+                    { value: "3", label: "Wed" },
+                    { value: "4", label: "Thu" },
+                    { value: "5", label: "Fri" },
+                    { value: "6", label: "Sat" },
+                  ].map((day) => (
+                    <button
+                      key={day.value}
+                      type="button"
+                      onClick={() => {
+                        const newDays = formData.daysOfWeek.includes(day.value)
+                          ? formData.daysOfWeek.filter((d) => d !== day.value)
+                          : [...formData.daysOfWeek, day.value];
+                        setFormData({ ...formData, daysOfWeek: newDays });
+                      }}
+                      className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                        formData.daysOfWeek.includes(day.value)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-muted-foreground"
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    placeholder="Start hour (0-23)"
+                    min="0"
+                    max="23"
+                    value={formData.startHour}
+                    onChange={(e) =>
+                      setFormData({ ...formData, startHour: e.target.value })
+                    }
+                    className="bg-secondary border border-white/10 rounded-xl px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="number"
+                    placeholder="End hour (0-23)"
+                    min="0"
+                    max="23"
+                    value={formData.endHour}
+                    onChange={(e) =>
+                      setFormData({ ...formData, endHour: e.target.value })
+                    }
+                    className="bg-secondary border border-white/10 rounded-xl px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="date"
+                    placeholder="Start date"
+                    value={formData.startDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, startDate: e.target.value })
+                    }
+                    className="bg-secondary border border-white/10 rounded-xl px-3 py-2 text-sm"
+                  />
+                  <input
+                    type="date"
+                    placeholder="End date"
+                    value={formData.endDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, endDate: e.target.value })
+                    }
+                    className="bg-secondary border border-white/10 rounded-xl px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
             </div>
             <div className="flex gap-3 mt-4">
               <button

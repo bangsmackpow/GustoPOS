@@ -10,6 +10,7 @@ import {
   settingsTable,
   tabPaymentsTable,
   specialsTable,
+  orderModificationsTable,
 } from "@workspace/db";
 import { eq, desc, sql, inArray } from "drizzle-orm";
 import {
@@ -18,20 +19,26 @@ import {
   CloseTabBody,
   AddOrderToTabBody,
   UpdateOrderBody,
+  ModifyOrderIngredientBody,
 } from "@workspace/api-zod";
 import { logEvent } from "../lib/auditLog";
 
 const router: IRouter = Router();
 
 async function getExchangeRates() {
-  const [settings] = await db
-    .select()
-    .from(settingsTable)
-    .where(eq(settingsTable.id, "default"));
-  return {
-    usdToMxn: settings ? Number(settings.usdToMxnRate) : 17.5,
-    cadToMxn: settings ? Number(settings.cadToMxnRate) : 12.8,
-  };
+  try {
+    const [settings] = await db
+      .select()
+      .from(settingsTable)
+      .where(eq(settingsTable.id, "default"));
+    return {
+      usdToMxn: settings ? Number(settings.usdToMxnRate) : 17.5,
+      cadToMxn: settings ? Number(settings.cadToMxnRate) : 12.8,
+    };
+  } catch (err: any) {
+    console.error("[getExchangeRates] Error, using defaults:", err.message);
+    return { usdToMxn: 17.5, cadToMxn: 12.8 };
+  }
 }
 
 function isSpecialActiveNow(
@@ -73,7 +80,16 @@ async function getActiveSpecialForDrink(
   discountValue: number;
   name: string;
 } | null> {
-  const allSpecials = await db.select().from(specialsTable);
+  let allSpecials;
+  try {
+    allSpecials = await db.select().from(specialsTable);
+  } catch (err: any) {
+    console.warn(
+      "[getActiveSpecial] Specials table query failed:",
+      err.message,
+    );
+    return null;
+  }
   const activeSpecials = allSpecials.filter(isSpecialActiveNow);
 
   if (activeSpecials.length === 0) return null;
@@ -195,7 +211,6 @@ function formatOrder(order: typeof ordersTable.$inferSelect) {
     tabId: order.tabId,
     drinkId: order.drinkId,
     drinkName: order.drinkName,
-    drinkNameEs: order.drinkNameEs ?? null,
     quantity: order.quantity,
     unitPriceMxn: Number(order.unitPriceMxn),
     discountMxn,
@@ -394,11 +409,18 @@ router.post("/tabs/:id/close", async (req: Request, res: Response) => {
     return;
   }
 
+  // Recalculate tab total before closing to ensure accuracy
+  await recalcTabTotal(req.params.id as string);
+  const [updatedTab] = await db
+    .select()
+    .from(tabsTable)
+    .where(eq(tabsTable.id, req.params.id as string));
+
   if (payments && payments.length > 0) {
     // Split bill: multiple payments
     const totalPaid = payments.reduce((sum, p) => sum + p.amountMxn, 0);
     const totalTips = payments.reduce((sum, p) => sum + (p.tipMxn ?? 0), 0);
-    const tabTotal = Number(existingTab.totalMxn);
+    const tabTotal = Number(updatedTab.totalMxn);
 
     if (Math.abs(totalPaid - tabTotal) > 0.01) {
       res.status(400).json({
@@ -443,6 +465,7 @@ router.post("/tabs/:id/close", async (req: Request, res: Response) => {
         })),
         totalPaid,
         totalTips,
+        totalMxn: updatedTab.totalMxn,
       },
     });
 
@@ -493,7 +516,8 @@ router.post("/tabs/:id/close", async (req: Request, res: Response) => {
       newValue: {
         paymentMethod,
         tipMxn: tipMxn ?? 0,
-        grandTotal: Number(existingTab.totalMxn) + (tipMxn ?? 0),
+        grandTotal: Number(updatedTab.totalMxn) + (tipMxn ?? 0),
+        totalMxn: updatedTab.totalMxn,
       },
     });
     const rates = await getExchangeRates();
@@ -570,7 +594,8 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
   const costPerDrink = recipe.reduce((sum, r) => {
     return sum + r.amountInBaseUnit * r.costPerBaseUnit;
   }, 0);
-  const markupFactor = Number(drink.markupFactor);
+  // TODO: Pricing overhaul - markupFactor needs to be replaced
+  const markupFactor = Number(drink.markupFactor || 3.0);
   const suggestedPrice = costPerDrink * markupFactor;
   let unitPriceMxn =
     drink.actualPrice != null ? Number(drink.actualPrice) : suggestedPrice;
@@ -637,7 +662,7 @@ router.post("/tabs/:id/orders", async (req: Request, res: Response) => {
         tabId: req.params.id as string,
         drinkId,
         drinkName: drink.name,
-        drinkNameEs: drink.nameEs ?? null,
+
         quantity,
         unitPriceMxn: Number(unitPriceMxn),
         taxCategory: drink.taxCategory ?? "standard",
@@ -972,5 +997,188 @@ router.patch("/orders/:id/discount", async (req: Request, res: Response) => {
     });
   }
 });
+
+/**
+ * PATCH /orders/:id/modify-ingredient
+ * Substitute an ingredient in an order with full stock and price tracking
+ */
+router.patch(
+  "/orders/:id/modify-ingredient",
+  async (req: Request, res: Response) => {
+    const parsed = ModifyOrderIngredientBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: "Invalid request body", details: parsed.error });
+      return;
+    }
+
+    const { recipeLineIndex, newIngredientId, notes } = parsed.data;
+    const modifiedByUserId = (req as any).user?.id || "system";
+
+    try {
+      const [order] = await db
+        .select()
+        .from(ordersTable)
+        .where(eq(ordersTable.id, req.params.id as string));
+
+      if (!order) {
+        res.status(404).json({ error: "Order not found" });
+        return;
+      }
+
+      if (order.voided === 1) {
+        res.status(400).json({ error: "Cannot modify a voided order" });
+        return;
+      }
+
+      // Get the drink recipe
+      const recipe = await db
+        .select()
+        .from(recipeIngredientsTable)
+        .where(eq(recipeIngredientsTable.drinkId, order.drinkId));
+
+      if (
+        !recipe ||
+        recipe.length === 0 ||
+        recipeLineIndex < 0 ||
+        recipeLineIndex >= recipe.length
+      ) {
+        res.status(400).json({
+          error: "Invalid recipe line index",
+        });
+        return;
+      }
+
+      const recipeItem = recipe[recipeLineIndex];
+      const originalIngredientId = recipeItem.ingredientId;
+
+      // Validate new ingredient exists
+      const [newIngredient] = await db
+        .select()
+        .from(inventoryItemsTable)
+        .where(eq(inventoryItemsTable.id, newIngredientId));
+
+      if (!newIngredient) {
+        res.status(404).json({ error: "New ingredient not found" });
+        return;
+      }
+
+      // Get original ingredient for cost calculation
+      const [originalIngredient] = await db
+        .select()
+        .from(inventoryItemsTable)
+        .where(eq(inventoryItemsTable.id, originalIngredientId));
+
+      if (!originalIngredient) {
+        res.status(404).json({ error: "Original ingredient not found" });
+        return;
+      }
+
+      const amountNeeded = Number(recipeItem.amountInBaseUnit) || 1;
+
+      // Check stock availability for new ingredient
+      const newIngAvailable =
+        (Number(newIngredient.currentStock) || 0) +
+        (Number(newIngredient.reservedStock) || 0);
+      if (newIngAvailable < amountNeeded) {
+        res.status(400).json({
+          error: "Insufficient stock for new ingredient",
+          available: newIngAvailable,
+          needed: amountNeeded,
+        });
+        return;
+      }
+
+      // Calculate price difference
+      // Cost per unit: orderCost is the cost of new inventory
+      const origCostPerUnit = Number(originalIngredient.orderCost) || 0;
+      const newCostPerUnit = Number(newIngredient.orderCost) || 0;
+
+      const origCost = origCostPerUnit * amountNeeded;
+      const newCost = newCostPerUnit * amountNeeded;
+      const costDifference = newCost - origCost;
+
+      // For quantity > 1, apply price difference to all units
+      const priceDifference = costDifference * order.quantity;
+
+      // Execute all changes in a transaction
+      const result = await db.transaction(async (tx) => {
+        // 1. Release reserved stock from original ingredient
+        const origTargetId =
+          originalIngredient.parentItemId || originalIngredientId;
+        await tx
+          .update(inventoryItemsTable)
+          .set({
+            reservedStock:
+              sql`COALESCE(${inventoryItemsTable.reservedStock}, 0) - ${amountNeeded * order.quantity}` as any,
+          })
+          .where(eq(inventoryItemsTable.id, origTargetId));
+
+        // 2. Reserve stock from new ingredient
+        const newTargetId = newIngredient.parentItemId || newIngredientId;
+        await tx
+          .update(inventoryItemsTable)
+          .set({
+            reservedStock:
+              sql`COALESCE(${inventoryItemsTable.reservedStock}, 0) + ${amountNeeded * order.quantity}` as any,
+          })
+          .where(eq(inventoryItemsTable.id, newTargetId));
+
+        // 3. Update order with new price
+        const newUnitPrice =
+          Number(order.unitPriceMxn) + priceDifference / order.quantity;
+        const [updatedOrder] = await tx
+          .update(ordersTable)
+          .set({
+            unitPriceMxn: newUnitPrice,
+          })
+          .where(eq(ordersTable.id, req.params.id as string))
+          .returning();
+
+        // 4. Record the modification for audit trail
+        await tx.insert(orderModificationsTable).values({
+          orderId: order.id,
+          recipeLineIndex,
+          originalIngredientId,
+          originalIngredientName: originalIngredient.name,
+          originalAmount: amountNeeded,
+          replacementIngredientId: newIngredientId,
+          replacementIngredientName: newIngredient.name,
+          replacementAmount: amountNeeded,
+          priceDifferenceMxn: priceDifference,
+          modifiedByUserId,
+          notes: notes || null,
+        } as any);
+
+        return updatedOrder;
+      });
+
+      // Recalculate tab total
+      await recalcTabTotal(order.tabId);
+
+      // Log the modification
+      await logEvent({
+        action: "modify_order_ingredient",
+        userId: modifiedByUserId,
+        entityType: "order",
+        entityId: order.id,
+        newValue: {
+          originalIngredient: originalIngredient.name,
+          newIngredient: newIngredient.name,
+          priceDifference,
+        },
+      });
+
+      res.json(formatOrder(result));
+    } catch (err: any) {
+      console.error("Error modifying order ingredient:", err);
+      res.status(500).json({
+        error: "Failed to modify order ingredient",
+        details: err.message,
+      });
+    }
+  },
+);
 
 export default router;

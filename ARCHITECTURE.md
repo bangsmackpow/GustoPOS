@@ -188,25 +188,43 @@ Individual drink orders within a tab.
 | `voided_by_user_id` | text        | FK to users                     |
 | `voided_at`         | integer     | Unix timestamp                  |
 
+#### Order Modifications (`order_modifications`)
+
+Ingredient substitution history with full audit trail.
+
+| Column                        | Type        | Description                             |
+| ----------------------------- | ----------- | --------------------------------------- |
+| `id`                          | text (UUID) | Primary key                             |
+| `order_id`                    | text        | FK to orders                            |
+| `recipe_line_index`           | integer     | Which recipe item (0-based)             |
+| `original_ingredient_id`      | text        | FK to original ingredient               |
+| `original_ingredient_name`    | text        | Name of original ingredient             |
+| `original_amount`             | real        | Amount of original ingredient           |
+| `replacement_ingredient_id`   | text        | FK to replacement ingredient            |
+| `replacement_ingredient_name` | text        | Name of replacement ingredient          |
+| `replacement_amount`          | real        | Amount of replacement ingredient        |
+| `price_difference_mxn`        | real        | Price adjustment (positive or negative) |
+| `modified_by_user_id`         | text        | FK to users (who made the change)       |
+| `modified_at`                 | integer     | Unix timestamp of modification          |
+| `notes`                       | text        | Optional reason/comments                |
+
 #### Drinks (`drinks`)
 
 Menu items (drinks/cocktails).
 
-| Column           | Type        | Description           |
-| ---------------- | ----------- | --------------------- |
-| `id`             | text (UUID) | Primary key           |
-| `name`           | text        | Drink name            |
-| `name_es`        | text        | Spanish name          |
-| `description`    | text        | English description   |
-| `description_es` | text        | Spanish description   |
-| `category`       | text        | Category              |
-| `tax_category`   | text        | Tax category          |
-| `tax_rate`       | real        | Tax rate              |
-| `actual_price`   | real        | Base price            |
-| `markup_factor`  | real        | Markup multiplier     |
-| `source_type`    | text        | `standard`, `special` |
-| `is_available`   | integer     | Available flag        |
-| `is_on_menu`     | integer     | Show on menu          |
+| Column          | Type        | Description           |
+| --------------- | ----------- | --------------------- |
+| `id`            | text (UUID) | Primary key           |
+| `name`          | text        | Drink name            |
+| `description`   | text        | Description           |
+| `category`      | text        | Category              |
+| `tax_category`  | text        | Tax category          |
+| `tax_rate`      | real        | Tax rate              |
+| `actual_price`  | real        | Base price            |
+| `markup_factor` | real        | Markup multiplier     |
+| `source_type`   | text        | `standard`, `special` |
+| `is_available`  | integer     | Available flag        |
+| `is_on_menu`    | integer     | Show on menu          |
 
 #### Recipe Ingredients (`recipe_ingredients`)
 
@@ -228,7 +246,6 @@ Inventory stock with pool/collection tracking.
 | ---------------------- | ----------- | ------------------------------- |
 | `id`                   | text (UUID) | Primary key                     |
 | `name`                 | text        | Item name                       |
-| `name_es`              | text        | Spanish name                    |
 | `type`                 | text        | `spirit`, `mixer`, `beer`, etc. |
 | `subtype`              | text        | Subtype                         |
 | `base_unit`            | text        | `ml` or `units`                 |
@@ -238,7 +255,6 @@ Inventory stock with pool/collection tracking.
 | `container_weight_g`   | real        | Empty container weight          |
 | `full_bottle_weight_g` | real        | Full bottle weight              |
 | `density`              | real        | Liquid density                  |
-| `bulk_cost`            | real        | Cost per bulk unit              |
 | `order_cost`           | real        | Order cost                      |
 | `markup_factor`        | real        | Markup multiplier               |
 | `sell_single_serving`  | integer     | Single serving flag             |

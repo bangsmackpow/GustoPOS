@@ -45,6 +45,7 @@ import type {
   GetTaxRatesResponse,
   HealthStatus,
   Ingredient,
+  ModifyIngredientBody,
   Order,
   PromoCode,
   Rush,
@@ -2129,6 +2130,93 @@ export const useDeleteOrder = <
   TContext
 > => {
   return useMutation(getDeleteOrderMutationOptions(options));
+};
+
+/**
+ * @summary Substitute an ingredient in an order
+ */
+export const getModifyOrderIngredientUrl = (id: string) => {
+  return `/api/orders/${id}/modify-ingredient`;
+};
+
+export const modifyOrderIngredient = async (
+  id: string,
+  modifyIngredientBody: ModifyIngredientBody,
+  options?: RequestInit,
+): Promise<Order> => {
+  return customFetch<Order>(getModifyOrderIngredientUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(modifyIngredientBody),
+  });
+};
+
+export const getModifyOrderIngredientMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof modifyOrderIngredient>>,
+    TError,
+    { id: string; data: BodyType<ModifyIngredientBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof modifyOrderIngredient>>,
+  TError,
+  { id: string; data: BodyType<ModifyIngredientBody> },
+  TContext
+> => {
+  const mutationKey = ["modifyOrderIngredient"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof modifyOrderIngredient>>,
+    { id: string; data: BodyType<ModifyIngredientBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return modifyOrderIngredient(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ModifyOrderIngredientMutationResult = NonNullable<
+  Awaited<ReturnType<typeof modifyOrderIngredient>>
+>;
+export type ModifyOrderIngredientMutationBody = BodyType<ModifyIngredientBody>;
+export type ModifyOrderIngredientMutationError = ErrorType<void>;
+
+/**
+ * @summary Substitute an ingredient in an order
+ */
+export const useModifyOrderIngredient = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof modifyOrderIngredient>>,
+    TError,
+    { id: string; data: BodyType<ModifyIngredientBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof modifyOrderIngredient>>,
+  TError,
+  { id: string; data: BodyType<ModifyIngredientBody> },
+  TContext
+> => {
+  return useMutation(getModifyOrderIngredientMutationOptions(options));
 };
 
 /**

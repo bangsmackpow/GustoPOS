@@ -119,11 +119,8 @@ export function useClearTrash() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      console.log("[useClearTrash] Calling DELETE /api/inventory/trash/clear");
       const res = await fetch(`${API_BASE}/trash/clear`, { method: "DELETE" });
-      console.log("[useClearTrash] Response status:", res.status);
       const data = await res.json();
-      console.log("[useClearTrash] Response data:", data);
       if (!res.ok) {
         throw new Error(data.error || `Failed to clear trash (${res.status})`);
       }

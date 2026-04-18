@@ -22,6 +22,7 @@ import {
   Globe,
   Search,
   ChevronLeft,
+  Calendar,
 } from "lucide-react";
 import { usePosStore } from "@/store";
 import { getTranslation } from "@/lib/utils";
@@ -49,6 +50,12 @@ const NAV_ITEMS = [
     icon: BarChart3,
     labelEn: "Reports",
     labelEs: "Reportes",
+  },
+  {
+    path: "/calendar",
+    icon: Calendar,
+    labelEn: "Calendar",
+    labelEs: "Calendario",
   },
   {
     path: "/settings",
@@ -187,7 +194,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           return; // Wait for modal decision
         }
       } catch (err) {
-        console.error("Failed to check trash", err);
+        // Silently fail
       }
     }
     executeLogout();
@@ -196,8 +203,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const executeLogout = async () => {
     try {
       await fetch("/api/auth/logout", { credentials: "include" });
-    } catch (err) {
-      console.error("Logout failed", err);
+    } catch {
+      // Silently fail
     }
     queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
     setActiveStaff(null);
@@ -208,8 +215,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
     if (shouldClear) {
       try {
         await fetch("/api/inventory/trash/clear", { method: "DELETE" });
-      } catch (err) {
-        console.error("Clear trash failed", err);
+      } catch {
+        // Silently fail
       }
     }
     setShowClearTrashModal(false);
@@ -238,8 +245,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       // Map AuthUser to StaffUser format for the store
       const staffUser = {
         id: auth.user.id,
-        email: auth.user.email ?? null,
-        username: auth.user.email ?? null,
+        email: auth.user.email ?? "",
         firstName: auth.user.firstName ?? "",
         lastName: auth.user.lastName ?? "",
         role: auth.user.role,
@@ -249,8 +255,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
       };
       setActiveStaff(staffUser);
+      // Set app language from user preference
+      if (auth.user.language) {
+        setLanguage(auth.user.language);
+      }
     }
-  }, [isSuccess, auth?.isAuthenticated, auth?.user]);
+  }, [isSuccess, auth?.isAuthenticated, auth?.user, setLanguage]);
 
   // Only show loading on initial load, NOT on background refetches
   // isFetching triggers on every staleTime:0 refetch which would block UI perpetually
@@ -444,7 +454,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
 
             <button
-              onClick={() => setShowPin(true)}
+              onClick={() => (window.location.href = "/login")}
               className="flex items-center gap-3 glass px-4 py-2 rounded-2xl hover:bg-white/10 transition-all border border-white/5 active:scale-95"
             >
               <div className="text-right hidden sm:block">

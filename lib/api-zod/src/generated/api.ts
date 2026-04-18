@@ -162,6 +162,7 @@ export const GetIngredientsResponseItem = zod.object({
   trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
   parentItemId: zod.string().nullish(),
   isOnMenu: zod.boolean(),
+  menuPricePerServing: zod.number().nullish(),
   createdAt: zod.string().datetime({}),
   updatedAt: zod.string().datetime({}),
 });
@@ -187,6 +188,7 @@ export const CreateIngredientBody = zod.object({
   unitsPerCase: zod.number().optional(),
   trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
   isOnMenu: zod.boolean().optional(),
+  menuPricePerServing: zod.number().nullish(),
 });
 
 /**
@@ -220,6 +222,7 @@ export const GetIngredientResponse = zod.object({
   trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
   parentItemId: zod.string().nullish(),
   isOnMenu: zod.boolean(),
+  menuPricePerServing: zod.number().nullish(),
   createdAt: zod.string().datetime({}),
   updatedAt: zod.string().datetime({}),
 });
@@ -248,6 +251,7 @@ export const UpdateIngredientBody = zod.object({
   unitsPerCase: zod.number().nullish(),
   trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
   isOnMenu: zod.boolean().nullish(),
+  menuPricePerServing: zod.number().nullish(),
 });
 
 export const UpdateIngredientResponse = zod.object({
@@ -274,6 +278,7 @@ export const UpdateIngredientResponse = zod.object({
   trackingMode: zod.enum(["auto", "pool", "collection"]).optional(),
   parentItemId: zod.string().nullish(),
   isOnMenu: zod.boolean(),
+  menuPricePerServing: zod.number().nullish(),
   createdAt: zod.string().datetime({}),
   updatedAt: zod.string().datetime({}),
 });
@@ -650,6 +655,44 @@ export const DeleteOrderResponse = zod.object({
 });
 
 /**
+ * @summary Substitute an ingredient in an order
+ */
+export const ModifyOrderIngredientParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const ModifyOrderIngredientBody = zod.object({
+  recipeLineIndex: zod
+    .number()
+    .describe("Index of the recipe item to replace (0-based)"),
+  newIngredientId: zod
+    .string()
+    .describe("ID of the new ingredient to substitute"),
+  notes: zod
+    .string()
+    .optional()
+    .describe("Optional reason for the substitution"),
+});
+
+export const ModifyOrderIngredientResponse = zod.object({
+  id: zod.string(),
+  tabId: zod.string(),
+  drinkId: zod.string(),
+  drinkName: zod.string(),
+  drinkNameEs: zod.string().nullish(),
+  quantity: zod.number(),
+  unitPriceMxn: zod.number(),
+  discountMxn: zod.number().optional(),
+  totalPriceMxn: zod.number(),
+  notes: zod.string().nullish(),
+  voided: zod.boolean().optional(),
+  voidReason: zod.string().nullish(),
+  voidedByUserId: zod.string().nullish(),
+  voidedAt: zod.string().nullish(),
+  createdAt: zod.string().datetime({}),
+});
+
+/**
  * @summary List all shifts
  */
 export const GetShiftsResponseItem = zod.object({
@@ -672,6 +715,10 @@ export const GetShiftsResponse = zod.array(GetShiftsResponseItem);
 export const StartShiftBody = zod.object({
   name: zod.string(),
   openedByUserId: zod.string(),
+  expectedCashMxn: zod
+    .number()
+    .optional()
+    .describe("Starting cash amount in the register (optional)"),
 });
 
 /**

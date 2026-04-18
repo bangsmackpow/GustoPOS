@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePosStore } from "@/store";
+import { getTranslation } from "@/lib/utils";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -35,9 +36,8 @@ export default function Login() {
       if (response.status === 429) {
         toast({
           variant: "destructive",
-          title: "Too Many Attempts",
-          description:
-            "Too many login attempts. Please try again in 15 minutes.",
+          title: getTranslation("too_many_attempts", language),
+          description: getTranslation("too_many_login_attempts", language),
         });
       } else if (data.ok) {
         queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
@@ -45,15 +45,16 @@ export default function Login() {
       } else {
         toast({
           variant: "destructive",
-          title: "Login Failed",
-          description: data.error || "Invalid credentials",
+          title: getTranslation("login_failed", language),
+          description:
+            data.error || getTranslation("invalid_credentials", language),
         });
       }
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Could not connect to server",
+        title: getTranslation("error", language),
+        description: getTranslation("connection_error", language),
       });
     } finally {
       setIsLoading(false);
@@ -78,14 +79,13 @@ export default function Login() {
       if (response.status === 429) {
         toast({
           variant: "destructive",
-          title: "Too Many Attempts",
-          description:
-            "Too many reset attempts. Please try again in 15 minutes.",
+          title: getTranslation("too_many_attempts", language),
+          description: getTranslation("too_many_reset_attempts", language),
         });
       } else if (data.success) {
         toast({
-          title: "Password Reset",
-          description: "Your password has been reset. You can now log in.",
+          title: getTranslation("password_reset", language),
+          description: getTranslation("password_reset_success", language),
         });
         setShowForgot(false);
         setResetEmail("");
@@ -94,15 +94,16 @@ export default function Login() {
       } else {
         toast({
           variant: "destructive",
-          title: "Reset Failed",
-          description: data.error || "Could not reset password.",
+          title: getTranslation("reset_password_failed", language),
+          description:
+            data.error || getTranslation("reset_password_error", language),
         });
       }
     } catch {
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Could not connect to server",
+        title: getTranslation("error", language),
+        description: getTranslation("connection_error", language),
       });
     } finally {
       setResetLoading(false);
@@ -113,7 +114,7 @@ export default function Login() {
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
       <div className="absolute inset-0 z-0">
         <img
-          src={`${import.meta.env.BASE_URL}images/hero-bg.png`}
+          src={`${import.meta.env.BASE_URL}images/login-bg.jpg`}
           alt="Bar background"
           className="w-full h-full object-cover opacity-40 mix-blend-overlay"
         />
@@ -126,7 +127,11 @@ export default function Login() {
           type="button"
           onClick={() => setLanguage(language === "en" ? "es" : "en")}
           className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-          title={language === "en" ? "Switch to Spanish" : "Cambiar a Inglés"}
+          title={
+            language === "en"
+              ? getTranslation("switch_to_spanish", language)
+              : "Switch to English"
+          }
         >
           <Globe size={20} className="text-muted-foreground" />
         </button>
@@ -145,7 +150,7 @@ export default function Login() {
         <form onSubmit={handleAdminLogin} className="space-y-4 text-left">
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Mail size={14} /> Username
+              <Mail size={14} /> {getTranslation("switch_user", language)}
             </label>
             <input
               type="text"
@@ -158,7 +163,7 @@ export default function Login() {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Lock size={14} /> Password
+              <Lock size={14} /> {getTranslation("password", language)}
             </label>
             <input
               type="password"
@@ -176,14 +181,16 @@ export default function Login() {
               className="w-2/3 text-lg h-14"
               disabled={isLoading}
             >
-              {isLoading ? "Logging in..." : "Login"}
+              {isLoading
+                ? getTranslation("logging_in", language)
+                : getTranslation("login", language)}
             </Button>
             <button
               type="button"
               className="text-xs text-primary underline ml-2"
               onClick={() => setShowForgot(true)}
             >
-              Forgot Password?
+              {getTranslation("password_reset", language)}
             </button>
           </div>
         </form>
@@ -198,11 +205,13 @@ export default function Login() {
               >
                 ×
               </button>
-              <h2 className="text-xl font-bold mb-4">Reset Password</h2>
+              <h2 className="text-xl font-bold mb-4">
+                {getTranslation("password_reset", language)}
+              </h2>
               <form onSubmit={handleResetPassword} className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium mb-1">
-                    Email
+                    {getTranslation("email", language)}
                   </label>
                   <input
                     type="email"
@@ -213,7 +222,9 @@ export default function Login() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1">PIN</label>
+                  <label className="block text-xs font-medium mb-1">
+                    {getTranslation("pin", language)}
+                  </label>
                   <input
                     type="text"
                     required
@@ -224,7 +235,7 @@ export default function Login() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium mb-1">
-                    New Password
+                    {getTranslation("password", language)}
                   </label>
                   <input
                     type="password"
@@ -239,12 +250,15 @@ export default function Login() {
                   className="w-full h-12 mt-2"
                   disabled={resetLoading}
                 >
-                  {resetLoading ? "Resetting..." : "Reset Password"}
+                  {resetLoading
+                    ? getTranslation("logging_in", language)
+                    : getTranslation("password_reset", language)}
                 </Button>
               </form>
               <p className="text-xs text-muted-foreground mt-4">
-                Enter your email, PIN, and new password. Contact your admin if
-                you do not know your PIN.
+                {language === "en"
+                  ? "Enter your email, PIN, and new password. Contact your admin if you do not know your PIN."
+                  : "Ingrese su correo electrónico, PIN y contraseña. Póngase en contacto con su administrador si no conoce su PIN."}
               </p>
             </div>
           </div>

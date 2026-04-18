@@ -24,7 +24,6 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
       .select({
         drinkId: ordersTable.drinkId,
         drinkName: ordersTable.drinkName,
-        drinkNameEs: ordersTable.drinkNameEs,
         unitsPriced: sql<number>`COUNT(${ordersTable.id})`,
         totalRevenue: sql<number>`SUM(${ordersTable.quantity} * ${ordersTable.unitPriceMxn})`,
         averagePrice: sql<number>`AVG(${ordersTable.unitPriceMxn})`,
@@ -38,11 +37,7 @@ router.get("/analytics/sales", async (req: Request, res: Response) => {
           eq(tabsTable.status, "closed"),
         ),
       )
-      .groupBy(
-        ordersTable.drinkId,
-        ordersTable.drinkName,
-        ordersTable.drinkNameEs,
-      )
+      .groupBy(ordersTable.drinkId, ordersTable.drinkName)
       .orderBy(
         desc(
           sql<number>`SUM(${ordersTable.quantity} * ${ordersTable.unitPriceMxn})`,
@@ -185,7 +180,7 @@ router.get(
         .select({
           itemId: inventoryItemsTable.id,
           itemName: inventoryItemsTable.name,
-          itemNameEs: inventoryItemsTable.nameEs,
+          // itemNameEs removed
           baseUnit: inventoryItemsTable.baseUnit,
           currentStock: inventoryItemsTable.currentStock,
           servingSize: inventoryItemsTable.servingSize,
@@ -244,7 +239,6 @@ router.get(
         return {
           itemId: item.itemId,
           itemName: item.itemName,
-          itemNameEs: item.itemNameEs || item.itemName,
           baseUnit: item.baseUnit,
           currentStock: parseFloat(currentStock.toFixed(2)),
           dailyVelocity: parseFloat(dailyVelocity.toFixed(2)),
@@ -309,7 +303,6 @@ router.get("/analytics/voids", async (req: Request, res: Response) => {
         id: ordersTable.id,
         drinkId: ordersTable.drinkId,
         drinkName: ordersTable.drinkName,
-        drinkNameEs: ordersTable.drinkNameEs,
         quantity: ordersTable.quantity,
         unitPriceMxn: ordersTable.unitPriceMxn,
         voidReason: ordersTable.voidReason,

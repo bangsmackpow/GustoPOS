@@ -23,24 +23,33 @@ export function PinPad({
   const submittedRef = useRef(false);
   const { data: users } = useGetUsers();
   const { setActiveStaff, language, setLanguage } = usePosStore();
+  const pinRef = useRef("");
 
   const handleNumber = (num: string) => {
     if (pin.length < 4) {
-      setPin((prev) => prev + num);
+      const newPin = pin + num;
+      setPin(newPin);
+      pinRef.current = newPin;
       setError(false);
     }
   };
 
-  const handleBackspace = () => setPin((prev) => prev.slice(0, -1));
+  const handleBackspace = () => {
+    const newPin = pin.slice(0, -1);
+    setPin(newPin);
+    pinRef.current = newPin;
+  };
 
   const handleSubmit = useCallback(async () => {
-    if (pin.length !== 4 || submittedRef.current) return;
+    const currentPin = pinRef.current;
+    if (currentPin.length !== 4 || submittedRef.current) return;
     submittedRef.current = true;
     setIsSubmitting(true);
     try {
       if (!users || users.length === 0) {
         setError(true);
         setPin("");
+        pinRef.current = "";
         setIsSubmitting(false);
         submittedRef.current = false;
         return;
@@ -52,13 +61,17 @@ export function PinPad({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ pin, email }),
+          body: JSON.stringify({ pin: currentPin, email }),
         });
         const data = await res.json();
         if (data.ok) {
           const matchedUser = users.find((u) => u.id === data.user.id);
           if (matchedUser) {
             setActiveStaff(matchedUser);
+            // Set app language from user preference
+            if (matchedUser.language) {
+              setLanguage(matchedUser.language);
+            }
           }
           if (onLogin) {
             onLogin();
@@ -79,21 +92,23 @@ export function PinPad({
       if (!foundMatch) {
         setError(true);
         setPin("");
+        pinRef.current = "";
       }
     } catch {
       setError(true);
       setPin("");
+      pinRef.current = "";
     } finally {
       setIsSubmitting(false);
       submittedRef.current = false;
     }
-  }, [users, pin, setActiveStaff, onLogin, onClose]);
+  }, [users, setActiveStaff, onLogin, onClose]);
 
   React.useEffect(() => {
-    if (pin.length === 4 && !isSubmitting) {
+    if (pinRef.current.length === 4 && !isSubmitting) {
       handleSubmit();
     }
-  }, [pin, isSubmitting, handleSubmit]);
+  }, [isSubmitting, handleSubmit]);
 
   // Keyboard input support for laptop/desktop users
   useEffect(() => {
@@ -107,7 +122,7 @@ export function PinPad({
         handleBackspace();
       } else if (e.key === "Enter") {
         e.preventDefault();
-        if (pin.length === 4 && !isSubmitting) {
+        if (pinRef.current.length === 4 && !isSubmitting) {
           handleSubmit();
         }
       } else if (e.key === "Escape") {

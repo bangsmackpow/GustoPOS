@@ -17,6 +17,8 @@ import NotFound from "@/pages/not-found";
 import InventoryAudit from "@/pages/InventoryAudit";
 import InventoryVariance from "@/pages/InventoryVariance";
 import BatchAudit from "@/pages/BatchAudit";
+import AuditReport from "@/pages/AuditReport";
+import Calendar from "@/pages/Calendar";
 import { usePosStore } from "@/store";
 
 // Clear stale persisted cache and force fresh data on app start
@@ -80,8 +82,13 @@ function Router() {
         <Route path="/inventory/:id/audit" component={InventoryAudit} />
         <Route path="/inventory/variance" component={InventoryVariance} />
         <Route path="/reports" component={Reports} />
+        <Route path="/calendar" component={Calendar} />
         <Route path="/settings" component={Settings} />
         <Route path="/settings/batch-audit/:id" component={BatchAudit} />
+        <Route
+          path="/settings/batch-audit/:id/report"
+          component={AuditReport}
+        />
         <Route component={NotFound} />
       </Switch>
     </Layout>

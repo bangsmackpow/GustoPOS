@@ -184,15 +184,23 @@ export default function Tabs() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground">Sort by:</label>
+          <label className="text-xs text-muted-foreground">
+            {getTranslation("sort_by", language)}:
+          </label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as any)}
             className="bg-secondary border border-white/10 rounded-lg px-2 py-1 text-sm"
           >
-            <option value="openedAt">Opened Time</option>
-            <option value="name">Name</option>
-            <option value="totalMxn">Total</option>
+            <option value="openedAt">
+              {getTranslation("opened_time", language)}
+            </option>
+            <option value="name">
+              {getTranslation("sort_name", language)}
+            </option>
+            <option value="totalMxn">
+              {getTranslation("sort_total", language)}
+            </option>
           </select>
           <button
             type="button"
@@ -270,7 +278,9 @@ export default function Tabs() {
                         <Clock size={14} />
                         {getTranslation("opened_x_ago", language).replace(
                           "{time}",
-                          formatDistanceToNow(new Date(tab.openedAt)),
+                          formatDistanceToNow(
+                            new Date(Number(tab.openedAt) * 1000),
+                          ),
                         )}
                       </div>
                     </div>

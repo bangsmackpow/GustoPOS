@@ -50,7 +50,7 @@ function calculateDiscount(
  * GET /api/specials/active
  * Get all currently active specials
  */
-router.get("/specials/active", async (_req: Request, res: Response) => {
+router.get("/active", async (_req: Request, res: Response) => {
   try {
     const allSpecials = await db.select().from(specialsTable);
 
@@ -75,160 +75,150 @@ router.get("/specials/active", async (_req: Request, res: Response) => {
  * GET /api/specials
  * List all specials (admin only)
  */
-router.get(
-  "/specials",
-  requireRole("admin"),
-  async (_req: Request, res: Response) => {
-    try {
-      const specials = await db
-        .select()
-        .from(specialsTable)
-        .orderBy(desc(specialsTable.createdAt));
+router.get("/", requireRole("admin"), async (_req: Request, res: Response) => {
+  try {
+    const specials = await db
+      .select()
+      .from(specialsTable)
+      .orderBy(desc(specialsTable.createdAt));
 
-      const specialsWithDrinkNames = await Promise.all(
-        specials.map(async (s) => {
-          let drinkName = null;
-          if (s.drinkId) {
-            const [drink] = await db
-              .select({ name: drinksTable.name })
-              .from(drinksTable)
-              .where(eq(drinksTable.id, s.drinkId));
-            drinkName = drink?.name || null;
-          }
+    const specialsWithDrinkNames = await Promise.all(
+      specials.map(async (s) => {
+        let drinkName = null;
+        if (s.drinkId) {
+          const [drink] = await db
+            .select({ name: drinksTable.name })
+            .from(drinksTable)
+            .where(eq(drinksTable.id, s.drinkId));
+          drinkName = drink?.name || null;
+        }
 
-          return {
-            id: s.id,
-            drinkId: s.drinkId,
-            drinkName,
-            category: s.category,
-            specialType: s.specialType,
-            discountType: s.discountType,
-            discountValue: s.discountValue,
-            daysOfWeek: s.daysOfWeek,
-            startHour: s.startHour,
-            endHour: s.endHour,
-            startDate: s.startDate
-              ? new Date(s.startDate * 1000).toISOString()
-              : null,
-            endDate: s.endDate
-              ? new Date(s.endDate * 1000).toISOString()
-              : null,
-            isActive: s.isActive === 1,
-            name: s.name,
-            isCurrentlyActive: isSpecialActive(s),
-            createdAt: new Date(s.createdAt * 1000).toISOString(),
-          };
-        }),
-      );
+        return {
+          id: s.id,
+          drinkId: s.drinkId,
+          drinkName,
+          category: s.category,
+          specialType: s.specialType,
+          discountType: s.discountType,
+          discountValue: s.discountValue,
+          daysOfWeek: s.daysOfWeek,
+          startHour: s.startHour,
+          endHour: s.endHour,
+          startDate: s.startDate
+            ? new Date(s.startDate * 1000).toISOString()
+            : null,
+          endDate: s.endDate ? new Date(s.endDate * 1000).toISOString() : null,
+          isActive: s.isActive === 1,
+          name: s.name,
+          isCurrentlyActive: isSpecialActive(s),
+          createdAt: new Date(s.createdAt * 1000).toISOString(),
+        };
+      }),
+    );
 
-      res.json(specialsWithDrinkNames);
-    } catch (err: any) {
-      console.error("Error listing specials:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
-);
+    res.json(specialsWithDrinkNames);
+  } catch (err: any) {
+    console.error("Error listing specials:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * POST /api/specials
  * Create a new special (admin only)
  */
-router.post(
-  "/specials",
-  requireRole("admin"),
-  async (req: Request, res: Response) => {
-    const {
-      drinkId,
-      category,
-      specialType,
-      discountType,
-      discountValue,
-      daysOfWeek,
-      startHour,
-      endHour,
-      startDate,
-      endDate,
-      name,
-    } = req.body;
+router.post("/", requireRole("admin"), async (req: Request, res: Response) => {
+  const {
+    drinkId,
+    category,
+    specialType,
+    discountType,
+    discountValue,
+    daysOfWeek,
+    startHour,
+    endHour,
+    startDate,
+    endDate,
+    name,
+  } = req.body;
 
-    if (!discountType || !discountValue) {
-      res
-        .status(400)
-        .json({ error: "discountType and discountValue are required" });
-      return;
-    }
+  if (!discountType || !discountValue) {
+    res
+      .status(400)
+      .json({ error: "discountType and discountValue are required" });
+    return;
+  }
 
-    if (!["percentage", "fixed_amount"].includes(discountType)) {
-      res
-        .status(400)
-        .json({ error: "discountType must be 'percentage' or 'fixed_amount'" });
-      return;
-    }
+  if (!["percentage", "fixed_amount"].includes(discountType)) {
+    res
+      .status(400)
+      .json({ error: "discountType must be 'percentage' or 'fixed_amount'" });
+    return;
+  }
 
-    const validTypes = ["manual", "happy_hour", "promotional", "bundle"];
-    if (specialType && !validTypes.includes(specialType)) {
-      res.status(400).json({
-        error: `specialType must be one of: ${validTypes.join(", ")}`,
-      });
-      return;
-    }
+  const validTypes = ["manual", "happy_hour", "promotional", "bundle"];
+  if (specialType && !validTypes.includes(specialType)) {
+    res.status(400).json({
+      error: `specialType must be one of: ${validTypes.join(", ")}`,
+    });
+    return;
+  }
 
-    try {
-      const [special] = await db
-        .insert(specialsTable)
-        .values({
-          drinkId: drinkId || null,
-          category: category || null,
-          specialType: specialType || "manual",
-          discountType,
-          discountValue: Number(discountValue),
-          daysOfWeek: daysOfWeek || null,
-          startHour: startHour !== undefined ? Number(startHour) : null,
-          endHour: endHour !== undefined ? Number(endHour) : null,
-          startDate: startDate
-            ? Math.floor(new Date(startDate).getTime() / 1000)
-            : null,
-          endDate: endDate
-            ? Math.floor(new Date(endDate).getTime() / 1000)
-            : null,
-          name: name || null,
-          isActive: 1,
-        })
-        .returning();
-
-      res.json({
-        id: special.id,
-        drinkId: special.drinkId,
-        category: special.category,
-        specialType: special.specialType,
-        discountType: special.discountType,
-        discountValue: special.discountValue,
-        daysOfWeek: special.daysOfWeek,
-        startHour: special.startHour,
-        endHour: special.endHour,
-        startDate: special.startDate
-          ? new Date(special.startDate * 1000).toISOString()
+  try {
+    const [special] = await db
+      .insert(specialsTable)
+      .values({
+        drinkId: drinkId || null,
+        category: category || null,
+        specialType: specialType || "manual",
+        discountType,
+        discountValue: Number(discountValue),
+        daysOfWeek: daysOfWeek || null,
+        startHour: startHour !== undefined ? Number(startHour) : null,
+        endHour: endHour !== undefined ? Number(endHour) : null,
+        startDate: startDate
+          ? Math.floor(new Date(startDate).getTime() / 1000)
           : null,
-        endDate: special.endDate
-          ? new Date(special.endDate * 1000).toISOString()
+        endDate: endDate
+          ? Math.floor(new Date(endDate).getTime() / 1000)
           : null,
-        isActive: special.isActive === 1,
-        name: special.name,
-        createdAt: new Date(special.createdAt * 1000).toISOString(),
-      });
-    } catch (err: any) {
-      console.error("Error creating special:", err);
-      res.status(500).json({ error: err.message });
-    }
-  },
-);
+        name: name || null,
+        isActive: 1,
+      })
+      .returning();
+
+    res.json({
+      id: special.id,
+      drinkId: special.drinkId,
+      category: special.category,
+      specialType: special.specialType,
+      discountType: special.discountType,
+      discountValue: special.discountValue,
+      daysOfWeek: special.daysOfWeek,
+      startHour: special.startHour,
+      endHour: special.endHour,
+      startDate: special.startDate
+        ? new Date(special.startDate * 1000).toISOString()
+        : null,
+      endDate: special.endDate
+        ? new Date(special.endDate * 1000).toISOString()
+        : null,
+      isActive: special.isActive === 1,
+      name: special.name,
+      createdAt: new Date(special.createdAt * 1000).toISOString(),
+    });
+  } catch (err: any) {
+    console.error("Error creating special:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * PATCH /api/specials/:id
  * Update a special (admin only)
  */
 router.patch(
-  "/specials/:id",
+  "/:id",
   requireRole("admin"),
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
@@ -328,7 +318,7 @@ router.patch(
  * Delete a special (admin only)
  */
 router.delete(
-  "/specials/:id",
+  "/:id",
   requireRole("admin"),
   async (req: Request, res: Response) => {
     const id = req.params.id as string;

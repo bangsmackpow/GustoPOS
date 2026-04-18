@@ -15,7 +15,7 @@ import {
 interface SessionItem {
   id: string;
   name: string;
-  nameEs: string;
+
   type: string;
   subtype: string;
   currentBulk: number;
@@ -119,10 +119,7 @@ export default function BatchAudit() {
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
       const matchesSearch =
-        !search ||
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        (item.nameEs &&
-          item.nameEs.toLowerCase().includes(search.toLowerCase()));
+        !search || item.name.toLowerCase().includes(search.toLowerCase());
       return matchesSearch;
     });
   }, [items, search]);
@@ -427,11 +424,6 @@ export default function BatchAudit() {
                     >
                       <td className="p-3">
                         <div className="font-medium">{item.name}</div>
-                        {item.nameEs && (
-                          <div className="text-xs text-muted-foreground">
-                            {item.nameEs}
-                          </div>
-                        )}
                       </td>
                       <td className="p-3 text-sm">
                         {isPool

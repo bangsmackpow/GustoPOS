@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   useGetActiveShift,
   useGetTabs,
@@ -27,10 +27,16 @@ import {
   MapPin,
   X,
   ChevronDown,
+  ChevronUp,
+  Clock,
+  Beer,
+  Martini,
 } from "lucide-react";
 import { format } from "date-fns";
 import { es as esLocale } from "date-fns/locale/es";
 import { Link } from "wouter";
+import { CashboxVerificationModal } from "@/components/CashboxVerificationModal";
+import { StaffClockInWidget } from "@/components/StaffClockInWidget";
 
 const IMPACT_COLORS = {
   high: "bg-primary/20 text-primary",
@@ -50,13 +56,28 @@ export default function Dashboard() {
   const { data: activeShift } = useGetActiveShift();
   const { data: tabs } = useGetTabs({ status: "open" });
   const { data: ingredients } = useGetIngredients();
-  const { data: rushes } = useGetRushes();
+  const { data: rushes, refetch: refetchRushes } = useGetRushes();
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      refetchRushes();
+    }, 60000);
+
+    const handleFocus = () => refetchRushes();
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [refetchRushes]);
 
   const startShift = useStartShiftMutation();
   const closeShift = useCloseShiftMutation();
   const [closeError, setCloseError] = useState<string | null>(null);
   const [showCloseSummary, setShowCloseSummary] = useState(false);
   const [forceClose, setForceClose] = useState(false);
+  const [showCashboxModal, setShowCashboxModal] = useState(false);
 
   const lowStock =
     ingredients?.filter((i) => i.currentStock <= i.lowStockThreshold) || [];
@@ -68,9 +89,9 @@ export default function Dashboard() {
   const [rushFilter, setRushFilter] = useState<
     "today" | "tomorrow" | "week" | "all"
   >("week");
-  const [rushesCollapsed, setRushesCollapsed] = useState(false);
+  const [tabsCollapsed, setTabsCollapsed] = useState(true);
+  const [rushesCollapsed, setRushesCollapsed] = useState(true);
 
-  // Filter upcoming rushes based on selected time range
   const upcomingRushes = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -99,9 +120,17 @@ export default function Dashboard() {
         }
       }) || [];
 
-    // Default to showing 3 events, expand to show all
     return filtered;
   }, [rushes, rushFilter]);
+
+  const sortedTabs = useMemo(() => {
+    if (!tabs) return [];
+    return [...tabs].sort(
+      (a, b) => new Date(b.openedAt).getTime() - new Date(a.openedAt).getTime(),
+    );
+  }, [tabs]);
+
+  const displayedTabs = tabsCollapsed ? sortedTabs.slice(0, 5) : sortedTabs;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -129,70 +158,168 @@ export default function Dashboard() {
             {getTranslation("close_shift", language)}
           </Button>
         ) : (
-          <Button
-            size="lg"
-            className="rounded-2xl h-14 px-8 shadow-lg shadow-primary/20"
-            onClick={() =>
-              startShift.mutate({
-                data: {
-                  name: `Shift ${format(new Date(), "MMM d, h:mm a", { locale: language === "es" ? esLocale : undefined })}`,
-                  openedByUserId: activeStaff?.id || "",
-                },
-              })
-            }
-            disabled={!activeStaff || startShift.isPending}
-          >
-            <Play className="mr-2" size={20} />
-            {getTranslation("start_shift", language)}
-          </Button>
+          <>
+            <Button
+              size="lg"
+              className="rounded-2xl h-14 px-8 shadow-lg shadow-primary/20"
+              onClick={() => setShowCashboxModal(true)}
+              disabled={!activeStaff}
+            >
+              <Play className="mr-2" size={20} />
+              {getTranslation("start_shift", language)}
+            </Button>
+            <CashboxVerificationModal
+              isOpen={showCashboxModal}
+              onClose={() => setShowCashboxModal(false)}
+              onConfirm={(expectedCashMxn) => {
+                setShowCashboxModal(false);
+                startShift.mutate({
+                  data: {
+                    name: `Shift ${format(new Date(), "MMM d, h:mm a", { locale: language === "es" ? esLocale : undefined })}`,
+                    openedByUserId: activeStaff?.id || "",
+                    expectedCashMxn,
+                  },
+                });
+              }}
+              isLoading={startShift.isPending}
+            />
+          </>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Quick Stats */}
-        <div className="glass p-6 rounded-3xl border border-white/5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary">
-            <Receipt size={24} />
+      {/* Active Employees Row - 2 columns wide */}
+      {activeShiftData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="lg:col-span-2">
+            <StaffClockInWidget shiftId={activeShiftData.id} />
+          </div>
+        </div>
+      )}
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="glass p-4 rounded-2xl border border-white/5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+            <Receipt size={20} />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {getTranslation("open_tabs", language)}
             </p>
-            <p className="text-2xl font-bold">{openTabsCount}</p>
+            <p className="text-xl font-bold">{openTabsCount}</p>
           </div>
         </div>
 
-        <div className="glass p-6 rounded-3xl border border-white/5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <TrendingUp size={24} />
+        <div className="glass p-4 rounded-2xl border border-white/5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <TrendingUp size={20} />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {getTranslation("running_sales", language)}
             </p>
-            <p className="text-2xl font-bold">{formatMoney(totalSales)}</p>
+            <p className="text-xl font-bold">{formatMoney(totalSales)}</p>
           </div>
         </div>
 
-        <div className="glass p-6 rounded-3xl border border-white/5 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400">
-            <AlertTriangle size={24} />
+        <div className="glass p-4 rounded-2xl border border-white/5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400">
+            <AlertTriangle size={20} />
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               {getTranslation("low_stock_alerts", language)}
             </p>
-            <p className="text-2xl font-bold">{lowStock.length}</p>
+            <p className="text-xl font-bold">{lowStock.length}</p>
+          </div>
+        </div>
+
+        <div className="glass p-4 rounded-2xl border border-white/5 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+            <Zap size={20} />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">
+              {language === "es" ? "Eventos" : "Events"}
+            </p>
+            <p className="text-xl font-bold">{upcomingRushes.length}</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Local Events Section (Dynamic Rushes) */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-display font-bold flex items-center gap-2">
-              <Zap size={20} className="text-primary" />
+      {/* Three-column layout: Open Tabs, Rushes, Specials */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Open Tabs - Collapsible */}
+        <div className="glass rounded-3xl overflow-hidden border border-white/5">
+          <div className="flex items-center justify-between p-4 border-b border-white/5">
+            <h3 className="text-lg font-display font-bold flex items-center gap-2">
+              <Receipt size={18} className="text-primary" />
+              {getTranslation("open_tabs", language)}
+            </h3>
+            <button
+              onClick={() => setTabsCollapsed(!tabsCollapsed)}
+              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+              title={tabsCollapsed ? "Expand" : "Collapse"}
+            >
+              {tabsCollapsed ? (
+                <ChevronDown size={18} />
+              ) : (
+                <ChevronUp size={18} />
+              )}
+            </button>
+          </div>
+          <div className="divide-y divide-white/5">
+            {displayedTabs.length > 0 ? (
+              displayedTabs.map((tab) => (
+                <Link key={tab.id} href={`/tab/${tab.id}`}>
+                  <div className="p-4 hover:bg-white/5 transition-colors cursor-pointer">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="font-medium">
+                          {tab.nickname || `Tab #${tab.id.slice(0, 6)}`}
+                        </span>
+                        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                          <Clock size={12} />
+                          {format(new Date(tab.openedAt), "h:mm a")}
+                        </p>
+                      </div>
+                      <span className="text-primary font-bold">
+                        {formatMoney(Number(tab.totalMxn))}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <div className="p-8 text-center text-muted-foreground">
+                <Receipt size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">
+                  {language === "es" ? "Sin pestañas abiertas" : "No open tabs"}
+                </p>
+              </div>
+            )}
+          </div>
+          {sortedTabs.length > 5 && (
+            <div className="p-3 border-t border-white/5">
+              <button
+                onClick={() => setTabsCollapsed(!tabsCollapsed)}
+                className="w-full text-center text-sm text-primary hover:text-primary/80 transition-colors py-1"
+              >
+                {tabsCollapsed
+                  ? `${language === "es" ? `Ver más (${sortedTabs.length - 5})` : `Show more (${sortedTabs.length - 5})`}`
+                  : language === "es"
+                    ? "Ver menos"
+                    : "Show less"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Rushes - Collapsible */}
+        <div className="glass rounded-3xl overflow-hidden border border-white/5">
+          <div className="flex items-center justify-between p-4 border-b border-white/5">
+            <h3 className="text-lg font-display font-bold flex items-center gap-2">
+              <Zap size={18} className="text-primary" />
               {getTranslation("pv_rushes", language)}
             </h3>
             <button
@@ -200,20 +327,21 @@ export default function Dashboard() {
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               title={rushesCollapsed ? "Expand" : "Collapse"}
             >
-              <ChevronDown
-                size={18}
-                className={`transition-transform ${rushesCollapsed ? "rotate-180" : ""}`}
-              />
+              {rushesCollapsed ? (
+                <ChevronDown size={18} />
+              ) : (
+                <ChevronUp size={18} />
+              )}
             </button>
           </div>
 
           {/* Filter Buttons */}
-          <div className="flex gap-2 flex-wrap">
-            {(["today", "tomorrow", "week", "all"] as const).map((filter) => (
+          <div className="px-4 pt-2 flex gap-1 flex-wrap">
+            {(["today", "tomorrow", "week"] as const).map((filter) => (
               <button
                 key={filter}
                 onClick={() => setRushFilter(filter)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${
                   rushFilter === filter
                     ? "bg-primary text-primary-foreground"
                     : "bg-secondary border border-white/10 hover:bg-white/5"
@@ -227,18 +355,14 @@ export default function Dashboard() {
                     ? language === "es"
                       ? "Mañana"
                       : "Tomorrow"
-                    : filter === "week"
-                      ? language === "es"
-                        ? "Esta Semana"
-                        : "This Week"
-                      : language === "es"
-                        ? "Todos"
-                        : "All"}
+                    : language === "es"
+                      ? "Semana"
+                      : "Week"}
               </button>
             ))}
           </div>
 
-          <div className="glass rounded-3xl overflow-hidden divide-y divide-white/5 border border-white/5 min-h-[300px]">
+          <div className="divide-y divide-white/5">
             {(rushesCollapsed
               ? upcomingRushes.slice(0, 3)
               : upcomingRushes
@@ -248,111 +372,124 @@ export default function Dashboard() {
               return (
                 <div
                   key={rush.id}
-                  className="p-5 hover:bg-white/5 transition-colors flex items-center gap-4"
+                  className="p-4 hover:bg-white/5 transition-colors flex items-center gap-3"
                 >
                   <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center ${IMPACT_COLORS[rush.impact as keyof typeof IMPACT_COLORS] || IMPACT_COLORS.low}`}
+                    className={`w-8 h-8 rounded-lg flex items-center justify-center ${IMPACT_COLORS[rush.impact as keyof typeof IMPACT_COLORS] || IMPACT_COLORS.low}`}
                   >
-                    <Icon size={20} />
+                    <Icon size={16} />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between items-start">
-                      <h4 className="font-bold text-sm">{rush.title}</h4>
-                      <span
-                        className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${rush.impact === "high" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
-                      >
-                        {rush.impact} {getTranslation("impact", language)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                      <span className="opacity-60 uppercase font-bold tracking-tighter">
-                        {rush.type}
-                      </span>{" "}
-                      • {format(new Date(rush.startTime), "MMM d, h:mm a")}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-bold text-sm truncate">{rush.title}</h4>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(rush.startTime), "MMM d, h:mm a")}
                     </p>
                   </div>
+                  <span
+                    className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${rush.impact === "high" ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"}`}
+                  >
+                    {rush.impact}
+                  </span>
                 </div>
               );
             })}
 
-            {/* Show More / Show Less Button */}
-            {upcomingRushes.length > 3 && (
-              <div className="p-3 border-t border-white/5">
-                <button
-                  onClick={() => setRushesCollapsed(!rushesCollapsed)}
-                  className="w-full text-center text-sm text-primary hover:text-primary/80 transition-colors py-2"
-                >
-                  {rushesCollapsed
-                    ? language === "es"
-                      ? `Mostrar más (${upcomingRushes.length - 3})`
-                      : `Show More (${upcomingRushes.length - 3})`
-                    : language === "es"
-                      ? "Ver menos"
-                      : "Show Less"}
-                </button>
-              </div>
-            )}
-
             {upcomingRushes.length === 0 && (
-              <div className="h-full flex flex-col items-center justify-center py-12 text-muted-foreground italic">
-                <Calendar size={48} className="mb-4 opacity-20" />
-                <p>
+              <div className="p-6 text-center text-muted-foreground">
+                <Calendar size={24} className="mx-auto mb-2 opacity-30" />
+                <p className="text-xs">
                   {rushFilter === "today"
                     ? language === "es"
-                      ? "No hay eventos hoy"
+                      ? "Sin eventos hoy"
                       : "No events today"
                     : language === "es"
-                      ? "No hay eventos programados"
+                      ? "Sin eventos"
                       : "No upcoming events"}
                 </p>
-                <Link href="/settings">
-                  <Button
-                    variant="link"
-                    size="sm"
-                    className="text-primary mt-2"
-                  >
-                    {getTranslation("manage_rushes", language)} →
-                  </Button>
-                </Link>
               </div>
             )}
           </div>
+
+          {upcomingRushes.length > 3 && (
+            <div className="p-3 border-t border-white/5">
+              <button
+                onClick={() => setRushesCollapsed(!rushesCollapsed)}
+                className="w-full text-center text-sm text-primary hover:text-primary/80 transition-colors py-1"
+              >
+                {rushesCollapsed
+                  ? `${language === "es" ? `Ver más (${upcomingRushes.length - 3})` : `Show more (${upcomingRushes.length - 3})`}`
+                  : language === "es"
+                    ? "Ver menos"
+                    : "Show less"}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Stock Alerts */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-display font-bold flex items-center gap-2">
-            <Package size={20} className="text-primary" />{" "}
-            {getTranslation("low_stock", language)}
-          </h3>
-          <div className="glass rounded-3xl p-6 border border-white/5 min-h-[300px]">
+        {/* Specials - Collapsible */}
+        <div className="glass rounded-3xl overflow-hidden border border-white/5">
+          <div className="flex items-center justify-between p-4 border-b border-white/5">
+            <h3 className="text-lg font-display font-bold flex items-center gap-2">
+              <Martini size={18} className="text-primary" />
+              {language === "es" ? "Especiales" : "Specials"}
+            </h3>
+            <Link href="/specials">
+              <Button variant="ghost" size="sm">
+                {language === "es" ? "Ver todo" : "View all"}
+              </Button>
+            </Link>
+          </div>
+          <div className="p-6 text-center text-muted-foreground">
+            <Martini size={24} className="mx-auto mb-2 opacity-30" />
+            <p className="text-xs">
+              {language === "es"
+                ? "Ver specials para ofertas activas"
+                : "Check specials page for active deals"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Low Stock Alerts - 2 columns wide below */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="lg:col-span-2 glass rounded-3xl overflow-hidden border border-white/5">
+          <div className="flex items-center justify-between p-4 border-b border-white/5">
+            <h3 className="text-lg font-display font-bold flex items-center gap-2">
+              <Package size={18} className="text-amber-400" />
+              {getTranslation("low_stock", language)}
+            </h3>
+            <Link href="/inventory">
+              <Button variant="ghost" size="sm">
+                {getTranslation("manage_inventory", language)} →
+              </Button>
+            </Link>
+          </div>
+          <div className="divide-y divide-white/5">
             {lowStock.length > 0 ? (
-              <div className="space-y-4">
-                {lowStock.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex justify-between items-center p-3 rounded-2xl bg-white/5 border border-white/5"
-                  >
-                    <span className="font-medium">
-                      {language === "es" && item.nameEs
-                        ? item.nameEs
-                        : item.name}
-                    </span>
-                    <span className="text-primary font-bold">
-                      {item.currentStock} {item.baseUnit}{" "}
-                      {getTranslation("left", language)}
-                    </span>
+              lowStock.slice(0, 10).map((item) => (
+                <div
+                  key={item.id}
+                  className="flex justify-between items-center p-4 hover:bg-white/5 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {item.type === "spirit" || item.type === "mixer" ? (
+                      <Martini size={16} className="text-muted-foreground" />
+                    ) : item.type === "beer" ? (
+                      <Beer size={16} className="text-muted-foreground" />
+                    ) : (
+                      <Package size={16} className="text-muted-foreground" />
+                    )}
+                    <span className="font-medium">{item.name}</span>
                   </div>
-                ))}
-                <Link href="/inventory">
-                  <Button variant="link" className="w-full text-primary">
-                    {getTranslation("manage_inventory", language)} →
-                  </Button>
-                </Link>
-              </div>
+                  <span className="text-amber-400 font-bold">
+                    {item.currentStock} {item.baseUnit}{" "}
+                    {getTranslation("left", language)}
+                  </span>
+                </div>
+              ))
             ) : (
-              <div className="h-full flex flex-col items-center justify-center py-12 text-muted-foreground italic">
-                <Package size={48} className="mb-4 opacity-20" />
+              <div className="p-8 text-center text-muted-foreground">
+                <Package size={32} className="mx-auto mb-2 opacity-30" />
                 <p>{getTranslation("all_good", language)}</p>
               </div>
             )}

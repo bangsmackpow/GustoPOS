@@ -39,7 +39,6 @@ async function getDrinksBatched(drinkIds?: string[]) {
     Array<{
       ingredientId: string | null;
       ingredientName: string;
-      ingredientNameEs: string | null;
       amountInBaseUnit: number;
       costContribution: number;
     }>
@@ -61,7 +60,6 @@ async function getDrinksBatched(drinkIds?: string[]) {
     drinkRecipeMap.get(ri.drinkId)!.push({
       ingredientId: ri.ingredientId,
       ingredientName: inv?.name ?? "Unknown",
-      ingredientNameEs: inv?.nameEs ?? null,
       amountInBaseUnit,
       costContribution,
     });
@@ -82,9 +80,7 @@ async function getDrinksBatched(drinkIds?: string[]) {
     return {
       id: drink.id,
       name: drink.name,
-      nameEs: drink.nameEs ?? null,
       description: drink.description ?? null,
-      descriptionEs: drink.descriptionEs ?? null,
       category: drink.category,
       costPerDrink,
       suggestedPrice,
@@ -124,9 +120,7 @@ router.post("/drinks", async (req: Request, res: Response) => {
     }
     const {
       name,
-      nameEs,
       description,
-      descriptionEs,
       category,
       markupFactor,
       actualPrice,
@@ -147,17 +141,57 @@ router.post("/drinks", async (req: Request, res: Response) => {
       .insert(drinksTable)
       .values({
         name,
-        nameEs: nameEs ?? null,
         description: description ?? null,
-        descriptionEs: descriptionEs ?? null,
         category: category as any,
         markupFactor: Number(markupFactor ?? 3.0),
         actualPrice: actualPrice != null ? Number(actualPrice) : null,
+        priceSource: actualPrice != null ? "manual" : "auto",
         isAvailable: isAvailable !== undefined ? (isAvailable ? 1 : 0) : 1,
       } as typeof drinksTable.$inferInsert)
       .returning();
 
+    // Calculate menuPrice from ingredients
+    let menuPrice = 0;
     if (recipe && recipe.length > 0) {
+      // Get ingredient prices
+      const ingredientIds = recipe.map((r: any) => r.ingredientId);
+      const ingredients = await db
+        .select({
+          id: inventoryItemsTable.id,
+          productPrice: inventoryItemsTable.productPrice,
+        })
+        .from(inventoryItemsTable)
+        .where(eq(inventoryItemsTable.id, ingredientIds[0])); // Simplified - get all
+
+      const priceMap = new Map(
+        ingredients.map((i) => [i.id, i.productPrice || 0]),
+      );
+
+      // Calculate menuPrice = sum of ingredient productPrices
+      menuPrice = recipe.reduce((sum: number, r: any) => {
+        return sum + (r.productPrice || priceMap.get(r.ingredientId) || 0);
+      }, 0);
+
+      // If no manual price provided, set actualPrice based on ingredient count
+      if (!actualPrice) {
+        if (recipe.length === 1) {
+          // Single ingredient: use ingredient's productPrice
+          const ing = ingredients.find((i) => i.id === recipe[0].ingredientId);
+          drink.actualPrice = ing?.productPrice || 0;
+        } else {
+          // Multi-ingredient: use calculated menuPrice
+          drink.actualPrice = menuPrice;
+        }
+      }
+      drink.menuPrice = menuPrice;
+
+      // Update drink with calculated prices
+      await db
+        .update(drinksTable)
+        .set({ actualPrice: drink.actualPrice, menuPrice: menuPrice })
+        .where(eq(drinksTable.id, drink.id));
+
+      // Save recipe with ingredient productPrices
       await db.insert(recipeIngredientsTable).values(
         recipe.map(
           (r: any) =>
@@ -165,6 +199,9 @@ router.post("/drinks", async (req: Request, res: Response) => {
               drinkId: drink.id,
               ingredientId: r.ingredientId,
               amountInBaseUnit: Number(r.amountInBaseUnit),
+              isDefault: r.isDefault ? 1 : 0,
+              defaultCost: r.defaultCost ? Number(r.defaultCost) : null,
+              productPrice: r.productPrice || priceMap.get(r.ingredientId) || 0,
             }) as typeof recipeIngredientsTable.$inferInsert,
         ),
       );
@@ -204,17 +241,16 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
       updatedAt: Math.floor(Date.now() / 1000),
     };
     if (data.name != null) updateData.name = data.name;
-    if (data.nameEs !== undefined) updateData.nameEs = data.nameEs;
     if (data.description !== undefined)
       updateData.description = data.description;
-    if (data.descriptionEs !== undefined)
-      updateData.descriptionEs = data.descriptionEs;
     if (data.category != null) updateData.category = data.category as any;
     if (data.markupFactor != null)
       updateData.markupFactor = Number(data.markupFactor);
-    if (data.actualPrice !== undefined)
+    if (data.actualPrice !== undefined) {
       updateData.actualPrice =
         data.actualPrice != null ? Number(data.actualPrice) : undefined;
+      updateData.priceSource = data.actualPrice != null ? "manual" : "auto";
+    }
     if (data.isAvailable != null) updateData.isAvailable = data.isAvailable;
 
     // Validate isOnMenu requires recipe
@@ -234,12 +270,10 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
 
         const isInventorySingle = existing.sourceType === "inventory_single";
         if (recipeRows.length === 0 && !isInventorySingle) {
-          res
-            .status(400)
-            .json({
-              error:
-                "Cannot enable menu: recipe must have at least one ingredient",
-            });
+          res.status(400).json({
+            error:
+              "Cannot enable menu: recipe must have at least one ingredient",
+          });
           return;
         }
       }
@@ -274,6 +308,41 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
         .delete(recipeIngredientsTable)
         .where(eq(recipeIngredientsTable.drinkId, req.params.id as string));
       if (data.recipe.length > 0) {
+        // Calculate menuPrice from recipe
+        const ingredientIds = data.recipe.map((r: any) => r.ingredientId);
+        const ingredients = await db
+          .select({
+            id: inventoryItemsTable.id,
+            productPrice: inventoryItemsTable.productPrice,
+          })
+          .from(inventoryItemsTable)
+          .where(eq(inventoryItemsTable.id, ingredientIds[0]));
+
+        const priceMap = new Map(
+          ingredients.map((i) => [i.id, i.productPrice || 0]),
+        );
+
+        const menuPrice = data.recipe.reduce((sum: number, r: any) => {
+          return sum + (r.productPrice || priceMap.get(r.ingredientId) || 0);
+        }, 0);
+
+        // Update menuPrice
+        if (drink.priceSource === "auto") {
+          const newActualPrice =
+            data.recipe.length === 1
+              ? priceMap.get(data.recipe[0].ingredientId) || 0
+              : menuPrice;
+          await db
+            .update(drinksTable)
+            .set({ actualPrice: newActualPrice, menuPrice })
+            .where(eq(drinksTable.id, drink.id));
+        } else {
+          await db
+            .update(drinksTable)
+            .set({ menuPrice })
+            .where(eq(drinksTable.id, drink.id));
+        }
+
         await db.insert(recipeIngredientsTable).values(
           data.recipe.map(
             (r: any) =>
@@ -281,6 +350,10 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
                 drinkId: drink.id,
                 ingredientId: r.ingredientId,
                 amountInBaseUnit: Number(r.amountInBaseUnit),
+                isDefault: r.isDefault ? 1 : 0,
+                defaultCost: r.defaultCost ? Number(r.defaultCost) : null,
+                productPrice:
+                  r.productPrice || priceMap.get(r.ingredientId) || 0,
               }) as typeof recipeIngredientsTable.$inferInsert,
           ),
         );

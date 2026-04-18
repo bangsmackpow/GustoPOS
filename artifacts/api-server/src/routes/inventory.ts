@@ -121,7 +121,7 @@ router.post("/items", async (req: Request, res: Response) => {
     };
 
     // Only add optional fields if they have values (safer for migration compatibility)
-    if (data.nameEs) insertValues.nameEs = data.nameEs;
+
     if (data.subtype) insertValues.subtype = data.subtype;
     if (data.baseUnit) insertValues.baseUnit = data.baseUnit;
     if (data.baseUnitAmount) insertValues.baseUnitAmount = baseUnitAmount;
@@ -147,10 +147,10 @@ router.post("/items", async (req: Request, res: Response) => {
       insertValues.trackingMode = data.trackingMode;
     if (data.isOnMenu !== undefined)
       insertValues.isOnMenu = data.isOnMenu ? 1 : 0;
-    if (data.sellSingleServing !== undefined)
-      insertValues.sellSingleServing = data.sellSingleServing ? 1 : 0;
-    if (data.singleServingPrice !== undefined)
-      insertValues.singleServingPrice = Number(data.singleServingPrice);
+    if (data.productPrice !== undefined)
+      insertValues.productPrice = Number(data.productPrice);
+    if (data.menuPricePerServing !== undefined)
+      insertValues.menuPricePerServing = Number(data.menuPricePerServing);
     if (data.parentItemId) insertValues.parentItemId = data.parentItemId;
     if (data.alcoholDensity !== undefined)
       insertValues.alcoholDensity = Number(data.alcoholDensity);
@@ -164,49 +164,40 @@ router.post("/items", async (req: Request, res: Response) => {
 
     console.log("[POST /items] Successfully created item:", item.id);
 
-    // Create linked drinks if flagged
+    // Map inventory type to drink category
+    const getCategoryForType = (itemType: string, itemName: string): string => {
+      const nameLower = itemName.toLowerCase();
+      if (itemType === "spirit") {
+        if (nameLower.includes("vino") || nameLower.includes("wine") || nameLower.includes("champagne") || nameLower.includes("espumoso")) {
+          return "wine";
+        }
+        return "shot";
+      }
+      if (itemType === "mixer") return "beverage";
+      if (itemType === "beer") return "beer";
+      if (itemType === "merch") return "other";
+      return "other";
+    };
+
+    // Always create drink from inventory if on menu (replaces sellSingleServing)
     if (item.isOnMenu) {
+      const drinkCategory = getCategoryForType(item.type, item.name);
       const drinkData = {
-        name: item.nameEs || item.name,
-        nameEs: item.nameEs ?? null,
-        category: item.type,
-        actualPrice: 0,
+        name: item.name,
+        category: drinkCategory,
+        actualPrice: item.menuPricePerServing || 0,
+        menuPrice: item.menuPricePerServing || 0,
+        priceSource: "auto",
+        sourceType: "inventory_single",
         isAvailable: 1,
         isOnMenu: 1,
-        sourceType: "inventory_single",
       };
       await db.insert(drinksTable).values({ id: item.id, ...drinkData });
-
-      // Auto-create recipe ingredient linking to the inventory item itself
-      const servingSize = item.servingSize || 44.36; // Default 1.5oz
       await db.insert(recipeIngredientsTable).values({
         drinkId: item.id,
         ingredientId: item.id,
-        amountInBaseUnit: servingSize,
-      });
-    }
-
-    if (item.sellSingleServing) {
-      const singleDrinkId = `${item.id}-single`;
-      const singleDrinkData = {
-        name: `${item.nameEs || item.name} (Shot)`,
-        nameEs: item.nameEs ? `${item.nameEs} (Trago)` : null,
-        category: item.type,
-        actualPrice: item.singleServingPrice || 0,
-        isAvailable: 1,
-        isOnMenu: 1,
-        sourceType: "inventory_single",
-      };
-      await db
-        .insert(drinksTable)
-        .values({ id: singleDrinkId, ...singleDrinkData });
-
-      // Auto-create recipe for single serving
-      const servingSize = item.servingSize || 44.36;
-      await db.insert(recipeIngredientsTable).values({
-        drinkId: singleDrinkId,
-        ingredientId: item.id,
-        amountInBaseUnit: servingSize,
+        amountInBaseUnit: item.servingSize || 44.36,
+        productPrice: item.menuPricePerServing || 0,
       });
     }
 
@@ -236,7 +227,24 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
         .where(eq(inventoryItemsTable.id, id))
         .returning();
 
-      if (!item) return res.status(404).json({ error: "Item not found" });
+      if (!item) {
+        return res.status(404).json({ error: "Item not found" });
+      }
+
+      // Map inventory type to drink category
+      const getCategoryForType = (itemType: string, itemName: string): string => {
+        const nameLower = itemName.toLowerCase();
+        if (itemType === "spirit") {
+          if (nameLower.includes("vino") || nameLower.includes("wine") || nameLower.includes("champagne") || nameLower.includes("espumoso")) {
+            return "wine";
+          }
+          return "shot";
+        }
+        if (itemType === "mixer") return "beverage";
+        if (itemType === "beer") return "beer";
+        if (itemType === "merch") return "other";
+        return "other";
+      };
 
       // Create or update linked drink
       if (data.isOnMenu) {
@@ -246,11 +254,14 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
           .where(eq(drinksTable.id, id))
           .limit(1);
 
+        const drinkCategory = getCategoryForType(item.type, item.name);
         const drinkData = {
-          name: item.nameEs || item.name,
-          nameEs: item.nameEs ?? null,
-          category: item.type,
+          name: item.name,
+          category: drinkCategory,
           actualPrice: 0,
+          menuPrice: 0,
+          priceSource: "auto",
+          sourceType: "inventory_single",
           isAvailable: 1,
           isOnMenu: 1,
         };
@@ -307,7 +318,7 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
 
     // Map known fields
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.nameEs !== undefined) updateData.nameEs = data.nameEs || null;
+
     if (data.type !== undefined) updateData.type = data.type;
     if (data.subtype !== undefined) updateData.subtype = data.subtype || null;
     if (data.baseUnit !== undefined) updateData.baseUnit = data.baseUnit;
@@ -345,11 +356,13 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       updateData.trackingMode = data.trackingMode;
     if (data.isOnMenu !== undefined)
       updateData.isOnMenu = data.isOnMenu ? 1 : 0;
-    if (data.sellSingleServing !== undefined)
-      updateData.sellSingleServing = data.sellSingleServing ? 1 : 0;
-    if (data.singleServingPrice !== undefined)
-      updateData.singleServingPrice = data.singleServingPrice
-        ? Number(data.singleServingPrice)
+    if (data.productPrice !== undefined)
+      updateData.productPrice = data.productPrice
+        ? Number(data.productPrice)
+        : null;
+    if (data.menuPricePerServing !== undefined)
+      updateData.menuPricePerServing = data.menuPricePerServing
+        ? Number(data.menuPricePerServing)
         : null;
     if (data.parentItemId !== undefined)
       updateData.parentItemId = data.parentItemId || null;
@@ -367,7 +380,9 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       .where(eq(inventoryItemsTable.id, id))
       .returning();
 
-    if (!item) return res.status(404).json({ error: "Item not found" });
+    if (!item) {
+      return res.status(404).json({ error: "Item not found" });
+    }
 
     console.log("[PATCH /items/:id] Successfully updated item:", item.id);
 
@@ -400,8 +415,8 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
           .limit(1);
 
         const drinkData = {
-          name: item.nameEs || item.name,
-          nameEs: item.nameEs ?? null,
+          name: item.name,
+
           category: item.type,
           actualPrice: 0,
           isAvailable: 1,
@@ -421,49 +436,42 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       }
     }
 
-    // Handle sellSingleServing setup in full update
-    if (
-      data.sellSingleServing !== undefined ||
-      data.singleServingPrice !== undefined
-    ) {
-      const singleDrinkId = `${item.id}-single`;
-      if (item.sellSingleServing) {
-        const [existingSingleDrink] = await db
-          .select()
-          .from(drinksTable)
-          .where(eq(drinksTable.id, singleDrinkId))
-          .limit(1);
+    // Handle productPrice changes - update linked drink
+    if (data.productPrice !== undefined && item.isOnMenu) {
+      const [existingDrink] = await db
+        .select()
+        .from(drinksTable)
+        .where(eq(drinksTable.id, item.id))
+        .limit(1);
 
-        const singleDrinkData = {
-          name: `${item.nameEs || item.name} (Shot)`,
-          nameEs: item.nameEs ? `${item.nameEs} (Trago)` : null,
-          category: item.type,
-          actualPrice: item.singleServingPrice || 0,
-          isAvailable: 1,
-          isOnMenu: 1,
-          sourceType: "inventory_single",
-        };
+      if (existingDrink) {
+        const calculatedMenuPrice = data.productPrice || 0;
+        const newActualPrice =
+          existingDrink.priceSource === "manual"
+            ? existingDrink.actualPrice
+            : calculatedMenuPrice;
 
-        if (existingSingleDrink) {
-          await db
-            .update(drinksTable)
-            .set({
-              ...singleDrinkData,
-              updatedAt: Math.floor(Date.now() / 1000),
-            })
-            .where(eq(drinksTable.id, existingSingleDrink.id));
-        } else {
-          await db
-            .insert(drinksTable)
-            .values({ id: singleDrinkId, ...singleDrinkData });
-        }
-      } else {
-        await db.delete(drinksTable).where(eq(drinksTable.id, singleDrinkId));
+        await db
+          .update(drinksTable)
+          .set({
+            actualPrice: newActualPrice,
+            menuPrice: calculatedMenuPrice,
+            updatedAt: Math.floor(Date.now() / 1000),
+          })
+          .where(eq(drinksTable.id, existingDrink.id));
+
+        // Also update recipe ingredient productPrice
+        await db
+          .update(recipeIngredientsTable)
+          .set({ productPrice: data.productPrice })
+          .where(eq(recipeIngredientsTable.drinkId, existingDrink.id));
       }
     }
 
-    return res.json(item);
+    res.json(item);
+    return;
   } catch (err: any) {
+    console.error("[PATCH /items/:id] Error:", err.message);
     return res.status(400).json({ error: err.message });
   }
 });
@@ -640,6 +648,28 @@ router.post("/items/:id/audit", async (req: Request, res: Response) => {
     const variancePercent =
       expectedTotal > 0 ? (variance / expectedTotal) * 100 : 0;
 
+    // AUDIT_PROTOCOL Section 5: Require variance reason when |variance%| > 5%
+    const SIGNIFICANT_VARIANCE_THRESHOLD = 5;
+    if (
+      Math.abs(variancePercent) > SIGNIFICANT_VARIANCE_THRESHOLD &&
+      !varianceReason
+    ) {
+      return res.status(400).json({
+        error: `Variance of ${variancePercent.toFixed(2)}% exceeds significant threshold (${SIGNIFICANT_VARIANCE_THRESHOLD}%). Please provide a variance reason.`,
+        code: "VARIANCE_REASON_REQUIRED",
+        variancePercent,
+        threshold: SIGNIFICANT_VARIANCE_THRESHOLD,
+        requiredReasons: [
+          "spillage",
+          "wastage",
+          "counting_error",
+          "demo_free_pour",
+          "in_transit",
+          "unknown",
+        ],
+      });
+    }
+
     // Store previous total for reference
     const previousTotal = expectedTotal;
 
@@ -781,7 +811,6 @@ router.get("/items/audit-age-stats", async (req: Request, res: Response) => {
       .select({
         id: inventoryItemsTable.id,
         name: inventoryItemsTable.name,
-        nameEs: inventoryItemsTable.nameEs,
         type: inventoryItemsTable.type,
         lastAuditedAt: inventoryItemsTable.lastAuditedAt,
       })

@@ -38,6 +38,17 @@ const translations = {
     connection_error: "Could not connect to server",
     welcome_back: "Welcome back",
     please_switch_staff: "Please switch staff member to begin",
+    too_many_attempts: "Too Many Attempts",
+    too_many_login_attempts:
+      "Too many login attempts. Please try again in 15 minutes.",
+    too_many_reset_attempts:
+      "Too many reset attempts. Please try again in 15 minutes.",
+    password_reset: "Password Reset",
+    password_reset_success: "Your password has been reset. You can now log in.",
+    reset_password_failed: "Reset Failed",
+    reset_password_error: "Could not reset password.",
+    logging_in: "Logging in...",
+    switch_to_spanish: "Switch to Spanish",
     // Shifts
     active_shift: "Active Shift",
     no_active_shift: "No Active Shift",
@@ -325,6 +336,10 @@ const translations = {
       "Are you sure you want to delete this tab? This action cannot be undone.",
     opened_x_ago: "Opened {time} ago",
     loading_tabs: "Loading tabs...",
+    sort_by: "Sort by",
+    opened_time: "Opened Time",
+    sort_name: "Name",
+    sort_total: "Total",
     // Inventory sidebar
     all_items: "All Items",
     items_count: "{count} items",
@@ -349,7 +364,7 @@ const translations = {
     glass_weight: "Container Weight",
     density_label: "Density",
     full_bottle_weight_label: "Full Bottle Weight (g)",
-    current_bottle_weight: "Current Bottle Weight (g)",
+    current_bottle_weight: "Active Bottle Weight (g)",
     calculate: "Calculate",
     weigh_bottle: "Weigh Bottle",
     remaining_pours: "Remaining Pours",
@@ -532,6 +547,18 @@ const translations = {
     connection_error: "No se pudo conectar al servidor",
     welcome_back: "Bienvenido de vuelta",
     please_switch_staff: "Cambie de miembro de personal para comenzar",
+    too_many_attempts: "Demasiados Intentos",
+    too_many_login_attempts:
+      "Demasiados intentos de inicio de sesión. Por favor, intente más tarde en 15 minutos.",
+    too_many_reset_attempts:
+      "Demasiados intentos de reinicio. Por favor, intente más tarde en 15 minutos.",
+    password_reset: "Reinicio de Contraseña",
+    password_reset_success:
+      "Su contraseña ha sido reiniciada. Ahora puede iniciar sesión.",
+    reset_password_failed: "Error de Reinicio",
+    reset_password_error: "No se pudo reiniciar la contraseña.",
+    logging_in: "Iniciando sesión...",
+    switch_to_spanish: "Cambiar a Español",
     // Shifts
     active_shift: "Turno Activo",
     no_active_shift: "Ningún Turno Activo",
@@ -819,6 +846,10 @@ const translations = {
       "¿Estás seguro de que quieres eliminar esta cuenta? Esta acción no se puede deshacer.",
     opened_x_ago: "Abierta hace {time}",
     loading_tabs: "Cargando cuentas...",
+    sort_by: "Ordenar por",
+    opened_time: "Hora de Apertura",
+    sort_name: "Nombre",
+    sort_total: "Total",
     // Inventory sidebar
     all_items: "Todos los Artículos",
     items_count: "{count} artículos",

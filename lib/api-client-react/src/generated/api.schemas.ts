@@ -211,6 +211,8 @@ export interface Ingredient {
   /** @nullable */
   parentItemId?: string | null;
   isOnMenu: boolean;
+  /** @nullable */
+  menuPricePerServing?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -264,6 +266,8 @@ export interface CreateIngredientBody {
   unitsPerCase?: number;
   trackingMode?: CreateIngredientBodyTrackingMode;
   isOnMenu?: boolean;
+  /** @nullable */
+  menuPricePerServing?: number | null;
 }
 
 export type UpdateIngredientBodyTrackingMode =
@@ -307,6 +311,8 @@ export interface UpdateIngredientBody {
   trackingMode?: UpdateIngredientBodyTrackingMode;
   /** @nullable */
   isOnMenu?: boolean | null;
+  /** @nullable */
+  menuPricePerServing?: number | null;
 }
 
 export interface RecipeIngredient {
@@ -575,6 +581,15 @@ export interface UpdateOrderBody {
   notes?: string | null;
 }
 
+export interface ModifyIngredientBody {
+  /** Index of the recipe item to replace (0-based) */
+  recipeLineIndex: number;
+  /** ID of the new ingredient to substitute */
+  newIngredientId: string;
+  /** Optional reason for the substitution */
+  notes?: string;
+}
+
 export type ShiftStatus = (typeof ShiftStatus)[keyof typeof ShiftStatus];
 
 export const ShiftStatus = {
@@ -607,6 +622,8 @@ export interface ShiftOrNull {
 export interface StartShiftBody {
   name: string;
   openedByUserId: string;
+  /** Starting cash amount in the register (optional) */
+  expectedCashMxn?: number;
 }
 
 export interface SalesByStaff {

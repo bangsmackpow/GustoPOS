@@ -9,7 +9,7 @@ function formatInventoryItem(item: typeof inventoryItemsTable.$inferSelect) {
   return {
     id: item.id,
     name: item.name,
-    nameEs: item.nameEs,
+    
     type: item.type,
     subtype: item.subtype,
     baseUnit: item.baseUnit,
@@ -62,7 +62,7 @@ router.post("/ingredients", async (req: Request, res: Response) => {
       .insert(inventoryItemsTable)
       .values({
         name: parsed.data.name,
-        nameEs: parsed.data.nameEs ?? null,
+        
         type: parsed.data.type ?? "spirit",
         subtype: parsed.data.subtype ?? null,
         baseUnit: parsed.data.baseUnit,
@@ -116,7 +116,7 @@ router.patch("/ingredients/:id", async (req: Request, res: Response) => {
     const data = parsed.data;
     const updateData: Partial<typeof inventoryItemsTable.$inferInsert> = {};
     if (data.name != null) updateData.name = data.name;
-    if (data.nameEs != null) updateData.nameEs = data.nameEs;
+    
     if (data.type != null) updateData.type = data.type;
     if (data.subtype != null) updateData.subtype = data.subtype;
     if (data.baseUnit != null) updateData.baseUnit = data.baseUnit;

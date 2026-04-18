@@ -102,10 +102,15 @@ router.post("/shifts", async (req: Request, res: Response) => {
         "There is already an active shift. Close it before starting a new one.",
     });
   }
-  const { name, openedByUserId } = parsed.data;
+  const { name, openedByUserId, expectedCashMxn } = parsed.data;
   const [shift] = await db
     .insert(shiftsTable)
-    .values({ name, openedByUserId, status: "active" })
+    .values({
+      name,
+      openedByUserId,
+      status: "active",
+      expectedCashMxn: expectedCashMxn || undefined,
+    })
     .returning();
   const [user] = await db
     .select()
@@ -368,7 +373,7 @@ router.get(
       string,
       {
         name: string;
-        nameEs: string | null;
+        // nameEs removed - consolidated to name
         qty: number;
         sales: number;
         cost: number;
@@ -381,7 +386,7 @@ router.get(
       if (!tab || tab.status !== "closed") continue;
       const drink = drinkMap.get(order.drinkId);
       const name = drink?.name ?? order.drinkName;
-      const nameEs = drink?.nameEs ?? order.drinkNameEs ?? null;
+      // nameEs removed
       const category = drink?.category ?? "other";
       const unitSale = Number(order.unitPriceMxn);
       const unitCost = drinkCostMap.get(order.drinkId) ?? 0;
@@ -391,7 +396,7 @@ router.get(
       if (!drinkSalesMap.has(order.drinkId)) {
         drinkSalesMap.set(order.drinkId, {
           name,
-          nameEs,
+
           qty: 0,
           sales: 0,
           cost: 0,
@@ -413,7 +418,6 @@ router.get(
       .map(([drinkId, v]) => ({
         drinkId,
         drinkName: v.name,
-        drinkNameEs: v.nameEs,
         quantitySold: v.qty,
         totalSalesMxn: v.sales,
         totalCostMxn: v.cost,

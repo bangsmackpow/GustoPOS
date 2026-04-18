@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import crypto from "crypto";
 import {
   db,
   inventoryItemsTable,
@@ -95,7 +96,7 @@ router.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
-// GET /api/inventory/audit-sessions/:id/items - Get items for session
+// GET /api/inventory/audit-sessions/:id/items - Get inventory items for session
 router.get("/:id/items", async (req: Request, res: Response) => {
   try {
     const id = getId(req);
@@ -247,6 +248,90 @@ router.post("/:id/submit", async (req: Request, res: Response) => {
     return res
       .status(500)
       .json({ error: err.message || "Failed to submit batch audit" });
+  }
+});
+
+// GET /api/inventory/audit-sessions/:id/report - Get audit report for completed session
+router.get("/:id/report", async (req: Request, res: Response) => {
+  try {
+    const id = getId(req);
+
+    const [session] = await db
+      .select()
+      .from(auditSessionsTable)
+      .where(eq(auditSessionsTable.id, id as string))
+      .limit(1);
+
+    if (!session) {
+      return res.status(404).json({ error: "Audit session not found" });
+    }
+
+    // Get all audits for this session
+    const audits = await db
+      .select({
+        audit: inventoryAuditsTable,
+        item: inventoryItemsTable,
+      })
+      .from(inventoryAuditsTable)
+      .leftJoin(
+        inventoryItemsTable,
+        eq(inventoryAuditsTable.itemId, inventoryItemsTable.id),
+      )
+      .where(eq(inventoryAuditsTable.sessionId, id));
+
+    // Calculate summary
+    let totalItems = 0;
+    let totalVariance = 0;
+    let overages = 0;
+    let shortages = 0;
+    let onTarget = 0;
+
+    const auditResults = audits.map((a: any) => {
+      const v = Number(a.audit?.variance || 0);
+      totalItems++;
+      totalVariance += v;
+      if (v > 0) overages++;
+      else if (v < 0) shortages++;
+      else onTarget++;
+
+      return {
+        id: a.audit?.id,
+        itemId: a.audit?.itemId,
+        itemName: a.item?.name || "Unknown",
+        itemType: a.item?.type || "unknown",
+        previousTotal: Number(a.audit?.previousTotal || 0),
+        reportedTotal: Number(a.audit?.reportedTotal || 0),
+        variance: v,
+        variancePercent: Number(a.audit?.variancePercent || 0),
+        auditReason: a.audit?.auditReason,
+      };
+    });
+
+    res.json({
+      session: {
+        id: session.id,
+        status: session.status,
+        typeFilter: session.typeFilter,
+        startedAt: session.startedAt,
+        completedAt: session.completedAt,
+        completedByUserId: session.completedByUserId,
+        itemCount: session.itemCount,
+        completedCount: session.completedCount,
+      },
+      summary: {
+        totalItems,
+        totalVariance,
+        overages,
+        shortages,
+        onTarget,
+      },
+      results: auditResults,
+    });
+  } catch (err: any) {
+    console.error("[GET /audit-sessions/:id/report] Error:", err.message);
+    return res
+      .status(500)
+      .json({ error: err.message || "Failed to get audit report" });
   }
 });
 

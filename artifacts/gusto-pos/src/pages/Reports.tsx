@@ -28,9 +28,12 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
-  Zap,
+  CalendarDays,
   Trash2,
+  Zap,
 } from "lucide-react";
+
+import { PeriodManager } from "@/components/PeriodManager";
 import {
   format,
   subDays,
@@ -52,7 +55,7 @@ export default function Reports() {
   const [selectedShiftId, setSelectedShiftId] = useState<string | null>(null);
   const [openTabsError, setOpenTabsError] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<
-    "shifts" | "analytics" | "forecast" | "audits" | "stats"
+    "shifts" | "analytics" | "forecast" | "audits" | "stats" | "periods"
   >("shifts");
   const [startDate, setStartDate] = useState(
     format(subDays(new Date(), 7), "yyyy-MM-dd"),
@@ -165,11 +168,8 @@ export default function Reports() {
       // Success - invalidate queries
       setShowCloseModal(false);
       window.location.reload();
-    } catch (err: any) {
+    } catch {
       // Error already handled above if it's an open tabs error
-      if (!openTabsError) {
-        console.error("Error closing shift:", err);
-      }
     }
   };
 
@@ -251,17 +251,18 @@ export default function Reports() {
         startDate: startDate + "T00:00:00Z",
         endDate: endDate + "T23:59:59Z",
       });
-      
+
       const [salesRes, voidsRes] = await Promise.all([
         fetch("/api/analytics/sales?" + params.toString()),
         fetch("/api/analytics/voids?" + params.toString()),
       ]);
 
-      if (!salesRes.ok || !voidsRes.ok) throw new Error("Failed to fetch stats");
-      
+      if (!salesRes.ok || !voidsRes.ok)
+        throw new Error("Failed to fetch stats");
+
       const salesData = await salesRes.json();
       const voidsData = await voidsRes.json();
-      
+
       setStatsData({ sales: salesData, voids: voidsData });
       toast({
         title: getTranslation("success", language),
@@ -404,7 +405,18 @@ export default function Reports() {
             }`}
           >
             <BarChart3 size={18} className="inline mr-2" />
-            Stats
+            Performance
+          </button>
+          <button
+            onClick={() => setActiveTab("periods")}
+            className={`px-4 py-3 font-medium transition-all border-b-2 whitespace-nowrap ${
+              activeTab === "periods"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <CalendarDays size={18} className="inline mr-2" />
+            Periods
           </button>
         </div>
       </div>
@@ -1537,6 +1549,9 @@ export default function Reports() {
         </div>
       )}
 
+      {/* Periods Tab */}
+      {activeTab === "periods" && <PeriodManager />}
+
       {/* Open Tabs Error Modal */}
       {openTabsError && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-md">
@@ -1612,7 +1627,9 @@ export default function Reports() {
             </h3>
             <div className="flex gap-4 items-end">
               <Button onClick={loadStats} disabled={statsLoading}>
-                {statsLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {statsLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
                 Load Stats
               </Button>
             </div>
@@ -1622,52 +1639,97 @@ export default function Reports() {
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="glass p-6 rounded-3xl border border-white/5">
-                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Total Sales</p>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">
+                    Total Sales
+                  </p>
                   <p className="text-3xl font-display font-bold text-primary mt-1">
-                    ${(statsData.sales?.summary?.totalRevenue || 0).toLocaleString()}
+                    $
+                    {(
+                      statsData.sales?.summary?.totalRevenue || 0
+                    ).toLocaleString()}
                   </p>
                 </div>
                 <div className="glass p-6 rounded-3xl border border-white/5">
-                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Tabs Closed</p>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">
+                    Tabs Closed
+                  </p>
                   <p className="text-3xl font-display font-bold text-emerald-400 mt-1">
                     {statsData.sales?.summary?.tabsCount || 0}
                   </p>
                 </div>
                 <div className="glass p-6 rounded-3xl border border-white/5">
-                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Avg Ticket</p>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">
+                    Avg Ticket
+                  </p>
                   <p className="text-3xl font-display font-bold text-blue-400 mt-1">
-                    ${statsData.sales?.summary?.tabsCount ? (statsData.sales.summary.totalRevenue / statsData.sales.summary.tabsCount).toFixed(0) : 0}
+                    $
+                    {statsData.sales?.summary?.tabsCount
+                      ? (
+                          statsData.sales.summary.totalRevenue /
+                          statsData.sales.summary.tabsCount
+                        ).toFixed(0)
+                      : 0}
                   </p>
                 </div>
                 <div className="glass p-6 rounded-3xl border border-white/5">
-                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">Total Tips</p>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wider font-bold">
+                    Total Tips
+                  </p>
                   <p className="text-3xl font-display font-bold text-amber-400 mt-1">
-                    ${(statsData.sales?.summary?.totalTips || 0).toLocaleString()}
+                    $
+                    {(
+                      statsData.sales?.summary?.totalTips || 0
+                    ).toLocaleString()}
                   </p>
                 </div>
               </div>
 
               <div className="glass rounded-3xl p-6 border border-white/5">
-                <h3 className="text-lg font-medium text-primary mb-4">Staff Performance</h3>
+                <h3 className="text-lg font-medium text-primary mb-4">
+                  Staff Performance
+                </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="border-b border-white/10">
-                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">Staff</th>
-                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">Sales</th>
-                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">Tabs</th>
-                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">Avg Ticket</th>
-                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">Tips</th>
+                        <th className="text-left py-3 px-4 text-muted-foreground font-medium">
+                          Staff
+                        </th>
+                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">
+                          Sales
+                        </th>
+                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">
+                          Tabs
+                        </th>
+                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">
+                          Avg Ticket
+                        </th>
+                        <th className="text-right py-3 px-4 text-muted-foreground font-medium">
+                          Tips
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {statsData.sales?.salesByStaff?.map((staff: any) => (
-                        <tr key={staff.userId} className="border-b border-white/5">
-                          <td className="py-3 px-4 font-medium">{staff.userName}</td>
-                          <td className="py-3 px-4 text-right text-emerald-400">${staff.totalRevenue?.toLocaleString()}</td>
-                          <td className="py-3 px-4 text-right">{staff.tabsCount}</td>
-                          <td className="py-3 px-4 text-right">${staff.avgTicket?.toFixed(0)}</td>
-                          <td className="py-3 px-4 text-right text-amber-400">${staff.tipsTotal?.toLocaleString()}</td>
+                        <tr
+                          key={staff.userId}
+                          className="border-b border-white/5"
+                        >
+                          <td className="py-3 px-4 font-medium">
+                            {staff.userName}
+                          </td>
+                          <td className="py-3 px-4 text-right text-emerald-400">
+                            ${staff.totalRevenue?.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            {staff.tabsCount}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            ${staff.avgTicket?.toFixed(0)}
+                          </td>
+                          <td className="py-3 px-4 text-right text-amber-400">
+                            ${staff.tipsTotal?.toLocaleString()}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -1676,42 +1738,76 @@ export default function Reports() {
               </div>
 
               <div className="glass rounded-3xl p-6 border border-white/5">
-                <h3 className="text-lg font-medium text-destructive mb-4">Void Analysis</h3>
+                <h3 className="text-lg font-medium text-destructive mb-4">
+                  Void Analysis
+                </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div className="p-4 bg-destructive/10 rounded-xl">
-                    <p className="text-xs text-muted-foreground uppercase">Total Voids</p>
-                    <p className="text-2xl font-bold">{statsData.voids?.summary?.totalVoids || 0}</p>
+                    <p className="text-xs text-muted-foreground uppercase">
+                      Total Voids
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {statsData.voids?.summary?.totalVoids || 0}
+                    </p>
                   </div>
                   <div className="p-4 bg-destructive/10 rounded-xl">
-                    <p className="text-xs text-muted-foreground uppercase">Void Value</p>
-                    <p className="text-2xl font-bold text-destructive">${(statsData.voids?.summary?.totalVoidValue || 0).toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground uppercase">
+                      Void Value
+                    </p>
+                    <p className="text-2xl font-bold text-destructive">
+                      $
+                      {(
+                        statsData.voids?.summary?.totalVoidValue || 0
+                      ).toLocaleString()}
+                    </p>
                   </div>
                   <div className="p-4 bg-destructive/10 rounded-xl">
-                    <p className="text-xs text-muted-foreground uppercase">Void Rate</p>
-                    <p className="text-2xl font-bold">{(statsData.voids?.summary?.voidRate || 0).toFixed(1)}%</p>
+                    <p className="text-xs text-muted-foreground uppercase">
+                      Void Rate
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {(statsData.voids?.summary?.voidRate || 0).toFixed(1)}%
+                    </p>
                   </div>
                   <div className="p-4 bg-destructive/10 rounded-xl">
-                    <p className="text-xs text-muted-foreground uppercase">Total Orders</p>
-                    <p className="text-2xl font-bold">{statsData.voids?.summary?.totalOrders || 0}</p>
+                    <p className="text-xs text-muted-foreground uppercase">
+                      Total Orders
+                    </p>
+                    <p className="text-2xl font-bold">
+                      {statsData.voids?.summary?.totalOrders || 0}
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="glass rounded-3xl p-6 border border-white/5">
-                <h3 className="text-lg font-medium text-primary mb-4">Top Sellers</h3>
+                <h3 className="text-lg font-medium text-primary mb-4">
+                  Top Sellers
+                </h3>
                 <div className="space-y-3">
-                  {statsData.sales?.salesByDrink?.slice(0, 10).map((drink: any, idx: number) => (
-                    <div key={drink.drinkId} className="flex items-center justify-between p-3 rounded-xl bg-white/5">
-                      <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">{idx + 1}</span>
-                        <span className="font-medium">{drink.drinkName}</span>
+                  {statsData.sales?.salesByDrink
+                    ?.slice(0, 10)
+                    .map((drink: any, idx: number) => (
+                      <div
+                        key={drink.drinkId}
+                        className="flex items-center justify-between p-3 rounded-xl bg-white/5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary">
+                            {idx + 1}
+                          </span>
+                          <span className="font-medium">{drink.drinkName}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-emerald-400 font-bold">
+                            ${drink.totalRevenue?.toLocaleString()}
+                          </span>
+                          <span className="text-muted-foreground text-sm ml-2">
+                            ({drink.unitsPriced} sold)
+                          </span>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-emerald-400 font-bold">${drink.totalRevenue?.toLocaleString()}</span>
-                        <span className="text-muted-foreground text-sm ml-2">({drink.unitsPriced} sold)</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             </>

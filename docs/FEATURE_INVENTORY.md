@@ -102,7 +102,7 @@ This document catalogs all features in GustoPOS, organized by functional area. E
 
 ### 3.1 Inventory CRUD
 
-- **Description**: Create, read, update, delete inventory items
+- **Description**: Create, read, update, delete inventory items. New item creation includes a 'Weigh Bottles' flow to set initial metrics, isolated from the standard edit flow.
 - **How it's used**: Admins manage inventory in Inventory page
 - **Connections**:
   - API: `GET/POST /inventory/items`, `PATCH/DELETE /inventory/items/:id` (routes/inventory.ts)
@@ -168,8 +168,8 @@ This document catalogs all features in GustoPOS, organized by functional area. E
 
 ### 3.8 Low Stock Alerts
 
-- **Description**: Alert when inventory below threshold
-- **How it's used**: Dashboard shows low stock items
+- **Description**: Alert when inventory falls below a specified threshold (tracked in servings)
+- **How it's used**: Dashboard shows low stock items based on serving threshold
 - **Connections**:
   - API: `GET /inventory/low-stock` (routes/inventory.ts)
   - Database: `inventory_items` table (low_stock_threshold)

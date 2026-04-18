@@ -41,7 +41,7 @@ router.get("/history", async (req: Request, res: Response) => {
         id: inventoryAuditsTable.id,
         itemId: inventoryAuditsTable.itemId,
         itemName: inventoryItemsTable.name,
-        itemNameEs: inventoryItemsTable.nameEs,
+        // itemNameEs removed
         baseUnit: inventoryItemsTable.baseUnit,
         auditEntryMethod: inventoryAuditsTable.auditEntryMethod,
         reportedBulk: inventoryAuditsTable.reportedBulk,
@@ -119,7 +119,7 @@ router.get("/variance-summary", async (req: Request, res: Response) => {
         id: inventoryAuditsTable.id,
         itemId: inventoryAuditsTable.itemId,
         itemName: inventoryItemsTable.name,
-        itemNameEs: inventoryItemsTable.nameEs,
+        // itemNameEs removed
         variance: inventoryAuditsTable.variance,
         variancePercent: inventoryAuditsTable.variancePercent,
         auditReason: inventoryAuditsTable.auditReason,
@@ -137,7 +137,6 @@ router.get("/variance-summary", async (req: Request, res: Response) => {
       {
         itemId: string;
         itemName: string;
-        itemNameEs?: string;
         auditCount: number;
         totalVariance: number;
         avgVariancePercent: number;
@@ -154,7 +153,6 @@ router.get("/variance-summary", async (req: Request, res: Response) => {
         itemVariances[audit.itemId] = {
           itemId: audit.itemId,
           itemName: audit.itemName,
-          itemNameEs: audit.itemNameEs ?? undefined,
           auditCount: 0,
           totalVariance: 0,
           avgVariancePercent: 0,

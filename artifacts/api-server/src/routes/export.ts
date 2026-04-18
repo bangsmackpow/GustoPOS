@@ -142,7 +142,7 @@ router.get(
       const inventoryData = items.map((item) => ({
         id: item.id,
         name: item.name,
-        nameEs: item.nameEs || "",
+
         type: item.type || "",
         subtype: item.subtype || "",
         baseUnitAmount: item.baseUnitAmount || 750,
@@ -159,7 +159,7 @@ router.get(
         lowStockThreshold: item.lowStockThreshold || 0,
         lastAuditedAt: item.lastAuditedAt || "",
         isOnMenu: item.isOnMenu ? "Yes" : "No",
-        sellSingleServing: item.sellSingleServing ? "Yes" : "No",
+        productPrice: item.productPrice || 0,
       }));
 
       const csv = arrayToCSV(inventoryData);

@@ -40,9 +40,9 @@ router.use("/admin", requireRole("admin"), adminRouter);
 router.use("/settings", settingsRouter); // Read is open, write is guarded in route
 // Bartender-accessible routes
 router.use(ingredientsRouter);
+router.use("/inventory/audit-sessions", auditSessionsRouter);
 router.use("/inventory", inventoryRouter);
 router.use("/inventory-audits", inventoryAuditsRouter);
-router.use("/inventory/audit-sessions", auditSessionsRouter);
 router.use(drinksRouter);
 router.use(tabsRouter);
 router.use(shiftsRouter);

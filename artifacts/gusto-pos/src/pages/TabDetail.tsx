@@ -9,10 +9,12 @@ import {
   useAddOrderMutation,
   useDeleteOrderMutation,
   useCloseTabMutation,
+  useModifyOrderIngredientMutation,
 } from "@/hooks/use-pos-mutations";
 import { useUpdateOrderMutation } from "@/hooks/use-update-order-mutation";
 import { usePosStore } from "@/store";
 import { formatMoney, getTranslation } from "@/lib/utils";
+import { ML_PER_OZ } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -34,6 +36,7 @@ import {
   Tag,
 } from "lucide-react";
 import { DiscountModal } from "@/components/DiscountModal";
+import { IngredientSubstitutionModal } from "@/components/IngredientSubstitutionModal";
 
 const CATEGORY_ICONS: Record<string, any> = {
   cocktail: Wine,
@@ -62,6 +65,7 @@ export default function TabDetail() {
   const addOrder = useAddOrderMutation();
   const deleteOrder = useDeleteOrderMutation();
   const closeTab = useCloseTabMutation();
+  const modifyIngredient = useModifyOrderIngredientMutation();
   const { toast } = useToast();
 
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -70,10 +74,11 @@ export default function TabDetail() {
   const [promoCode, setPromoCode] = useState<string>("");
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [viewingRecipe, setViewingRecipe] = useState<any>(null);
-  const [addQuantity, setAddQuantity] = useState<number>(1);
   const [editingOrder, setEditingOrder] = useState<any>(null);
   const [deletingOrder, setDeletingOrder] = useState<any>(null);
   const [voidReason, setVoidReason] = useState<string>("");
+  const [managerPin, setManagerPin] = useState("");
+  const [managerId, setManagerId] = useState("");
   const [selectedQuantities, setSelectedQuantities] = useState<
     Record<string, number>
   >({});
@@ -84,7 +89,12 @@ export default function TabDetail() {
   >(null);
   const [showPaymentConfirmation, setShowPaymentConfirmation] = useState(false);
   const [discountingOrder, setDiscountingOrder] = useState<any>(null);
+  const [substitutingOrder, setSubstitutingOrder] = useState<any>(null);
+  const [showSubstitutionModal, setShowSubstitutionModal] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [showBrandSelect, setShowBrandSelect] = useState(false);
+  const [selectedDrink, setSelectedDrink] = useState<any>(null);
+  const [brandQuantity, setBrandQuantity] = useState(1);
 
   const getSelectedQuantity = (drinkId: string) =>
     selectedQuantities[drinkId] || 1;
@@ -156,6 +166,14 @@ export default function TabDetail() {
       return;
     }
 
+    // For Shot and Cocktail (non-specialty) categories, show brand selection
+    if (drink.category === "shot" || drink.category === "cocktail") {
+      setSelectedDrink(drink);
+      setBrandQuantity(quantity || getSelectedQuantity(drink.id));
+      setShowBrandSelect(true);
+      return;
+    }
+
     const qty = quantity || getSelectedQuantity(drink.id);
     addOrder.mutate(
       { id: tabId, data: { drinkId: drink.id, quantity: qty } },
@@ -163,9 +181,71 @@ export default function TabDetail() {
         onSuccess: () => {
           toast({
             title: getTranslation("success", language),
-            description: `${qty}x ${language === "es" && drink.nameEs ? drink.nameEs : drink.name} added to tab.`,
+            description: `${qty}x ${drink.name} added to tab.`,
           });
           setSelectedQuantities((prev) => ({ ...prev, [drink.id]: 1 }));
+        },
+        onError: (error: any) => {
+          toast({
+            variant: "destructive",
+            title: getTranslation("error", language),
+            description: error.message || "Failed to add drink to tab.",
+          });
+        },
+      },
+    );
+  };
+
+  // Get available brands for selected drink based on default ingredient's subtype
+  const getAvailableBrands = () => {
+    if (!selectedDrink || !ingredients) return [];
+    const defaultIngredient = selectedDrink.recipe?.find(
+      (r: any) => r.isDefault,
+    );
+    if (!defaultIngredient) return [];
+    const defaultIng = ingredients.find(
+      (i: any) => i.id === defaultIngredient.ingredientId,
+    );
+    if (!defaultIng) return [];
+    // Filter ingredients by same subtype
+    return ingredients.filter(
+      (i: any) => i.subtype === defaultIng.subtype && i.orderCost > 0,
+    );
+  };
+
+  const handleAddBrand = (ingredient: any) => {
+    if (!selectedDrink || !activeStaff) return;
+    const defaultIngredient = selectedDrink.recipe?.find(
+      (r: any) => r.isDefault,
+    );
+    const defaultCost = defaultIngredient?.defaultCost || 0;
+    const drinkPrice = selectedDrink.actualPrice || 0;
+    // Calculate price: selected ingredient cost + (drink price - default cost)
+    const adjustedPrice = ingredient.orderCost + (drinkPrice - defaultCost);
+
+    // Create order data with adjusted price
+    const orderData: any = {
+      drinkId: selectedDrink.id,
+      quantity: brandQuantity,
+    };
+
+    // Use adjusted price instead of drink's default price
+    orderData.unitPriceMxn = Math.max(0, adjustedPrice);
+
+    addOrder.mutate(
+      {
+        id: tabId,
+        data: orderData,
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: getTranslation("success", language),
+            description: `${brandQuantity}x ${ingredient.name} added to tab.`,
+          });
+          setShowBrandSelect(false);
+          setSelectedDrink(null);
+          setBrandQuantity(1);
         },
         onError: (error: any) => {
           toast({
@@ -277,6 +357,8 @@ export default function TabDetail() {
         tabId,
         reason: voidReason,
         voidedByUserId: activeStaff?.id,
+        managerUserId: activeStaff?.id,
+        managerPin: managerPin,
       },
       {
         onSuccess: () => {
@@ -286,12 +368,14 @@ export default function TabDetail() {
           });
           setDeletingOrder(null);
           setVoidReason("");
+          setManagerPin("");
+          setManagerId("");
         },
         onError: (error: any) => {
           toast({
             variant: "destructive",
             title: getTranslation("error", language),
-            description: error.message || "Failed to remove order.",
+            description: error?.message || "Failed to void order",
           });
         },
       },
@@ -410,6 +494,16 @@ export default function TabDetail() {
                           title="Apply Discount"
                         >
                           <Tag size={14} />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSubstitutingOrder(order);
+                            setShowSubstitutionModal(true);
+                          }}
+                          className="w-8 h-8 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Modify Ingredients"
+                        >
+                          <Coffee size={14} />
                         </button>
                         <button
                           onClick={() => setEditingOrder(order)}
@@ -813,9 +907,7 @@ export default function TabDetail() {
                     )}
                   </div>
                   <h4 className="font-bold text-foreground leading-tight line-clamp-2 mb-1 group-hover:text-primary transition-colors">
-                    {language === "es" && drink.nameEs
-                      ? drink.nameEs
-                      : drink.name}
+                    {drink.name}
                   </h4>
 
                   {stock.message && (
@@ -921,7 +1013,7 @@ export default function TabDetail() {
                             {" "}
                             /{" "}
                           </span>
-                          {(amount / 29.57).toFixed(1)}oz
+                          {(amount / ML_PER_OZ).toFixed(1)}oz
                         </div>
                       </div>
                     );
@@ -1163,12 +1255,30 @@ export default function TabDetail() {
               </select>
             </div>
 
+            <div className="mb-6">
+              <label className="text-sm font-medium mb-2 block">
+                Manager PIN:
+              </label>
+              <input
+                type="password"
+                value={managerPin}
+                onChange={(e) => setManagerPin(e.target.value)}
+                placeholder="Enter manager PIN"
+                className="w-full p-3 rounded-xl bg-background border border-border focus:border-primary focus:outline-none"
+                maxLength={4}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Required to void an order
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <Button
                 variant="ghost"
                 onClick={() => {
                   setDeletingOrder(null);
                   setVoidReason("");
+                  setManagerPin("");
                 }}
               >
                 {getTranslation("cancel", language) || "Cancel"}
@@ -1189,7 +1299,9 @@ export default function TabDetail() {
         <DiscountModal
           orderId={discountingOrder.id}
           drinkName={discountingOrder.drinkName}
-          currentPrice={discountingOrder.unitPriceMxn * discountingOrder.quantity}
+          currentPrice={
+            discountingOrder.unitPriceMxn * discountingOrder.quantity
+          }
           currentDiscount={discountingOrder.discountMxn || 0}
           isOpen={true}
           onClose={() => {
@@ -1199,8 +1311,163 @@ export default function TabDetail() {
           onSuccess={() => {
             refetch();
             setShowDiscountModal(false);
+            setDiscountingOrder(null);
           }}
         />
+      )}
+
+      {showSubstitutionModal &&
+        substitutingOrder &&
+        drinks &&
+        ingredients &&
+        (() => {
+          const drink = drinks.find(
+            (d: any) => d.id === substitutingOrder.drinkId,
+          );
+          if (!drink || !drink.recipe || drink.recipe.length === 0) {
+            return null;
+          }
+
+          return (
+            <IngredientSubstitutionModal
+              isOpen={true}
+              onClose={() => {
+                setShowSubstitutionModal(false);
+                setSubstitutingOrder(null);
+              }}
+              recipeItem={
+                drink.recipe[0]
+                  ? {
+                      ingredientId: drink.recipe[0].ingredientId || "",
+                      ingredientName:
+                        drink.recipe[0].ingredientName ||
+                        drink.recipe[0].ingredientId ||
+                        "Unknown",
+                      amount: Number(drink.recipe[0].amountInBaseUnit || 1),
+                      index: 0,
+                    }
+                  : {
+                      ingredientId: "",
+                      ingredientName: "Unknown",
+                      amount: 0,
+                      index: 0,
+                    }
+              }
+              currentIngredient={
+                (ingredients.find(
+                  (i: any) => i.id === drink.recipe[0]?.ingredientId,
+                ) as any) || {
+                  id: "",
+                  name: "Unknown",
+                  type: "",
+                  subtype: null,
+                  orderCost: 0,
+                  currentStock: 0,
+                  reservedStock: 0,
+                  baseUnitAmount: 1,
+                }
+              }
+              availableIngredients={ingredients as any}
+              orderQuantity={substitutingOrder.quantity}
+              onSubstitute={async (recipeLineIndex, newIngredientId, notes) => {
+                await modifyIngredient.mutateAsync({
+                  id: substitutingOrder.id,
+                  data: {
+                    recipeLineIndex,
+                    newIngredientId,
+                    notes: notes || undefined,
+                  },
+                });
+                refetch();
+                setShowSubstitutionModal(false);
+                setSubstitutingOrder(null);
+              }}
+              isLoading={modifyIngredient.isPending}
+            />
+          );
+        })()}
+
+      {/* Brand Selection Modal for Shot/Cocktail */}
+      {showBrandSelect && selectedDrink && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
+          <div className="glass p-6 rounded-3xl w-full max-w-md border border-white/10 max-h-[80vh] overflow-y-auto">
+            <button
+              onClick={() => {
+                setShowBrandSelect(false);
+                setSelectedDrink(null);
+              }}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-xl font-display font-bold mb-4">
+              Select {selectedDrink.name}
+            </h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Base price: {formatMoney(selectedDrink.actualPrice || 0)}
+            </p>
+
+            {/* Quantity selector */}
+            <div className="flex items-center justify-between mb-4 p-3 bg-secondary/50 rounded-xl">
+              <span className="font-medium">Quantity:</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() =>
+                    setBrandQuantity(Math.max(1, brandQuantity - 1))
+                  }
+                  className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center"
+                >
+                  -
+                </button>
+                <span className="font-bold text-lg w-8 text-center">
+                  {brandQuantity}
+                </span>
+                <button
+                  onClick={() =>
+                    setBrandQuantity(Math.min(20, brandQuantity + 1))
+                  }
+                  className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {getAvailableBrands().map((ing: any) => {
+                const defaultIngredient = selectedDrink.recipe?.find(
+                  (r: any) => r.isDefault,
+                );
+                const defaultCost = defaultIngredient?.defaultCost || 0;
+                const drinkPrice = selectedDrink.actualPrice || 0;
+                const adjustedPrice =
+                  ing.orderCost + (drinkPrice - defaultCost);
+                return (
+                  <button
+                    key={ing.id}
+                    onClick={() => handleAddBrand(ing)}
+                    className="w-full p-3 rounded-xl bg-secondary/50 border border-white/10 hover:bg-primary/10 hover:border-primary/50 transition-colors flex items-center justify-between"
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">{ing.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        Cost: {formatMoney(ing.orderCost)}
+                      </div>
+                    </div>
+                    <div className="font-bold text-emerald-400">
+                      {formatMoney(Math.max(0, adjustedPrice))}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {getAvailableBrands().length === 0 && (
+              <p className="text-center text-muted-foreground py-4">
+                No brands available with prices set.
+              </p>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

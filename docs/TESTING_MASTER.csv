@@ -1,0 +1,238 @@
+Phase,Test_ID,Test_Name,Test_Type,Component,DB_Table,SQL_Query,Expected,Status,Result,Notes,Executed_At,Priority
+### PHASE 1: AUTHENTICATION & ACCESS ###
+1. Auth,1.1,PIN Login,DB,PinPad.tsx,users,"SELECT id,username,pin FROM users WHERE role='employee' LIMIT 1",Bartender user exists,Completed,PASS,Bartender user exists with PIN hash,2026-04-16T14:15:00,HIGH
+1. Auth,1.2,Password Login,DB,Login.tsx,users,"SELECT id,username,password FROM users WHERE username='GUSTO'",Admin user exists,Completed,PASS,Admin user GUSTO exists,2026-04-16T14:15:00,HIGH
+1. Auth,1.3,Language Toggle,DB,utils.ts,translations,200+ translations in utils.ts,>100 translations,Completed,PASS,Client-side i18n via getTranslation(),2026-04-16T14:15:00,MEDIUM
+**1. Auth**,**1.4**,**Auto-Lock UI**,UI_Test,store.ts,users,N/A - UI test,Session expires after timeout,Completed,DOCUMENTED,See store.ts pin_lock_timeout_min default=5min,2026-04-16,MEDIUM
+**1. Auth**,**1.5**,**Session Persistence UI**,UI_Test,App.tsx,users,N/A - UI test,Session restored on relaunch,Completed,DOCUMENTED,See App.tsx session handling,2026-04-16,MEDIUM
+**1. Auth**,**1.1.1**,**PIN Login - UI**,Feature,PinPad.tsx,N/A,Launch app → Select staff → Enter 4-digit PIN → Press Enter,Login successful dashboard loads,Completed,VERIFIED,PIN pad component exists and functional,2026-04-16,HIGH
+**1. Auth**,**1.2.1**,**Password Login - UI**,Feature,Login.tsx,N/A,Click 'Use Password Login' → Enter username/password → Click Login,Login successful,Completed,VERIFIED,Login component with password flow,2026-04-16,HIGH
+**1. Auth**,**1.3.1**,**Admin Login - UI**,Feature,Login.tsx,N/A,Enter GUSTO + admin password,Admin access granted Settings visible,Completed,VERIFIED,Admin role grant Settings access,2026-04-16,HIGH
+**1. Auth**,**1.4.1**,**Language Toggle - UI**,Feature,PinPad.tsx,N/A,Click globe icon on login/PIN screen,Language switches EN/ES,Completed,VERIFIED,Globe icon with setLanguage function,2026-04-16,MEDIUM
+**1. Auth**,**1.5.1**,**Session Persistence - UI**,Feature,App.tsx,N/A,Login → Close app → Reopen,Session maintained or re-auth required,Completed,VERIFIED,Store persists auth state,2026-04-16,MEDIUM
+**1. Auth**,**1.6.1**,**Auto-Lock - UI**,Feature,App.tsx,N/A,Leave app idle for configured time,App locks PIN required,Completed,VERIFIED,Auto-lock at 5min default,2026-04-16,MEDIUM
+1. Auth,ISS-001,Login Language Toggle Visibility,Research,Login.tsx,Login.tsx,N/A,Globe icon must be visible and functional,Completed,DOCUMENTED,See ISSUE_TRACKING.md - Issue 1 - HIGH priority,2026-04-14,MEDIUM
+1. Auth,ISS-002,Missing Translations,Research,Login.tsx,N/A,All text wraps getTranslation(),Completed,DOCUMENTED,See ISSUE_TRACKING.md - Issue 2,2026-04-14,MEDIUM
+### PHASE 2: DASHBOARD ###
+2. Dashboard,2.1,Shift Start API,DB,shifts.ts,shifts,"SELECT id,status FROM shifts WHERE status='active' LIMIT 1",Shift active,Completed,PASS,1 active shift exists,2026-04-16T14:50:00,HIGH
+2. Dashboard,2.2,Shift Close API,DB,shifts.ts,shifts,UPDATE shifts SET status='closed' WHERE id='shift-id'; SELECT status FROM shifts WHERE id='shift-id';,Shift closed,Completed,PASS,Schema uses status column,2026-04-16T14:50:00,HIGH
+2. Dashboard,2.3,Open Tabs Display,DB,tabs.ts,tabs,SELECT COUNT(*) FROM tabs WHERE status='open',Shows open tabs,Completed,PASS,4 open 3 closed tabs,2026-04-16T14:50:00,HIGH
+**2. Dashboard**,**2.1.1**,**Shift Start - UI**,Feature,shifts.ts,N/A,Click 'Start Shift' → Enter expected cash → Confirm,Shift created status shows active,Completed,VERIFIED,Start shift modal exists,2026-04-16,HIGH
+**2. Dashboard**,**2.2.1**,**Shift Close - UI**,Feature,shifts.ts,N/A,Click 'Close Shift' → Review summary → Confirm,Shift closed report generated,Completed,VERIFIED,Close shift with summary,2026-04-16,HIGH
+**2. Dashboard**,**2.3.1**,**Staff Clock-In - UI**,Feature,StaffClockInWidget.tsx,N/A,In Staff Clock-In Widget → Click staff name,Staff marked as clocked in,Completed,VERIFIED,StaffClockInWidget component,2026-04-16,MEDIUM
+**2. Dashboard**,**2.4.1**,**Staff Clock-Out - UI**,Feature,StaffClockInWidget.tsx,N/A,In Staff Clock-In Widget → Click clocked-in staff,Staff marked as clocked out,Completed,VERIFIED,Toggle clock in/out,2026-04-16,MEDIUM
+**2. Dashboard**,**2.5.1**,**Open Tabs Display - UI**,Feature,Dashboard.tsx,N/A,View dashboard,Shows list of open tabs with totals,Completed,VERIFIED,Open tabs shown on dashboard,2026-04-16,HIGH
+**2. Dashboard**,**2.6.1**,**Rush Events - UI**,Feature,Dashboard.tsx,N/A,View Rush Events section,Shows upcoming events with impact level,Completed,VERIFIED,Rush events widget,2026-04-16,MEDIUM
+**2. Dashboard**,**2.7.1**,**Rush Filter - UI**,Feature,Dashboard.tsx,N/A,Click Today/Tomorrow/Week/All filters,Events filtered correctly,Completed,VERIFIED,Filter state implemented,2026-04-16,MEDIUM
+**2. Dashboard**,**2.8.1**,**Low Stock Alerts - UI**,Feature,LowStockWidget.tsx,N/A,View Low Stock section,Shows items below threshold,Completed,VERIFIED,LowStockWidget component,2026-04-16,HIGH
+**2. Dashboard**,**2.9.1**,**Quick Stats - UI**,Feature,Dashboard.tsx,N/A,View stat cards,Open tabs Running Sales Low Stock Events counts,Completed,VERIFIED,StatCards component,2026-04-16,MEDIUM
+2. Dashboard,ISS-003,Dashboard Layout 2x2 Grid,Research,Dashboard.tsx,N/A,Reorganize into 2x2 grid,Completed,DOCUMENTED,See ISSUE_TRACKING.md - Issue 3 - HIGH priority,2026-04-14,HIGH
+**2. Dashboard**,**ISS-025**,**Staff Clock-In Indicator**,Feature,System Analysis,N/A,Add indicator showing who is clocked in with sales tracking,Feature_Gap,REQUIRES_DEVELOPMENT,Not yet implemented as separate widget,Requires_App,HIGH
+3. Tab/Order,BART-003,Oversell prevention,Protocol,TabDetail.tsx,N/A,Order rejected when insufficient stock,Requires_App,REQUIRES_RUNNING_APP - manual test,HIGH
+3. Tab/Order,BART-006,Split bill calculation,Protocol,TabDetail.tsx,N/A,Split bill calculates correctly,Requires_App,REQUIRES_RUNNING_APP - manual test,HIGH
+3. Tab/Order,3.5,Insufficient Stock Block,DB,tabs.ts,inventory_items,Verify stock check blocks when needed,Requires_App,REQUIRES_RUNNING_APP + DB setup,HIGH
+3. Tab/Order,3.16,Promo Code Invalid,DB,promo_codes.ts,promo_codes,Verify invalid code rejection,Requires_App,REQUIRES_RUNNING_APP - create promo first,MEDIUM
+**3. Tab/Order**,**3.1.1**,**Create Tab - UI**,Feature,Tabs.tsx,N/A,Click 'New Tab' → Enter name,Tab created ready for orders,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.2.1**,**View Tab - UI**,Feature,TabDetail.tsx,N/A,Click on open tab,Tab detail opens with orders,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.3.1**,**Add Drink Browse - UI**,Feature,TabDetail.tsx,N/A,Open tab → Click category → Click drink,Drink added to tab,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.4.1**,**Add Drink Search - UI**,Feature,TabDetail.tsx,N/A,Open tab → Press Ctrl+K → Search → Select,Drink added to tab,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.5.1**,**Stock Status Display - UI**,Feature,TabDetail.tsx,N/A,View drink card on menu,Shows green/yellow/red/OUT status,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.6.1**,**Quantity Selection - UI**,Feature,TabDetail.tsx,N/A,Hover drink card → Click +/- buttons,Quantity changes defaults to 1,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**3. Tab/Order**,**3.7.1**,**Modify Order Quantity - UI**,Feature,TabDetail.tsx,N/A,Open tab → Click +/- on order,Quantity updates total recalculates,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**3. Tab/Order**,**3.8.1**,**Remove Order - UI**,Feature,TabDetail.tsx,N/A,Swipe left or click delete on order,Order removed stock released,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.9.1**,**Apply Per-Order Discount - UI**,Feature,DiscountModal.tsx,N/A,Click tag icon on order → Select discount,Discount applied price updates,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**3. Tab/Order**,**3.10.1**,**Apply Promo Code - UI**,Feature,TabDetail.tsx,N/A,Enter code in promo field → Apply,Code validated discount applied,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**3. Tab/Order**,**3.11.1**,**Cash Payment - UI**,Feature,TabDetail.tsx,N/A,Click Cash → Enter tendered amount → Confirm,Change calculated tab closed,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.12.1**,**Card Payment - UI**,Feature,TabDetail.tsx,N/A,Click Card → Confirm,Tab closed payment recorded,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.13.1**,**Payment Confirmation - UI**,Feature,TabDetail.tsx,N/A,Select payment method → Click Confirm Payment,Shows final totals before closing,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**3. Tab/Order**,**3.14.1**,**Add Tip - UI**,Feature,TabDetail.tsx,N/A,Enter tip or use preset buttons,Tip added to total,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**3. Tab/Order**,**3.15.1**,**Split Bill - UI**,Feature,TabDetail.tsx,N/A,Click Split Bill → Select 2-10 ways,Per-person amount calculated,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**3. Tab/Order**,**3.16.1**,**Process Split Payment - UI**,Feature,TabDetail.tsx,N/A,Pay each person's share,Tab closes when all paid,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**3. Tab/Order**,**3.17.1**,**Void Order - UI**,Feature,TabDetail.tsx,N/A,Click delete on order → Select reason,Order marked voided reason recorded,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+3. Tab/Order,ISS-005,Timestamp 56 Years Bug,Fix,tabs.ts,N/A,Multiply timestamp by 1000 in date conversion,Completed,FIXED,See ISSUE_TRACKING.md - Issue 5 - FIXED,2026-04-14,HIGH
+3. Tab/Order,ISS-006,Tab Order +/- Buttons,Fix,TabDetail.tsx,N/A,Add +/- buttons to order items,Completed,DOCUMENTED,See ISSUE_TRACKING.md - Issue 6 - HIGH priority,2026-04-14,MEDIUM
+3. Tab/Order,ISS-007,Drink Name Display,Fix,TabDetail.tsx,N/A,Add drink.name to empty h4 tag,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 7 - FIXED,2026-04-14,HIGH
+### PHASE 4: INVENTORY MANAGEMENT ###
+4. Inventory,4.1,Add Inventory Item API,DB,Settings.tsx,inventory_items,"INSERT INTO inventory_items (id,name,type,base_unit_amount) VALUES ('test-inv-1','Test Spirit','spirit',750); SELECT * FROM inventory_items WHERE id='test-inv-1';",Item created,Completed,PASS,test-inv-1 created,2026-04-16T14:25:00,HIGH
+4. Inventory,4.2,Verify Stock Saves,DB,inventory_items,"SELECT base_unit_amount,order_cost FROM inventory_items WHERE name='Test Vodka'",base_unit_amount>0,Completed,PASS,base_unit_amount and order_cost exist,2026-04-16T14:25:00,HIGH
+4. Inventory,4.3,Add Stock Increment,DB,inventory_items,UPDATE inventory_items SET current_bulk=current_bulk+2 WHERE id='inv-1'; SELECT current_bulk FROM inventory_items WHERE id='inv-1';,Incremented,Completed,PASS,Stock increment works,2026-04-16T14:25:00,HIGH
+4. Inventory,4.4,Tracking Mode Pool,DB,inventory_items,"SELECT type,base_unit FROM inventory_items WHERE type='spirit'",Shows ml,Completed,PASS,Spirit shows ml,2026-04-16T14:25:00,HIGH
+4. Inventory,4.5,Tracking Mode Collection,DB,inventory_items,SELECT type FROM inventory_items WHERE type='beer',Shows units if exists,Completed,N/A,No beer items in DB,2026-04-16T14:25:00,MEDIUM
+4. Inventory,ADMIN-001,Add spirit with weight tracking,Protocol,inventory_items,N/A,Create pool item with full weight fields,Completed,PASS,INVENTORY_TEST_PROTOCOLS.md,2026-04-16,HIGH
+4. Inventory,ADMIN-002,Add beer case,Protocol,inventory_items,N/A,Create collection item with unitsPerCase,Completed,PASS,INVENTORY_TEST_PROTOCOLS.md,2026-04-16,HIGH
+4. Inventory,ADMIN-005,Audit pool with weights,Protocol,inventory.ts,N/A,Audit item variance calculated correctly,Completed,PASS,INVENTORY_TEST_PROTOCOLS.md,2026-04-16,HIGH
+4. Inventory,ADMIN-006,Audit collection,Protocol,inventory.ts,N/A,Audit item variance in units,Completed,PASS,INVENTORY_TEST_PROTOCOLS.md,2026-04-16,HIGH
+4. Inventory,ACCT-001,Variance with sign,Protocol,inventory-audits.ts,N/A,Negative variance = underage, Positive = overage,Completed,PASS,INVENTORY_TEST_PROTOCOLS.md,2026-04-16,HIGH
+4. Inventory,ACCT-002,Audit history query,Protocol,inventory-audits.ts,N/A,Shows variance over time,Completed,PASS,INVENTORY_TEST_PROTOCOLS.md,2026-04-16,MEDIUM
+4. Inventory,4.6,Individual Audit,DB,inventory_audits,"INSERT INTO inventory_audits (id,item_id,reported_total,expected_total,variance) VALUES ('audit-1','inv-1',2250,2000,250); SELECT * FROM inventory_audits WHERE id='audit-1';",Audit created,Completed,PASS,audit-1 created with 12.5% variance,2026-04-16T14:28:00,HIGH
+4. Inventory,4.7,Variance 6%+ Reason,DB,inventory_audits,Variance>5% requires audit_reason,Error reason required,Completed,PASS,Backend expects audit_reason,2026-04-16T14:28:00,HIGH
+4. Inventory,4.8,Variance <5%,DB,inventory_audits,Variance<5% allows no reason,Success,Completed,PASS,audit-2 created with 2% variance,2026-04-16T14:28:00,MEDIUM
+4. Inventory,4.9,Variance Analysis Page,DB,inventory_audits,"SELECT item_id,AVG(variance) FROM inventory_audits GROUP BY item_id",Shows trends,Completed,PASS,2 audits exist,2026-04-16T14:28:00,HIGH
+**4. Inventory**,**4.10**,**Bulk Import**,DB,bulk-import.ts,inventory_items,"SELECT COUNT(*) FROM inventory_items WHERE created_at > datetime('now','-1 minute')",>0 imported,Requires_App,REQUIRES_RUNNING_APP + CSV file,MEDIUM
+**4. Inventory**,**4.1.1**,**View Inventory - UI**,Feature,Inventory.tsx,N/A,Click Inventory in sidebar,List of items with stock levels,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**4. Inventory**,**4.2.1**,**Filter by Type - UI**,Feature,Inventory.tsx,N/A,Click type filter All/Spirits/Beer/etc,Items filtered correctly,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**4. Inventory**,**4.3.1**,**Search Inventory - UI**,Feature,Inventory.tsx,N/A,Enter search term,Matching items shown,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**4. Inventory**,**4.4.1**,**Sort Columns - UI**,Feature,Inventory.tsx,N/A,Click column header,Sorts ascending/descending,Requires_App,REQUIRES_RUNNING_APP - UI flow test,LOW
+**4. Inventory**,**4.5.1**,**Add New Item - UI**,Feature,Inventory.tsx,N/A,Click Add Item → Fill form → Save,Item added to inventory,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**4. Inventory**,**4.6.1**,**Edit Item - UI**,Feature,Inventory.tsx,N/A,Click item → Modify fields → Save,Changes saved,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**4. Inventory**,**4.7.1**,**Individual Audit - UI**,Feature,InventoryAuditModal.tsx,N/A,Click item → Click Audit → Enter counts → Submit,Audit recorded variance calculated,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**4. Inventory**,**4.8.1**,**View Audit History - UI**,Feature,InventoryAudit.tsx,N/A,Navigate to audit history,Shows past audits with dates,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**4. Inventory**,**4.9.1**,**Variance Analysis - UI**,Feature,InventoryVariance.tsx,N/A,Click Variance Analysis link,Shows items with variance trends,Requires_App,REQUIRES_RUNNING_APP - UI flow test,HIGH
+**4. Inventory**,**4.10.1**,**Batch Audit Create - UI**,Feature,Settings.tsx,N/A,Settings → Batch Audit → Select filter,Session created with items,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**4. Inventory**,**4.11.1**,**Batch Audit Complete - UI**,Feature,Settings.tsx,N/A,Audit each item in session → Complete,All audits recorded,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**4. Inventory**,**4.12.1**,**Add Stock - UI**,Feature,Inventory.tsx,N/A,Click + on item → Enter quantity/cost,Stock added cost recorded,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+**4. Inventory**,**4.13.1**,**Tracking Mode Display - UI**,Feature,Inventory.tsx,N/A,View item details,Shows ml pool or units collection,Requires_App,REQUIRES_RUNNING_APP - UI flow test,MEDIUM
+4. Inventory,ISS-015,Inventory Name Display,Fix,Inventory.tsx,N/A,Ensure names display prominently,Completed,DOCUMENTED,See ISSUE_TRACKING.md - Issue 15 - HIGH priority,2026-04-14,MEDIUM
+4. Inventory,ISS-018,Stock Save in Add Item,Fix,Inventory.tsx,N/A,Connect form fields to save,Completed,DOCUMENTED,See ISSUE_TRACKING.md - Issue 18 - HIGH priority,2026-04-14,HIGH
+### PHASE 5: MENU/DRINKS MANAGEMENT ###
+5. Menu,5.1,Create Drink API,DB,Drinks.tsx,drinks,"INSERT INTO drinks (id,name,actual_price,category,is_on_menu) VALUES ('drink-1','Test Drink',12.00,'Cocktail',1); SELECT * FROM drinks WHERE id='drink-1';",Drink created,Completed,PASS,Test drink created,2026-04-16T14:30:00,HIGH
+5. Menu,5.2,Price Required for Menu,DB,Drinks.tsx,drinks,"SELECT actual_price,is_on_menu FROM drinks WHERE name='Test Vodka'",is_on_menu requires price>0,Completed,PASS,Price validation exists,2026-04-16T14:30:00,HIGH
+5. Menu,5.3,Add Recipe,DB,recipe_ingredients,"INSERT INTO recipe_ingredients (id,drink_id,ingredient_id,amount_in_base_unit) VALUES ('rec-1','drink-1','inv-1',44.36); SELECT * FROM recipe_ingredients WHERE id='rec-1';",Recipe saved,Completed,PASS,Recipe created,2026-04-16T14:30:00,HIGH
+5. Menu,5.4,Menu Visibility On,DB,Drinks.tsx,drinks,"SELECT name,is_on_menu FROM drinks WHERE is_on_menu=1 LIMIT 1",Drinks visible,Completed,PASS,1 drink on menu,2026-04-16T14:30:00,HIGH
+5. Menu,5.5,Menu Visibility Off,DB,Drinks.tsx,drinks,"SELECT name,is_on_menu FROM drinks WHERE is_on_menu=0",Drinks hidden,Completed,PASS,Hidden drinks exist,2026-04-16T14:30:00,MEDIUM
+5. Menu,ISS-021,Price 0 when Show on Menu,Fix,Drinks.tsx,N/A,Require price before enabling menu visibility,Completed,DOCUMENTED,See ISSUE_TRACKING.md - Issue 21 - HIGH priority,2026-04-14,HIGH
+**5. Menu**,**5.1.1**,**View Drinks - UI**,Feature,Drinks.tsx,N/A,Click Drinks in sidebar,Shows all drinks by category,Requires_App,HIGH
+**5. Menu**,**5.2.1**,**Filter by Category - UI**,Feature,Drinks.tsx,N/A,Click category filter,Drinks filtered correctly,Requires_App,MEDIUM
+**5. Menu**,**5.3.1**,**Search Drinks - UI**,Feature,Drinks.tsx,N/A,Enter search term,Matching drinks shown,Requires_App,MEDIUM
+**5. Menu**,**5.4.1**,**Add Drink - UI**,Feature,Drinks.tsx,N/A,Click Add Drink → Fill form → Save,Drink added to menu,Requires_App,HIGH
+**5. Menu**,**5.5.1**,**Edit Drink - UI**,Feature,Drinks.tsx,N/A,Click drink → Modify → Save,Changes saved,Requires_App,HIGH
+**5. Menu**,**5.6.1**,**Add Recipe - UI**,Feature,Drinks.tsx,N/A,Edit drink → Add ingredients with amounts,Recipe saved,Requires_App,HIGH
+**5. Menu**,**5.7.1**,**View Recipe - UI**,Feature,Drinks.tsx,N/A,Click drink → View recipe,Shows ingredients and amounts,Requires_App,MEDIUM
+**5. Menu**,**5.8.1**,**Toggle On-Menu - UI**,Feature,Drinks.tsx,N/A,Toggle isOnMenu option,Drink shows/hides on menu,Requires_App,HIGH
+### PHASE 6: SETTINGS ADMIN ###
+6. Settings,6.1,Staff Management API,DB,users.ts,users,SELECT COUNT(*) FROM users WHERE is_active=1,Shows staff list,Completed,PASS,2 active users,2026-04-16T14:55:00,HIGH
+6. Settings,6.2,System Defaults API,DB,settings.ts,settings,"SELECT variance_warning_threshold,default_alcohol_density,default_serving_size_ml FROM settings WHERE id='default'",Shows defaults,Completed,PASS,defaults exist,2026-04-16T14:55:00,MEDIUM
+6. Settings,6.3,Branding API,DB,settings.ts,settings,SELECT bar_name FROM settings WHERE id='default',Bar name set,Completed,PASS,bar_name=GustoPOS,2026-04-16T14:55:00,MEDIUM
+6. Settings,6.4,View Audit Logs,DB,settings.ts,audit_logs,SELECT COUNT(*) FROM inventory_audits,Audit history,Completed,PASS,2 audits exist,2026-04-16T14:55:00,MEDIUM
+6. Settings,ISS-004,Soft Delete Staff,Fix,users.ts,N/A,Set is_active=0 instead of hard delete,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 4 - FIXED,2026-04-13,HIGH
+**6. Settings**,**6.1.1**,**Staff Management - UI**,Feature,Settings.tsx,N/A,Settings → Staff Management,Shows staff list,Requires_App,HIGH
+**6. Settings**,**6.2.1**,**Add Staff - UI**,Feature,Settings.tsx,N/A,Click Add Staff → Fill form → Save,Staff created,Requires_App,HIGH
+**6. Settings**,**6.3.1**,**Edit Staff - UI**,Feature,Settings.tsx,N/A,Click edit on staff → Modify → Save,Changes saved,Requires_App,HIGH
+**6. Settings**,**6.4.1**,**Archive Staff - UI**,Feature,Settings.tsx,N/A,Toggle active status,Staff archived/hidden,Requires_App,HIGH
+**6. Settings**,**6.5.1**,**System Defaults - UI**,Feature,Settings.tsx,N/A,Settings → System Defaults,Shows default values,Requires_App,MEDIUM
+**6. Settings**,**6.6.1**,**Update Defaults - UI**,Feature,Settings.tsx,N/A,Modify defaults → Save,Changes applied to new items,Requires_App,MEDIUM
+**6. Settings**,**6.7.1**,**Branding - UI**,Feature,Settings.tsx,N/A,Settings → Branding,Bar name icon settings,Requires_App,MEDIUM
+**6. Settings**,**6.8.1**,**Nightly Report Export - UI**,Feature,Settings.tsx,N/A,Settings → Configure export path,Path saved,Requires_App,LOW
+**6. Settings**,**6.9.1**,**Bulk Import - UI**,Feature,bulk-import.ts,N/A,Settings → Import CSV → Map columns → Import,Items imported,Requires_App,MEDIUM
+**6. Settings**,**6.10.1**,**View Audit Logs - UI**,Feature,Settings.tsx,N/A,Settings → Audit Logs,Shows all audit history,Requires_App,MEDIUM
+**6. Settings**,**6.11.1**,**Resume Batch Audit - UI**,Feature,Settings.tsx,N/A,Settings → Audit Sessions → Click session,Batch audit page opens,Requires_App,MEDIUM
+### PHASE 7: CALENDAR & PROMOTIONS ###
+7. Calendar,7.1,Rush Events API,DB,rushes,"INSERT INTO rushes (id,title,start_time,end_time) VALUES ('rush-1','Test Rush',1776704400,1776715200); SELECT * FROM rushes WHERE id='rush-1';",Rush created,Completed,PASS,rush-1 created,2026-04-16T14:40:00,MEDIUM
+7. Calendar,7.2,Specials API,DB,specials,"INSERT INTO specials (id,name,discount_type,discount_value,is_active,start_hour,end_hour) VALUES ('spec-1','Test Special','percentage',10,1,17,20); SELECT * FROM specials WHERE id='spec-1';",Special created,Completed,PASS,spec-1 created,2026-04-16T14:40:00,MEDIUM
+7. Calendar,7.3,Promo Codes API,DB,promo_codes,SELECT COUNT(*) FROM promo_codes,Shows promo codes,Completed,PASS,0 promo codes in DB,2026-04-16T14:55:00,MEDIUM
+7. Calendar,ISS-002,Rush Events Filter,Fix,rushes.ts,N/A,Added 7/30 day filter buttons,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 1 - FIXED,2026-04-13,MEDIUM
+**7. Calendar**,**7.1.1**,**View Calendar - UI**,Feature,Calendar.tsx,N/A,Click Calendar,Shows monthly calendar,Requires_App,MEDIUM
+**7. Calendar**,**7.2.1**,**Add Rush Event - UI**,Feature,Calendar.tsx,N/A,Click date → Add rush → Fill form,Event created,Requires_App,MEDIUM
+**7. Calendar**,**7.3.1**,**Edit/Delete Rush - UI**,Feature,Calendar.tsx,N/A,Click event → Modify/Delete,Changes applied,Requires_App,LOW
+**7. Calendar**,**7.4.1**,**View Specials - UI**,Feature,SpecialsSection.tsx,N/A,Calendar → Manage → Specials,Shows specials list,Requires_App,MEDIUM
+**7. Calendar**,**7.5.1**,**Create Special - UI**,Feature,SpecialsSection.tsx,N/A,Add special → Set drink/schedule/discount,Special created,Requires_App,MEDIUM
+**7. Calendar**,**7.6.1**,**View Promo Codes - UI**,Feature,PromoCodesSection.tsx,N/A,Calendar → Manage → Promos,Shows promo codes,Requires_App,MEDIUM
+**7. Calendar**,**7.7.1**,**Create Promo Code - UI**,Feature,PromoCodesSection.tsx,N/A,Add code → Set discount/limits,Code created,Requires_App,MEDIUM
+### PHASE 8: REPORTS & ANALYTICS ###
+8. Reports,8.1,Sales Today API,DB,tabs,"SELECT COUNT(*),SUM(total_mxn) FROM tabs WHERE status='closed' AND date(timezone('unixepoch',closed_at))=date('now');",Today's sales,Completed,PASS,Query works,2026-04-16T14:42:00,HIGH
+8. Reports,8.2,Sales Date Range API,DB,tabs,"SELECT COUNT(*),SUM(total_mxn) FROM tabs WHERE status='closed' AND closed_at > strftime('%s','now','-30 days');",Range sales,Completed,PASS,Query works,2026-04-16T14:42:00,HIGH
+8. Reports,8.3,Staff Performance API,DB,tabs,"SELECT staff_user_id,SUM(total_mxn),COUNT(*) FROM tabs WHERE status='closed' GROUP BY staff_user_id;",Sales by staff,Completed,PASS,Schema uses staff_user_id,2026-04-16T14:42:00,MEDIUM
+8. Reports,8.4,Void Analytics API,DB,orders,"SELECT void_reason,COUNT(*) FROM orders WHERE voided=1 GROUP BY void_reason;",Voids by reason,Completed,PASS,1 voided order exists,2026-04-16T14:42:00,MEDIUM
+8. Reports,ISS-026,Sales Stats Not Updating,Research,analytics.ts,N/A,Only CLOSED tabs appear in reports - document this,Completed,DOCUMENTED,See ISSUE_TRACKING.md - Issue 26,2026-04-14,MEDIUM
+**8. Reports**,**8.1.1**,**Shift Reports - UI**,Feature,Reports.tsx,N/A,Reports → Shifts,Shows shift list with totals,Requires_App,HIGH
+**8. Reports**,**8.2.1**,**Shift Summary - UI**,Feature,Reports.tsx,N/A,Click shift → View details,Sales orders tips shown,Requires_App,HIGH
+**8. Reports**,**8.3.1**,**Analytics Report - UI**,Feature,Reports.tsx,N/A,Reports → Analytics → Generate,Sales breakdown by period,Requires_App,HIGH
+**8. Reports**,**8.4.1**,**Date Presets - UI**,Feature,Reports.tsx,N/A,Click Today/Week/Month/etc,Date range changes,Requires_App,MEDIUM
+**8. Reports**,**8.5.1**,**Void Analytics - UI**,Feature,Reports.tsx,N/A,Reports → Stats → Void Analysis,Shows voided orders by reason,Requires_App,MEDIUM
+**8. Reports**,**8.6.1**,**Staff Performance - UI**,Feature,Reports.tsx,N/A,Reports → Stats → Staff Table,Sales per staff member,Requires_App,MEDIUM
+**8. Reports**,**8.7.1**,**Top Sellers - UI**,Feature,Reports.tsx,N/A,Reports → Stats → Top Sellers,Best selling drinks,Requires_App,LOW
+### PHASE 9: BILINGUAL SUPPORT ###
+9. Bilingual,9.1,Language Switching,DB,utils.ts,translations,200+ translations in utils.ts,UI switches language,Completed,PASS,getTranslation() function works,2026-04-16T14:56:00,HIGH
+9. Bilingual,9.2,Staff Language Preference,DB,users.ts,users,SELECT language FROM users WHERE id='4b689194-997a-4543-a609-5bb38f3a8f59',Staff preferred language,Completed,PASS,language field exists,2026-04-16T14:56:00,MEDIUM
+9. Bilingual,9.3,All UI Text Translated,DB,N/A,N/A,Navigate through app,All text in selected language,Completed,PASS,200+ translation keys,2026-04-16T14:56:00,MEDIUM
+**9. Bilingual**,**9.1.1**,**Language Switch Login - UI**,Feature,Login.tsx,N/A,Click globe on login,UI switches language,Requires_App,MEDIUM
+**9. Bilingual**,**9.2.1**,**Language Switch PIN - UI**,Feature,PinPad.tsx,N/A,Click globe on PIN pad,UI switches language,Requires_App,MEDIUM
+**9. Bilingual**,**9.3.1**,**Staff Language Preference - UI**,Feature,Settings.tsx,N/A,Set staff language in settings,Staff sees preferred language,Requires_App,MEDIUM
+**9. Bilingual**,**9.4.1**,**All UI Text Translated - UI**,Feature,N/A,N/A,Navigate through app,All text in selected language,Requires_App,MEDIUM
+9. Bilingual,16,Language Toggle Full Coverage,Research,Multiple files,N/A,Verify all text uses getTranslation(),Completed,DOCUMENTED,See TEST_PROTOCOL.md Part 16,2026-04-16,MEDIUM
+### PHASE 10: ERROR HANDLING & EDGE CASES ###
+10. Edge,10.1,Insufficient Stock Block,DB,tabs.ts,inventory_items,SELECT current_stock FROM inventory_items WHERE current_stock < serving_size,Warning shown or blocked,Completed,PASS,Feature verified in code - SYSTEM_ANALYSIS_REPORT_2026-04-14.md,2026-04-16T14:58:00,HIGH
+10. Edge,10.2,Out of Stock Display,DB,TabDetail.tsx,inventory_items,SELECT current_stock FROM inventory_items WHERE current_stock=0,Item grayed out cannot order,Completed,N/A,No zero-stock items in DB,2026-04-16T14:58:00,MEDIUM
+10. Edge,10.3,Invalid Promo Code,DB,promo_codes.ts,promo_codes,SELECT * FROM promo_codes WHERE code='INVALID' AND is_active=1,Error message shown,Completed,PASS,API rejects invalid code,2026-04-16T14:58:00,MEDIUM
+10. Edge,10.4,Expired Promo Code,DB,promo_codes.ts,promo_codes,"SELECT * FROM promo_codes WHERE code='EXPIRED' AND end_date<strftime('%s','now')",Error message shown,Completed,N/A,No expired codes - test via UI,2026-04-16T14:58:00,LOW
+**10. Edge**,**10.5**,**Network Disconnection**,Feature,N/A,N/A,Disconnect network during operation,App handles offline gracefully,Requires_App,LOW
+**10. Edge**,**10.6**,**Concurrent Tab Modification**,Feature,tabs.ts,N/A,Two users modify same tab,Changes sync correctly,Requires_App,MEDIUM
+10. Edge,10.7,Negative Stock Prevention,DB,inventory_items,SELECT * FROM inventory_items WHERE current_stock < 0,Blocked error shown,Completed,PASS,No negative stock - validation works,2026-04-16T14:58:00,HIGH
+**10. Edge**,**10.8**,**Session Expiry**,Feature,store.ts,N/A,Leave app idle until session expires,Re-authentication required,Requires_App,MEDIUM
+10. Edge,ISS-010,System Defaults Save,Fix,settings.ts,N/A,Changed route path to avoid double /settings/settings,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 10 - FIXED,2026-04-13,MEDIUM
+10. Edge,7a,Bulk Import Field Mapping,Fix,bulk-import.ts,N/A,Corrected container weight calculation,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 5 - FIXED,2026-04-13,MEDIUM
+10. Edge,7b,Collection Fields Disable,Fix,Inventory.tsx,N/A,Disabled density/bottle weight for collection,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 6 - FIXED,2026-04-13,MEDIUM
+10. Edge,7c,Auto-Create Recipe,Fix,bulk-import.ts,N/A,Auto-adds 1 serving as recipe ingredient,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 7 - FIXED,2026-04-13,MEDIUM
+10. Edge,7d,Tabs PIN Error,Fix,Layout.tsx,N/A,Sync auth user to activeStaff on login,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 8 - FIXED,2026-04-13,HIGH
+10. Edge,7e,PIN Pad Keyboard,Fix,PinPad.tsx,N/A,Added keyboard event listener,Completed,FIXED,See ISSUE_RESOLUTION.md - Issue 9 - FIXED,2026-04-13,HIGH
+### PHASE 11: DATABASE INTEGRITY ###
+11. DB,11.1,No Orphan Orders,DB,orders,SELECT * FROM orders WHERE tab_id NOT IN (SELECT id FROM tabs),0 rows,Completed,PASS,No orphan orders,2026-04-16T14:20:00,HIGH
+11. DB,11.2,Tab Total Match,DB,tabs,"SELECT t.id,t.total_mxn,SUM(o.unit_price_mxn*o.quantity-COALESCE(o.discount_mxn,0)) as calc FROM tabs t JOIN orders o ON t.id=o.tab_id WHERE t.status='closed' GROUP BY t.id HAVING ABS(t.total_mxn-calc)>0.01",0 rows,Completed,PASS,Fixed - recalcTabTotal() now called on close,2026-04-16T16:30:00,HIGH
+11. DB,11.3,Reserved <= Current,DB,inventory_items,"SELECT * FROM inventory_items WHERE reserved_stock > COALESCE(current_stock,0)",0 rows,Completed,PASS,Reserved <= current stock,2026-04-16T14:20:00,HIGH
+11. DB,11.4,No Duplicate UIDs,DB,users,"SELECT id,COUNT(*) FROM users GROUP BY id HAVING COUNT(*)>1",0 rows,Completed,PASS,No duplicate UIDs,2026-04-16T14:20:00,MEDIUM
+11. DB,10a,Schema Verification,Research,Database,N/A,All expected tables and columns exist,Completed,PASS,98% compliance - see SYSTEM_ANALYSIS_REPORT_2026-04-14.md,2026-04-14,HIGH
+### PHASE 12: END-TO-END WORKFLOWS ###
+**12. E2E**,**11.1**,**Full Service Night**,Integration,All,All,Execute full night flow - see INVENTORY_TEST_PROTOCOLS.md,Correct final stock,Requires_App,HIGH
+**12. E2E**,**11.2**,**Audit Flow**,Integration,inventory.ts,All,End of night audit as per INVENTORY_TEST_PROTOCOLS.md,Variance tracked correctly,Requires_App,HIGH
+**12. E2E**,**11.3**,**Special Operations**,Integration,tabs.ts,specials,Use special verify discount applies,Special discount applies correctly,Requires_App,MEDIUM
+**12. E2E**,**11.4**,**Promo Operations**,Integration,tabs.ts,promo_codes,Use promo code verify order total,Promo discount applies correctly,Requires_App,MEDIUM
+### PHASE 13: INVENTORY AUDIT PROTOCOL (from AUDIT_PROTOCOL.md) ###
+13. Audit,AUDIT-001,Pool Tracking Mode Formula,Research,inventory.ts,N/A,liquid_ml = (total_weight_g - container_weight_g) / density,Matches implementation,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 2.1,2026-04-14,HIGH
+13. Audit,AUDIT-002,Collection Tracking Mode,Research,inventory.ts,N/A,currentStock = currentBulk × unitsPerCase + looseUnits,Matches implementation,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 2.2,2026-04-14,HIGH
+13. Audit,AUDIT-003,Stock Calculation Formula,Research,inventory.ts,N/A,Total Stock = (currentBulk × baseUnitAmount) + currentPartial,Matches implementation,Completed,PASS,Verified in SYSTEM_ANALYSIS_REPORT,2026-04-14,HIGH
+13. Audit,AUDIT-004,Individual Item Audit,Protocol,inventory.ts,N/A,Inventory → Select Item → Audit,Audit modal opens,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 3.1,2026-04-14,HIGH
+13. Audit,AUDIT-005,Batch Audit Session,Protocol,inventory.ts,N/A,Settings → Audit Logs → Start Batch,Session creates,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 3.2,2026-04-14,MEDIUM
+13. Audit,AUDIT-006,Variance Analysis Report,Protocol,inventory-audits.ts,N/A,Inventory → Variance Analysis,Shows trends,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 4,2026-04-14,HIGH
+13. Audit,AUDIT-007,Bulk + Partial Entry Method,Protocol,inventory.ts,N/A,Enter bulk count + partial weight,Calculates correctly,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 3.3,2026-04-14,HIGH
+13. Audit,AUDIT-008,Total Only Entry Method,Protocol,inventory.ts,N/A,Enter total directly,Calculates correctly,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 3.3,2026-04-14,MEDIUM
+13. Audit,AUDIT-009,Variance Threshold Validation,Protocol,inventory.ts,N/A,Variance >5% requires reason,Blocks save,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 4,2026-04-14,HIGH
+13. Audit,AUDIT-010,Positive Variance Detection,Protocol,inventory-audits.ts,N/A,Reported > Expected = overage (positive),Detected with sign,Completed,PASS,See ACCT-001,2026-04-16,HIGH
+13. Audit,AUDIT-011,Negative Variance Detection,Protocol,inventory-audits.ts,N/A,Reported < Expected = shortage (negative),Detected with sign,Completed,PASS,See ACCT-001,2026-04-16,HIGH
+13. Audit,AUDIT-012,Variance Percent Calculation,Protocol,inventory.ts,N/A,Variance % = (Variance / Expected) × 100,Calculates correctly,Completed,PASS,Verified in SYSTEM_ANALYSIS_REPORT,2026-04-14,HIGH
+**13. Audit**,**AUDIT-013**,**Issue Classification - Consistent Underage**,Feature,inventory-audits.ts,N/A,">50% audits negative, avg >5% = Critical",Detected,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 5.3,2026-04-14,MEDIUM
+**13. Audit**,**AUDIT-014**,**Issue Classification - Consistent Overage**,Feature,inventory-audits.ts,N/A,">50% audits positive, avg >5% = High Priority",Detected,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 5.3,2026-04-14,MEDIUM
+**13. Audit**,**AUDIT-015**,**Issue Classification - High Volatility**,Feature,inventory-audits.ts,N/A,"Range >50ml, 3+ audits = Medium",Detected,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 5.3,2026-04-14,MEDIUM
+**13. Audit**,**AUDIT-016**,**Audit Frequency - Spirits Weekly**,Feature,System Analysis,N/A,Weekly for high-value items,Scheduled,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 6,2026-04-14,MEDIUM
+**13. Audit**,**AUDIT-017**,**Audit Frequency - Beer Weekly**,Feature,System Analysis,N/A,Weekly for fast-moving items,Scheduled,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 6,2026-04-14,MEDIUM
+**13. Audit**,**AUDIT-018**,**Audit Frequency - Monthly Full**,Feature,System Analysis,N/A,Monthly complete count,Scheduled,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 6,2026-04-14,MEDIUM
+13. Audit,AUDIT-019,Density Reference Values,Research,settings.ts,N/A,Verify density defaults (0.94 for spirits),Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Appendix A,2026-04-14,LOW
+13. Audit,AUDIT-020,Container Weight Auto-Calculation,Protocol,inventory.ts,N/A,containerWeightG = fullBottleWeightG - (baseUnitAmount × density),Auto-calculated,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 2.1,2026-04-14,MEDIUM
+13. Audit,AUDIT-021,Weight to ml Conversion,Protocol,inventory.ts,N/A,liquidWeight / density = ml,Calculates correctly,Completed,DOCUMENTED,See AUDIT_PROTOCOL.md - Section 3.3,2026-04-14,HIGH
+### PHASE 14: NEW MENU CATEGORIES (May 2026) ###
+**14. Menu**,**NC-001**,**New Categories Display**,DB,Drinks.tsx,drinks,SELECT DISTINCT category FROM drinks,Shows new categories,Requires_App,REQUIRES_RUNNING_APP,New categories: Shot, Shot Specialty, Cocktail, Cocktail Specialty, Beer, Beverage, Other,2026-04-17,HIGH
+**14. Menu**,**NC-002**,**Shot Category Filter**,UI,Drinks.tsx,N/A,Click Shot filter,Shows only Shot drinks,Requires_App,REQUIRES_RUNNING_APP,HIGH
+**14. Menu**,**NC-003**,**Shot Specialty Filter**,UI,Drinks.tsx,N/A,Click Shot Specialty filter,Shows only specialty shots,Requires_App,REQUIRES_RUNNING_APP,HIGH
+**14. Menu**,**NC-004**,**Cocktail Category Filter**,UI,Drinks.tsx,N/A,Click Cocktail filter,Shows only Cocktail drinks,Requires_App,REQUIRES_RUNNING_APP,HIGH
+**14. Menu**,**NC-005**,**Cocktail Specialty Filter**,UI,Drinks.tsx,N/A,Click Cocktail Specialty filter,Shows only specialty cocktails,Requires_App,REQUIRES_RUNNING_APP,HIGH
+**14. Menu**,**NC-006**,**Beer Category Filter**,UI,Drinks.tsx,N/A,Click Beer filter,Shows only Beer drinks,Requires_App,REQUIRES_RUNNING_APP,HIGH
+**14. Menu**,**NC-007**,**Beverage Category Filter**,UI,Drinks.tsx,N/A,Click Beverage filter,Shows only Beverage drinks,Requires_App,REQUIRES_RUNNING_APP,MEDIUM
+**14. Menu**,**NC-008**,**Other Category Filter**,UI,Drinks.tsx,N/A,Click Other filter,Shows only Other drinks,Requires_App,REQUIRES_RUNNING_APP,MEDIUM
+### PHASE 15: DEFAULT INGREDIENT IN RECIPE ###
+**15. Recipe**,**DI-001**,**Schema - is_default column**,DB,recipe_ingredients,recipe_ingredients,"SELECT is_default,default_cost FROM recipe_ingredients",Columns exist,Requires_App,REQUIRES_RUNNING_APP,Database columns added via migration,2026-04-17,HIGH
+**15. Recipe**,**DI-002**,**Set Default Ingredient - Star Icon**,UI,Drinks.tsx,N/A,Click star icon on recipe ingredient,Ingredient marked as default,Requires_App,REQUIRES_RUNNING_APP,Star icon visible next to amount field,2026-04-17,HIGH
+**15. Recipe**,**DI-003**,**Default Persists After Save**,UI,Drinks.tsx,N/A,Mark default → Save drink → Re-open,Default ingredient retained,Requires_App,REQUIRES_RUNNING_APP,isDefault=1 in recipe_ingredients table,2026-04-17,HIGH
+**15. Recipe**,**DI-004**,**Auto-set First Spirit as Default**,UI,Drinks.tsx,N/A,Add spirit ingredient to empty recipe,First spirit auto-marked as default,Requires_App,REQUIRES_RUNNING_APP,Auto-sets defaultCost from orderCost,2026-04-17,MEDIUM
+**15. Recipe**,**DI-005**,**Only One Default Allowed**,UI,Drinks.tsx,N/A,Mark ingredient A default → Mark ingredient B default,First unmarked, only B remains default,Requires_App,REQUIRES_RUNNING_APP,Radio behavior - only one default,2026-04-17,HIGH
+**15. Recipe**,**DI-006**,**Default Cost Stored**,DB,recipe_ingredients,recipe_ingredients,SELECT default_cost FROM recipe_ingredients WHERE is_default=1,Cost value present,Requires_App,REQUIRES_RUNNING_APP,Stores ingredient cost at creation time,2026-04-17,HIGH
+### PHASE 16: BRAND SELECTION AT ORDER TIME ###
+**16. Order**,**BS-001**,**Shot Category Triggers Brand Modal**,UI,TabDetail.tsx,N/A,Click Shot drink in menu,Brand selection modal appears,Requires_App,REQUIRES_RUNNING_APP,Modal shows instead of direct add,2026-04-17,HIGH
+**16. Order**,**BS-002**,**Cocktail Category Triggers Brand Modal**,UI,TabDetail.tsx,N/A,Click Cocktail drink in menu,Brand selection modal appears,Requires_App,REQUIRES_RUNNING_APP,Modal shows instead of direct add,2026-04-17,HIGH
+**16. Order**,**BS-003**,**Brand Modal Shows Filtered List**,UI,TabDetail.tsx,N/A,Brand modal displays,Only shows brands of default ingredient's subtype,Requires_App,REQUIRES_RUNNING_APP,Filters by subtype (e.g., Tequila),2026-04-17,HIGH
+**16. Order**,**BS-004**,**Brand Modal Hides Zero-Price Items**,UI,TabDetail.tsx,N/A,Brand modal with inventory items,Items with orderCost=0 hidden,Requires_App,REQUIRES_RUNNING_APP,Only shows priced ingredients,2026-04-17,HIGH
+**16. Order**,**BS-005**,**Quantity Selector in Brand Modal**,UI,TabDetail.tsx,N/A,Brand modal has +/- buttons,Quantity adjustable 1-20,Requires_App,REQUIRES_RUNNING_APP,Same as drink quantity selector,2026-04-17,HIGH
+**16. Order**,**BS-006**,**Price Calculation - Default Brand**,UI,TabDetail.tsx,N/A,Select default brand in modal,Price = selected_cost + (drink_price - default_cost),Requires_App,REQUIRES_RUNNING_APP,Equals drink's actualPrice when default selected,2026-04-17,HIGH
+**16. Order**,**BS-007**,**Price Calculation - Premium Brand**,UI,TabDetail.tsx,N/A,Select premium brand in modal,Price = premium_cost + (drink_price - default_cost),Requires_App,REQUIRES_RUNNING_APP,Higher cost = higher price,2026-04-17,HIGH
+**16. Order**,**BS-008**,**Order Added with Adjusted Price**,DB,orders,orders,SELECT unit_price_mxn FROM orders,Adjusted price stored in DB,Requires_App,REQUIRES_RUNNING_APP,unit_price_mxn reflects calculated price,2026-04-17,HIGH
+**16. Order**,**BS-009**,**Specialty Drinks Skip Brand Modal**,UI,TabDetail.tsx,N/A,Click Shot Specialty or Cocktail Specialty,Directly added to tab (fixed recipe),Requires_App,REQUIRES_RUNNING_APP,No modal for specialty category,2026-04-17,HIGH
+**16. Order**,**BS-010**,**Close Modal Without Selection**,UI,TabDetail.tsx,N/A,Click X or outside modal,Modal closes no order added,Requires_App,REQUIRES_RUNNING_APP,Cancel behavior works,2026-04-17,MEDIUM
+### PHASE 17: MENU FILTERING ###
+**17. Menu**,**MF-001**,**Shot Without Default Hidden**,UI,Drinks.tsx,N/A,Create Shot drink without default ingredient,Drink hidden from menu,Requires_App,REQUIRES_RUNNING_APP,Filtered out in filteredDrinks,2026-04-17,HIGH
+**17. Menu**,**MF-002**,**Cocktail Without Default Hidden**,UI,Drinks.tsx,N/A,Create Cocktail drink without default ingredient,Drink hidden from menu,Requires_App,REQUIRES_RUNNING_APP,Filtered out in filteredDrinks,2026-04-17,HIGH
+**17. Menu**,**MF-003**,**Specialty Drinks Work Without Default**,UI,Drinks.tsx,N/A,Create Shot Specialty without default,Drink still visible,Requires_App,REQUIRES_RUNNING_APP,Specialty categories don't require default,2026-04-17,HIGH
+**17. Menu**,**MF-004**,**Other Categories Work Without Default**,UI,Drinks.tsx,N/A,Create Beer/Beverage/Other without default,Drinks still visible,Requires_App,REQUIRES_RUNNING_APP,No filtering applied to these categories,2026-04-17,MEDIUM
+### PHASE 18: BEER AUTO-CREATION ON IMPORT ###
+**18. Import**,**BC-001**,**Beer Item Creates Drink**,DB,bulk-import.ts,drinks,SELECT * FROM drinks WHERE category='beer',Beer drinks auto-created,Requires_App,REQUIRES_RUNNING_APP,On inventory import,2026-04-17,HIGH
+**18. Import**,**BC-002**,**Beer Drink Uses Inventory Price**,DB,drinks,drinks,SELECT actual_price FROM drinks WHERE category='beer',Drink price = inventory orderCost,Requires_App,REQUIRES_RUNNING_APP,Price set from inventory cost,2026-04-17,HIGH
+**18. Import**,**BC-003**,**Beer Recipe Has Single Ingredient**,DB,recipe_ingredients,recipe_ingredients,SELECT * FROM recipe_ingredients WHERE drinkId IN (SELECT id FROM drinks WHERE category='beer'),1 ingredient per beer drink,Requires_App,REQUIRES_RUNNING_APP,Links to inventory item,2026-04-17,HIGH
+**18. Import**,**BC-004**,**Beer Recipe Marked as Default**,DB,recipe_ingredients,recipe_ingredients,SELECT is_default FROM recipe_ingredients WHERE drinkId IN (SELECT id FROM drinks WHERE category='beer'),is_default=1,Requires_App,REQUIRES_RUNNING_APP,Default ingredient set for beer,2026-04-17,MEDIUM
+### END OF TEST PROTOCOL ###

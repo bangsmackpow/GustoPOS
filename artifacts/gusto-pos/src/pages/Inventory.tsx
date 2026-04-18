@@ -308,6 +308,52 @@ export default function Inventory() {
     }
   };
 
+  const getTotalServings = (item: any) => {
+    const {
+      currentBulk,
+      currentPartial,
+      baseUnitAmount,
+      containerWeightG,
+      density,
+      servingSize,
+      type,
+    } = item;
+    const ML_PER_OZ = 29.5735;
+    const baseUnit = baseUnitAmount || 750;
+    const d = density || 0.94;
+    const serving = servingSize || 44.36;
+
+    const isPool =
+      item.trackingMode === "pool" ||
+      (item.trackingMode === "auto" && (type === "spirit" || type === "mixer"));
+
+    if (!isPool) {
+      const totalUnits = currentBulk * baseUnit + currentPartial;
+      return totalUnits.toFixed(1);
+    }
+
+    // Pool items: convert to oz, then divide by serving size in oz
+    const servingOz = serving / ML_PER_OZ; // e.g., 44.36ml / 29.5735 = 1.5oz
+
+    // Sealed bottles: grams -> oz -> servings
+    const sealedGrams = currentBulk * (baseUnit * d);
+    const sealedOz = sealedGrams / ML_PER_OZ;
+    const sealedServings = sealedOz / servingOz;
+
+    // Partial bottle: liquid weight -> oz -> servings
+    // Fallback to 500g if full bottle weight not available
+    const glassWeightG = (() => {
+      const diff = (item.fullBottleWeightG || 0) - currentPartial;
+      return diff > 0 ? diff : 500;
+    })();
+    const partialLiquidWeight = Math.max(0, currentPartial - glassWeightG);
+    const partialOz = partialLiquidWeight / ML_PER_OZ;
+    const partialServings = partialOz / servingOz;
+
+    const totalServings = sealedServings + partialServings;
+    return totalServings.toFixed(1);
+  };
+
   const _handleCellSave = async (id: string, field: string, value: any) => {
     const item = items?.find((i: any) => i.id === id);
     if (!item) return;
@@ -690,7 +736,8 @@ export default function Inventory() {
                 containerWeightG: null,
                 density: 0.94,
                 isOnMenu: false,
-                sellSingleServing: false,
+                productPrice: 0,
+                menuPricePerServing: 0,
                 singleServingPrice: null,
               })
             }
@@ -718,44 +765,23 @@ export default function Inventory() {
                       (sortConfig.direction === "asc" ? "↑" : "↓")}
                   </th>
                   <th
-                    className="p-3 font-medium w-20 cursor-pointer hover:bg-white/5"
-                    onClick={() => handleSort("baseUnitAmount")}
+                    className="p-3 font-medium w-24 cursor-pointer hover:bg-white/5"
+                    onClick={() => handleSort("subtype")}
                   >
-                    Bottle{" "}
-                    {sortConfig?.key === "baseUnitAmount" &&
+                    Subtype{" "}
+                    {sortConfig?.key === "subtype" &&
                       (sortConfig.direction === "asc" ? "↑" : "↓")}
                   </th>
                   <th
                     className="p-3 font-medium w-24 cursor-pointer hover:bg-white/5"
-                    onClick={() => handleSort("type")}
-                  >
-                    Type{" "}
-                    {sortConfig?.key === "type" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th
-                    className="p-3 font-medium w-24 cursor-pointer hover:bg-white/5"
-                    onClick={() => handleSort("currentStock")}
+                    onClick={() => handleSort("currentBulk")}
                   >
                     Stock{" "}
-                    {sortConfig?.key === "currentStock" &&
+                    {sortConfig?.key === "currentBulk" &&
                       (sortConfig.direction === "asc" ? "↑" : "↓")}
                   </th>
-                  <th
-                    className="p-3 font-medium w-20 cursor-pointer hover:bg-white/5"
-                    onClick={() => handleSort("servingSize")}
-                  >
-                    Servings{" "}
-                    {sortConfig?.key === "servingSize" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th
-                    className="p-3 font-medium w-16 cursor-pointer hover:bg-white/5"
-                    onClick={() => handleSort("orderCost")}
-                  >
-                    Avg ${" "}
-                    {sortConfig?.key === "orderCost" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  <th className="p-3 font-medium w-24 cursor-pointer hover:bg-white/5">
+                    Total Servings
                   </th>
                   <th
                     className="p-3 font-medium w-20 cursor-pointer hover:bg-white/5"
@@ -765,13 +791,8 @@ export default function Inventory() {
                     {sortConfig?.key === "markupFactor" &&
                       (sortConfig.direction === "asc" ? "↑" : "↓")}
                   </th>
-                  <th
-                    className="p-3 font-medium w-16 cursor-pointer hover:bg-white/5"
-                    onClick={() => handleSort("density")}
-                  >
-                    Weight{" "}
-                    {sortConfig?.key === "density" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
+                  <th className="p-3 font-medium w-24 cursor-pointer hover:bg-white/5">
+                    Menu Price
                   </th>
                   <th className="p-3 font-medium w-16 text-right">Actions</th>
                 </tr>
@@ -859,73 +880,20 @@ export default function Inventory() {
                           </div>
                         </td>
                         <td className="p-3">
-                          <div className="text-sm text-muted-foreground">
-                            {item.bottleSizeMl || item.unitsPerCase ? (
-                              <span className="font-mono">
-                                {getContainerDisplay(item)}
-                              </span>
-                            ) : item.baseUnitAmount ? (
-                              <span className="font-mono">
-                                {item.baseUnitAmount}
-                                {item.baseUnit}
-                              </span>
-                            ) : (
-                              <span className="opacity-40">—</span>
-                            )}
-                            {item.fullBottleWeightG && (
-                              <span className="text-[10px] block text-muted-foreground/60">
-                                {item.fullBottleWeightG.toFixed(0)}g full
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3">
                           <div className="text-sm text-muted-foreground capitalize">
-                            {typeLabel(item.type)}
-                            {item.subtype && (
-                              <span className="text-xs block text-muted-foreground/60">
-                                {getSubtypeLabel(item.type, item.subtype)}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <div
-                            className={`cursor-pointer hover:text-primary font-medium ${isLow ? "text-primary" : "text-foreground"}`}
-                            onClick={() => setEditingItem(item)}
-                          >
-                            <div className="flex flex-col">
-                              <span>
-                                {isLow && (
-                                  <AlertTriangle
-                                    size={12}
-                                    className="inline mr-1"
-                                  />
-                                )}
-                                {getStockDisplay(item)}
-                              </span>
-                              {hasVariations && (
-                                <span className="text-[10px] text-muted-foreground uppercase">
-                                  Pooled Total ({variations.length + 1})
-                                </span>
-                              )}
-                            </div>
+                            {item.subtype
+                              ? getSubtypeLabel(item.type, item.subtype)
+                              : typeLabel(item.type)}
                           </div>
                         </td>
                         <td className="p-3">
                           <span className="font-mono text-sm">
-                            {pooledStock > 0 && item.servingSize > 0
-                              ? (pooledStock / item.servingSize).toFixed(1)
-                              : "0"}
+                            {item.currentBulk || 0}
                           </span>
                         </td>
                         <td className="p-3">
                           <span className="font-mono text-sm">
-                            {item.orderCost > 0 && item.baseUnitAmount > 0
-                              ? formatMoney(
-                                  item.orderCost / item.baseUnitAmount,
-                                )
-                              : "—"}
+                            {getTotalServings(item)}
                           </span>
                         </td>
                         <td className="p-3">
@@ -939,19 +907,11 @@ export default function Inventory() {
                           </span>
                         </td>
                         <td className="p-3">
-                          <div className="text-xs text-muted-foreground">
-                            {item.containerWeightG ? (
-                              <span className="font-mono block">
-                                {item.containerWeightG.toFixed(0)}g container
-                              </span>
-                            ) : (
-                              <span className="opacity-40 text-[10px]">
-                                {language === "es"
-                                  ? "Sin datos de peso"
-                                  : "No weight data"}
-                              </span>
-                            )}
-                          </div>
+                          <span className="font-mono text-sm text-blue-400">
+                            {item.menuPricePerServing
+                              ? formatMoney(item.menuPricePerServing)
+                              : "—"}
+                          </span>
                         </td>
                         <td className="p-3 text-right">
                           <div className="flex justify-end gap-2">
@@ -1024,13 +984,6 @@ export default function Inventory() {
                               </span>
                             </td>
                             <td className="p-3">
-                              <span className="font-mono text-xs">
-                                {v.orderCost > 0 && v.baseUnitAmount > 0
-                                  ? formatMoney(v.orderCost / v.baseUnitAmount)
-                                  : "—"}
-                              </span>
-                            </td>
-                            <td className="p-3">
                               <span className="font-mono text-xs opacity-50">
                                 {v.orderCost > 0 && v.baseUnitAmount > 0
                                   ? formatMoney(
@@ -1038,15 +991,6 @@ export default function Inventory() {
                                         v.servingSize,
                                     )
                                   : "—"}
-                              </span>
-                            </td>
-                            <td className="p-3">
-                              <span className="text-[10px] text-muted-foreground opacity-50">
-                                {v.glassWeightG
-                                  ? `${v.glassWeightG.toFixed(0)}g glass`
-                                  : v.density
-                                    ? `${v.density} density`
-                                    : "—"}
                               </span>
                             </td>
                             <td className="p-3 text-right">
@@ -1347,6 +1291,25 @@ export default function Inventory() {
                     />
                   </div>
 
+                  {/* Menu Price Per Serving */}
+                  <div className="flex flex-col space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
+                      Menu Price/Srv
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="w-full bg-secondary/50 border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors"
+                      value={editingItem.menuPricePerServing || ""}
+                      onChange={(e) =>
+                        setEditingItem({
+                          ...editingItem,
+                          menuPricePerServing: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
                   {/* Row 5: Alcohol Density (col 1) - only for pool items */}
                   <div className="flex flex-col space-y-2">
                     <label className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-[10px]">
@@ -1393,7 +1356,7 @@ export default function Inventory() {
                   {/* Row 6: Low Stock Alert */}
                   <div className="flex flex-col space-y-2">
                     <label className="text-sm font-bold text-primary uppercase tracking-widest text-[10px]">
-                      {getTranslation("low_stock_alert_label", language)}
+                      Low Stock Alert (servings)
                     </label>
                     <input
                       type="number"
@@ -1409,12 +1372,31 @@ export default function Inventory() {
                     />
                   </div>
 
+                  {/* Row 6: Price (legacy - duplicates menuPricePerServing) */}
                   <div className="flex flex-col space-y-2">
-                    {/* Empty cell for grid alignment */}
+                    <label className="text-sm font-bold text-primary uppercase tracking-widest text-[10px]">
+                      Price
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-primary font-bold">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors text-primary font-mono"
+                        value={editingItem.menuPricePerServing || ""}
+                        onChange={(e) => {
+                          const price = parseFloat(e.target.value) || 0;
+                          setEditingItem({
+                            ...editingItem,
+                            menuPricePerServing: price,
+                          });
+                        }}
+                      />
+                    </div>
                   </div>
 
-                  {/* Weighing Section (If applicable) */}
-                  {isLayoutA && (
+                  {/* Weighing Section - Only for NEW items (not editing existing) */}
+                  {isLayoutA && !editingItem.id && (
                     <div className="col-span-2 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-6">
                       <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-[10px]">
                         <Settings size={14} />
@@ -1434,10 +1416,10 @@ export default function Inventory() {
                               const count = parseInt(e.target.value) || 0;
                               setFullBottleCount(count);
                               const size = editingItem.bottleSizeMl || 750;
-                              const partial =
-                                (editingItem.currentStock || 0) % size;
+                              const partial = editingItem.currentPartial || 0;
                               setEditingItem({
                                 ...editingItem,
+                                currentBulk: count,
                                 currentStock: count * size + partial,
                               });
                             }}
@@ -1445,7 +1427,7 @@ export default function Inventory() {
                         </div>
                         <div className="space-y-1">
                           <label className="text-[10px] text-muted-foreground uppercase font-bold">
-                            {getTranslation("current_bottle_weight", language)}
+                            Active Bottle Weight (g)
                           </label>
                           <input
                             type="number"
@@ -1464,11 +1446,10 @@ export default function Inventory() {
                                 const glass = editingItem.containerWeightG;
                                 const liquid = Math.max(0, weight - glass);
                                 const partialMl = liquid / den;
-                                const fulls = Math.floor(
-                                  (editingItem.currentStock || 0) / size,
-                                );
+                                const fulls = editingItem.currentBulk || 0;
                                 setEditingItem({
                                   ...editingItem,
+                                  currentPartial: partialMl,
                                   currentStock: fulls * size + partialMl,
                                 });
                               }
@@ -1491,7 +1472,7 @@ export default function Inventory() {
                         <input
                           type="checkbox"
                           className="hidden"
-                          checked={editingItem.isOnMenu}
+                          checked={!!editingItem.isOnMenu}
                           onChange={(e) =>
                             setEditingItem({
                               ...editingItem,
@@ -1504,33 +1485,6 @@ export default function Inventory() {
                         {getTranslation("on_menu_label", language)}
                       </span>
                     </label>
-
-                    <div className="flex-1 flex items-center gap-3 group">
-                      <div className="flex items-center bg-secondary/50 rounded-lg px-3 py-2 border border-white/10 transition-all">
-                        <span className="text-[10px] text-muted-foreground mr-3 font-bold uppercase whitespace-nowrap tracking-wider">
-                          Single Serving Price
-                        </span>
-                        <div className="bg-white/5 rounded px-2 py-1 flex items-center border border-white/5 focus-within:border-primary/30">
-                          <span className="text-xs text-primary/60 mr-1">
-                            $
-                          </span>
-                          <input
-                            type="number"
-                            className="bg-transparent border-none outline-none text-sm w-20 text-right text-primary font-mono"
-                            placeholder="0.00"
-                            value={editingItem.singleServingPrice || ""}
-                            onChange={(e) => {
-                              const price = parseFloat(e.target.value) || 0;
-                              setEditingItem({
-                                ...editingItem,
-                                singleServingPrice: price,
-                                sellSingleServing: price > 0,
-                              });
-                            }}
-                          />
-                        </div>
-                      </div>
-                    </div>
                   </div>
 
                   {/* Current Inventory Display (Read-only - use Audit to update) */}
@@ -1637,7 +1591,8 @@ export default function Inventory() {
             })()}
             <div className="flex justify-between items-center mt-6">
               <div className="flex gap-3">
-                {!editingItem.id && (
+                {/* Add Variation only for EXISTING items (has id) */}
+                {editingItem.id && (
                   <Button
                     variant="outline"
                     onClick={() => {

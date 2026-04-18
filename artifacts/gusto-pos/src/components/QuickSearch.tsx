@@ -1,73 +1,78 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'wouter';
-import { 
-  Search, 
-  X, 
-  ReceiptText, 
-  Wine, 
+import React, { useState, useEffect, useRef } from "react";
+import { useLocation } from "wouter";
+import {
+  Search,
+  X,
+  ReceiptText,
+  Wine,
   Info,
   ArrowRight,
-  TrendingUp
-} from 'lucide-react';
-import { useGetDrinks, useGetTabs } from '@workspace/api-client-react';
-import { usePosStore } from '@/store';
-import { getTranslation } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
+  TrendingUp,
+} from "lucide-react";
+import { useGetDrinks, useGetTabs } from "@workspace/api-client-react";
+import { usePosStore } from "@/store";
+import { getTranslation } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 
-export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
-  const [search, setSearch] = useState('');
+export function QuickSearch({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  const [search, setSearch] = useState("");
   const [, setLocation] = useLocation();
   const { language } = usePosStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: drinks } = useGetDrinks();
-  const { data: tabs } = useGetTabs({ status: 'open' });
+  const { data: tabs } = useGetTabs({ status: "open" });
 
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
         inputRef.current?.focus();
-        setSearch('');
+        setSearch("");
       }, 100);
     }
   }, [isOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
         onClose(); // Toggle logic would be handled by parent, but this is a simple closer
       }
-      if (e.key === 'Escape') onClose();
+      if (e.key === "Escape") onClose();
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  const filteredDrinks = drinks?.filter(d => 
-    d.name.toLowerCase().includes(search.toLowerCase()) || 
-    d.nameEs?.toLowerCase().includes(search.toLowerCase())
-  ).slice(0, 5);
+  const filteredDrinks = drinks
+    ?.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
+    .slice(0, 5);
 
-  const filteredTabs = tabs?.filter(t => 
-    t.nickname.toLowerCase().includes(search.toLowerCase())
-  ).slice(0, 5);
+  const filteredTabs = tabs
+    ?.filter((t) => t.nickname.toLowerCase().includes(search.toLowerCase()))
+    .slice(0, 5);
 
   if (!isOpen) return null;
 
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[10vh] px-4">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-background/80 backdrop-blur-md" 
+          className="absolute inset-0 bg-background/80 backdrop-blur-md"
         />
-        
-        <motion.div 
+
+        <motion.div
           initial={{ opacity: 0, scale: 0.95, y: -20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
@@ -75,14 +80,21 @@ export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () 
         >
           <div className="p-6 border-b border-white/10 flex items-center gap-4">
             <Search className="text-primary" size={24} />
-            <input 
+            <input
               ref={inputRef}
               className="flex-1 bg-transparent border-none text-xl outline-none placeholder:text-muted-foreground"
-              placeholder={language === 'en' ? "Search drinks, tabs, recipes..." : "Buscar bebidas, cuentas, recetas..."}
+              placeholder={
+                language === "en"
+                  ? "Search drinks, tabs, recipes..."
+                  : "Buscar bebidas, cuentas, recetas..."
+              }
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
             />
-            <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-xl transition-colors">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/5 rounded-xl transition-colors"
+            >
               <X size={20} />
             </button>
           </div>
@@ -92,13 +104,16 @@ export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () 
             {filteredTabs && filteredTabs.length > 0 && (
               <div>
                 <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-3 px-2 flex items-center gap-2">
-                  <ReceiptText size={12} /> {getTranslation('tabs', language)}
+                  <ReceiptText size={12} /> {getTranslation("tabs", language)}
                 </h3>
                 <div className="space-y-1">
-                  {filteredTabs.map(tab => (
+                  {filteredTabs.map((tab) => (
                     <button
                       key={tab.id}
-                      onClick={() => { setLocation(`/tabs/${tab.id}`); onClose(); }}
+                      onClick={() => {
+                        setLocation(`/tabs/${tab.id}`);
+                        onClose();
+                      }}
                       className="w-full flex items-center justify-between p-4 hover:bg-primary/10 rounded-2xl transition-all group border border-transparent hover:border-primary/20"
                     >
                       <div className="flex items-center gap-4">
@@ -108,11 +123,20 @@ export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                         <div className="text-left">
                           <p className="font-medium">{tab.nickname}</p>
                           <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                            ${tab.totalMxn.toLocaleString()} MXN • {tab.openedAt ? new Date(tab.openedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                            ${tab.totalMxn.toLocaleString()} MXN •{" "}
+                            {tab.openedAt
+                              ? new Date(tab.openedAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : ""}
                           </p>
                         </div>
                       </div>
-                      <ArrowRight size={18} className="text-muted-foreground group-hover:text-primary transition-colors translate-x-[-10px] group-hover:translate-x-0 opacity-0 group-hover:opacity-100 duration-200" />
+                      <ArrowRight
+                        size={18}
+                        className="text-muted-foreground group-hover:text-primary transition-colors translate-x-[-10px] group-hover:translate-x-0 opacity-0 group-hover:opacity-100 duration-200"
+                      />
                     </button>
                   ))}
                 </div>
@@ -123,10 +147,10 @@ export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () 
             {filteredDrinks && filteredDrinks.length > 0 && (
               <div>
                 <h3 className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold mb-3 px-2 flex items-center gap-2">
-                  <Wine size={12} /> {getTranslation('drinks', language)}
+                  <Wine size={12} /> {getTranslation("drinks", language)}
                 </h3>
                 <div className="space-y-1">
-                  {filteredDrinks.map(drink => (
+                  {filteredDrinks.map((drink) => (
                     <div
                       key={drink.id}
                       className="w-full flex items-center justify-between p-4 hover:bg-white/5 rounded-2xl transition-all group"
@@ -136,24 +160,32 @@ export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () 
                           <Wine size={20} />
                         </div>
                         <div className="text-left">
-                          <p className="font-medium">{language === 'en' ? drink.name : (drink.nameEs || drink.name)}</p>
-                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{drink.category}</p>
+                          <p className="font-medium">{drink.name}</p>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                            {drink.category}
+                          </p>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="h-9 gap-2 text-xs text-primary hover:bg-primary/10 rounded-xl"
-                          onClick={() => { setLocation('/drinks'); onClose(); }}
+                          onClick={() => {
+                            setLocation("/drinks");
+                            onClose();
+                          }}
                         >
                           <Info size={14} /> Recipe
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           className="h-9 gap-2 text-xs rounded-xl"
-                          onClick={() => { setLocation('/tabs'); onClose(); }}
+                          onClick={() => {
+                            setLocation("/tabs");
+                            onClose();
+                          }}
                         >
                           Add to Tab
                         </Button>
@@ -164,19 +196,27 @@ export function QuickSearch({ isOpen, onClose }: { isOpen: boolean, onClose: () 
               </div>
             )}
 
-            {search && filteredDrinks?.length === 0 && filteredTabs?.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <p className="italic">No results found for &quot;{search}&quot;</p>
-              </div>
-            )}
+            {search &&
+              filteredDrinks?.length === 0 &&
+              filteredTabs?.length === 0 && (
+                <div className="text-center py-12 text-muted-foreground">
+                  <p className="italic">
+                    No results found for &quot;{search}&quot;
+                  </p>
+                </div>
+              )}
 
             {!search && (
               <div className="text-center py-12 text-muted-foreground">
                 <div className="w-12 h-12 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4 opacity-50">
                   <TrendingUp size={24} />
                 </div>
-                <p className="text-sm">Start typing to search for anything...</p>
-                <p className="text-[10px] uppercase tracking-widest mt-2 opacity-50">Press ESC to close</p>
+                <p className="text-sm">
+                  Start typing to search for anything...
+                </p>
+                <p className="text-[10px] uppercase tracking-widest mt-2 opacity-50">
+                  Press ESC to close
+                </p>
               </div>
             )}
           </div>

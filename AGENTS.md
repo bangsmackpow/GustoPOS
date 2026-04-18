@@ -988,3 +988,119 @@ Changes:
 | `artifacts/gusto-pos/src/pages/Inventory.tsx`   | Current stock display, tracking mode defaults |
 | `artifacts/gusto-pos/src/pages/Settings.tsx`    | Serving size ml/oz toggle                     |
 | `artifacts/gusto-pos/src/pages/Dashboard.tsx`   | Rush event filters (Today/Tomorrow/Week/All)  |
+
+---
+
+## 📝 May 17, 2026 - Inventory Table Redesign & Bug Fixes
+
+### Inventory Table Column Changes
+
+**New Column Schema:**
+| Column | Description |
+|--------|-------------|
+| Menu | Existing (checkbox) |
+| Name | Existing |
+| Subtype | Existing |
+| **Stock** | Shows `currentBulk` (sealed containers count) - renamed from "Backstock" |
+| **Total Servings** | New calculation (see formula below) |
+| Cost/Srv | Unchanged (calculated from order cost) |
+| **Menu Price** | New column showing manual `menuPricePerServing` |
+
+**Total Servings Formula:**
+
+_Pool items (spirit, mixer):_
+
+```
+totalServings = (sealedGrams / ML_PER_OZ / servingOz) + (partialLiquidGrams / ML_PER_OZ / servingOz)
+```
+
+Where:
+
+- sealedGrams = currentBulk × (baseUnitAmount × density)
+- partialLiquidGrams = max(0, currentPartial - glassWeightG)
+- glassWeightG = (fullBottleWeightG - currentPartial) > 0 ? (fullBottleWeightG - currentPartial) : 500 (fallback)
+- servingOz = servingSize / 29.5735
+
+_Collection items (beer, merch):_
+
+- totalUnits = currentBulk × unitsPerCase + currentPartial
+
+### Database Schema Changes
+
+**inventory_items table:**
+
+- Added `menu_price_per_serving` column (real, nullable) - manual entry
+
+**drinks table:**
+
+- Added `source_type` column (text, default "standard") - needed for auto-created drinks from inventory
+
+### Backend Changes
+
+**`artifacts/api-server/src/routes/inventory.ts`:**
+
+- Added handling for `menuPricePerServing` in POST/PATCH endpoints
+
+**`artifacts/api-server/src/routes/audit-sessions.ts`:**
+
+- Added `import crypto from "crypto"` - was using crypto.randomUUID() without import
+
+### Frontend Changes
+
+**`artifacts/gusto-pos/src/pages/Inventory.tsx`:**
+
+- Renamed "Backstock" column to "Stock"
+- Added `getTotalServings()` function with corrected formula (was adding grams + servings incorrectly)
+- Added fallback logic for glassWeightG: 500g when full bottle weight unavailable
+- Added "Menu Price/Srv" input field in Add/Edit modal
+
+**`lib/db/src/index.ts`:**
+
+- Added auto-migration for `menu_price_per_serving` column
+- Added auto-migration for `source_type` column in drinks table
+
+### Files Modified This Session
+
+| File                                                | Changes                                                     |
+| --------------------------------------------------- | ----------------------------------------------------------- |
+| `lib/db/src/schema/inventory.ts`                    | Added menuPricePerServing column                            |
+| `lib/db/src/schema/gusto.ts`                        | Added sourceType column to drinksTable                      |
+| `lib/db/src/index.ts`                               | Added auto-migrations for new columns                       |
+| `lib/api-spec/openapi.yaml`                         | Added menuPricePerServing to schemas                        |
+| `artifacts/api-server/src/routes/inventory.ts`      | Handle menuPricePerServing in POST/PATCH                    |
+| `artifacts/api-server/src/routes/audit-sessions.ts` | Added crypto import                                         |
+| `artifacts/gusto-pos/src/types/inventory.ts`        | Added menuPricePerServing type                              |
+| `artifacts/gusto-pos/src/pages/Inventory.tsx`       | New columns: Stock, Total Servings, Menu Price; new formula |
+| `artifacts/gusto-pos/src/pages/Settings.tsx`        | Added menuPricePerServing field to edit modal               |
+
+---
+
+## 📝 Batch Audit System (April 17, 2026)
+
+### Bug Fixes
+
+1. **crypto import** - Added `import crypto from "crypto"` to audit-sessions.ts
+2. **session_id column** - Added auto-migration to add session_id to inventory_audits table
+3. **Duplicate sourceType** - Removed duplicate property in drinksTable schema
+
+### Documentation
+
+Created `docs/BATCH_AUDIT_SYSTEM.md` with:
+
+- System overview
+- Database schema
+- API endpoints
+- Bug fixes applied
+- Future enhancements
+
+---
+
+## Verification Commands
+
+```bash
+# TypeCheck
+pnpm run typecheck
+
+# Build DMG
+pnpm run build:desktop
+```

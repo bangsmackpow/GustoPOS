@@ -13,7 +13,6 @@ export const inventoryItemsTable = sqliteTable("inventory_items", {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text("name").notNull(),
-  nameEs: text("name_es"),
   type: text("type").notNull(),
   subtype: text("subtype"),
   parentItemId: text("parent_item_id").references(
@@ -40,10 +39,13 @@ export const inventoryItemsTable = sqliteTable("inventory_items", {
   orderCost: real("order_cost").notNull().default(0),
   markupFactor: real("markup_factor").default(3.0),
 
-  // Booleans stored as 0/1 integers in SQLite (no type conversion)
+  // Boolean flags
   isOnMenu: integer("is_on_menu").notNull().default(1),
   sellSingleServing: integer("sell_single_serving").notNull().default(0),
   singleServingPrice: real("single_serving_price"),
+  productPrice: real("product_price"),
+  menuPricePerServing: real("menu_price_per_serving"),
+
   isDeleted: integer("is_deleted").notNull().default(0),
 
   lowStockMethod: text("low_stock_method").default("manual"),

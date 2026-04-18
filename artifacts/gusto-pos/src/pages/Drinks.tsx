@@ -22,6 +22,8 @@ import {
   Wine,
   ChevronRight,
   ChevronLeft,
+  Star,
+  Check,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -29,11 +31,21 @@ const OZ_TO_ML = 44.36;
 
 const DRINK_CATEGORIES = [
   { value: "all", label: "All", labelEs: "Todos" },
-  { value: "cocktail", label: "Cocktail", labelEs: "Cóctel" },
-  { value: "beer", label: "Beer", labelEs: "Cerveza" },
-  { value: "wine", label: "Wine", labelEs: "Vino" },
   { value: "shot", label: "Shot", labelEs: "Shot" },
-  { value: "non_alcoholic", label: "Non-Alcoholic", labelEs: "Sin Alcohol" },
+  {
+    value: "shot_specialty",
+    label: "Shot (Specialty)",
+    labelEs: "Shot (Especial)",
+  },
+  { value: "cocktail", label: "Cocktail", labelEs: "Córtel" },
+  {
+    value: "cocktail_specialty",
+    label: "Cocktail (Specialty)",
+    labelEs: "Córtel (Especial)",
+  },
+  { value: "beer", label: "Beer", labelEs: "Cerveza" },
+  { value: "beverage", label: "Beverage", labelEs: "Bebida" },
+  { value: "wine", label: "Wine", labelEs: "Vino" },
   { value: "other", label: "Other", labelEs: "Otro" },
 ];
 
@@ -197,10 +209,16 @@ export default function Drinks() {
       activeCategory === "all" || d.category === activeCategory;
     const matchesOnMenu = !onMenuOnly || d.isOnMenu;
     const matchesSearch =
-      !search ||
-      d.name.toLowerCase().includes(search.toLowerCase()) ||
-      (d.nameEs && d.nameEs.toLowerCase().includes(search.toLowerCase()));
-    return matchesCategory && matchesOnMenu && matchesSearch;
+      !search || d.name.toLowerCase().includes(search.toLowerCase());
+
+    // For Shot and Cocktail categories, require default ingredient
+    const needsDefault = d.category === "shot" || d.category === "cocktail";
+    const hasDefault = d.recipe?.some((r: any) => r.isDefault);
+    const showWithoutDefault = !needsDefault || hasDefault;
+
+    return (
+      matchesCategory && matchesOnMenu && matchesSearch && showWithoutDefault
+    );
   });
 
   const sortedDrinks = [...(filteredDrinks || [])].sort((a: any, b: any) => {
@@ -383,12 +401,12 @@ export default function Drinks() {
               onClick={() =>
                 setEditingDrink({
                   name: "",
-                  nameEs: "",
                   category: "cocktail",
                   actualPrice: null,
                   recipe: [],
                   isAvailable: true,
                   isOnMenu: false,
+                  sourceType: "standard",
                 })
               }
             >
@@ -512,11 +530,7 @@ export default function Drinks() {
                                   className="text-muted-foreground"
                                 />
                               )}
-                              <span>
-                                {language === "es" && drink.nameEs
-                                  ? drink.nameEs
-                                  : drink.name}
-                              </span>
+                              <span className="font-medium">{drink.name}</span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-1 line-clamp-1 italic">
                               {drink.recipe
@@ -571,13 +585,10 @@ export default function Drinks() {
                                 }
                                 onClick={() => {
                                   // Clone: open modal with copied drink (no id, name prefixed)
-                                  const { name, nameEs, ...rest } = drink;
+                                  const { name, ...rest } = drink;
                                   setEditingDrink({
                                     ...rest,
                                     name: `Copy of ${name}`,
-                                    nameEs: nameEs
-                                      ? `Copia de ${nameEs}`
-                                      : `Copy of ${name}`,
                                     id: undefined,
                                   });
                                 }}
@@ -630,12 +641,14 @@ export default function Drinks() {
               return {
                 ingredientId: r.ingredientId,
                 amountInBaseUnit: amount,
+                isDefault: r.isDefault || false,
+                defaultCost: r.defaultCost || 0,
               };
             });
 
             const saveData = {
               ...rest,
-              nameEs: rest.nameEs || rest.name,
+              // nameEs removed
               recipe: convertedRecipe,
             };
             saveDrink.mutate(
@@ -755,14 +768,19 @@ function DrinkModal({
   ];
 
   const getIngredientsFiltered = (typeFilter: string, subtype: string) => {
+    const lowerType = typeFilter?.toLowerCase() || "";
     return ingredients
       .filter(
         (ing: any) =>
-          ing.type === typeFilter || (typeFilter === "other" && !ing.type),
+          (ing.type && ing.type.toLowerCase() === lowerType) ||
+          (typeFilter === "other" && !ing.type),
       )
       .filter(
         (ing: any) =>
-          ing.subtype === subtype || (!ing.subtype && subtype === "other"),
+          !subtype ||
+          (ing.subtype &&
+            ing.subtype.toLowerCase() === subtype.toLowerCase()) ||
+          (!ing.subtype && subtype === "other"),
       );
   };
 
@@ -803,12 +821,31 @@ function DrinkModal({
     if (updates.ingredientId) {
       const ing = ingredients.find((i: any) => i.id === updates.ingredientId);
       if (ing) {
-        newRecipe[idx].ingredientName =
-          language === "es" && ing.nameEs ? ing.nameEs : ing.name;
+        newRecipe[idx].ingredientName = ing.name;
         newRecipe[idx].amountInBaseUnit = ing.servingSize || 1.5;
+        // Auto-set as default if it's the first spirit ingredient
+        if (
+          ing.type === "spirit" &&
+          !newRecipe.some((r: any, i: number) => r.isDefault && i !== idx)
+        ) {
+          newRecipe[idx].isDefault = true;
+          newRecipe[idx].defaultCost = ing.orderCost || 0;
+        }
       }
     }
 
+    setEditing({ ...editing, recipe: newRecipe });
+  };
+
+  const setDefaultIngredient = (idx: number) => {
+    const newRecipe = [...(editing.recipe || [])];
+    newRecipe.forEach((r: any, i: number) => {
+      newRecipe[i] = { ...r, isDefault: i === idx };
+      if (i === idx) {
+        const ing = ingredients.find((ing: any) => ing.id === r.ingredientId);
+        newRecipe[i].defaultCost = ing?.orderCost || 0;
+      }
+    });
     setEditing({ ...editing, recipe: newRecipe });
   };
 
@@ -862,18 +899,6 @@ function DrinkModal({
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-muted-foreground">
-              {getTranslation("spanish_name", language)}
-            </label>
-            <input
-              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-              value={editing.nameEs || ""}
-              onChange={(e) =>
-                setEditing({ ...editing, nameEs: e.target.value })
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-muted-foreground">
               {getTranslation("drink_category", language)}
             </label>
             <select
@@ -883,14 +908,21 @@ function DrinkModal({
                 setEditing({ ...editing, category: e.target.value })
               }
             >
+              <option value="shot">{getTranslation("shot", language)}</option>
+              <option value="shot_specialty">
+                {language === "es" ? "Shot (Especial)" : "Shot (Specialty)"}
+              </option>
               <option value="cocktail">
                 {getTranslation("cocktail", language)}
               </option>
+              <option value="cocktail_specialty">
+                {language === "es"
+                  ? "Córtel (Especial)"
+                  : "Cocktail (Specialty)"}
+              </option>
               <option value="beer">{getTranslation("beer", language)}</option>
-              <option value="wine">{getTranslation("wine", language)}</option>
-              <option value="shot">{getTranslation("shot", language)}</option>
-              <option value="non_alcoholic">
-                {getTranslation("non_alcoholic", language)}
+              <option value="beverage">
+                {language === "es" ? "Bebida" : "Beverage"}
               </option>
               <option value="other">{getTranslation("other", language)}</option>
             </select>
@@ -1036,6 +1068,27 @@ function DrinkModal({
                           oz
                         </span>
                       </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setDefaultIngredient(idx)}
+                        className={`shrink-0 p-2 rounded-lg transition-colors ${
+                          item.isDefault
+                            ? "bg-amber-500/20 text-amber-400"
+                            : "text-muted-foreground hover:text-amber-400 hover:bg-white/5"
+                        }`}
+                        title={
+                          item.isDefault
+                            ? "Default ingredient"
+                            : "Set as default"
+                        }
+                      >
+                        {item.isDefault ? (
+                          <Check size={16} />
+                        ) : (
+                          <Star size={16} />
+                        )}
+                      </button>
 
                       <Button
                         variant="ghost"

@@ -7,18 +7,14 @@ import {
   useGetUsers,
   useUpdateUser,
   useCreateUser,
-  useGetRushes,
-  usePostRushes,
-  useDeleteRushesId,
   useGetCurrentAuthUser,
   useGetDrinks,
 } from "@workspace/api-client-react";
 import { usePosStore } from "@/store";
 import { getTranslation } from "@/lib/utils";
+import { ML_PER_OZ } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { PromoCodesSection } from "@/components/PromoCodesSection";
-import { SpecialsSection } from "@/components/SpecialsSection";
 import {
   Save,
   Users,
@@ -43,12 +39,14 @@ import {
   Lock,
   Archive,
   Upload,
+  Download,
   FileSpreadsheet,
   Database,
   RefreshCw,
   Sliders,
   ChevronDown,
   ClipboardList,
+  Sparkles,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
@@ -233,36 +231,14 @@ export default function Settings() {
   const { data: settings } = useGetSettings();
   const { data: users, refetch: refetchUsers } = useGetUsers();
   const { data: drinks } = useGetDrinks();
-  const { data: rushes, refetch: refetchRushes } = useGetRushes({
-    days: showAllRushes ? 365 : rushDays,
-  });
-
-  const [promoCodes, setPromoCodes] = useState<any[]>([]);
-  const [specials, setSpecials] = useState<any[]>([]);
-
   const updateSettings = useUpdateSettings();
   const updateUser = useUpdateUser();
   const createUser = useCreateUser();
-  const createRush = usePostRushes();
-  const deleteRush = useDeleteRushesId();
 
   const { toast } = useToast();
   const { data: auth } = useGetCurrentAuthUser();
   const isAdmin = auth?.user?.role === "admin";
   const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    if (isAdmin) {
-      fetch("/api/promo-codes", { credentials: "include" })
-        .then((res) => res.json())
-        .then(setPromoCodes)
-        .catch(console.error);
-      fetch("/api/specials", { credentials: "include" })
-        .then((res) => res.json())
-        .then(setSpecials)
-        .catch(console.error);
-    }
-  }, [isAdmin]);
 
   const [formData, setFormData] = useState({
     barName: "",
@@ -292,11 +268,14 @@ export default function Settings() {
 
   const qc = useQueryClient();
   const [editingStaff, setEditingStaff] = useState<any>(null);
-  const [showAddRush, setShowAddRush] = useState(false);
-  const [deletingRush, setDeletingRush] = useState<any>(null);
+  const [staffFilter, setStaffFilter] = useState<"all" | "active" | "archived">(
+    "active",
+  );
 
   const [showSeedModal, setShowSeedModal] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [showSeedCocktailsModal, setShowSeedCocktailsModal] = useState(false);
+  const [isSeedingCocktails, setIsSeedingCocktails] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [showDeleteDataModal, setShowDeleteDataModal] = useState(false);
 
@@ -383,11 +362,15 @@ export default function Settings() {
           startedByUserId: auth?.user?.id,
         }),
       });
-      if (!res.ok) throw new Error("Failed to create audit session");
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${res.status}`);
+      }
       const session = await res.json();
       fetchAuditSessions();
       setLocation("/settings/batch-audit/" + session.id);
     } catch (err: any) {
+      console.error("Batch audit error:", err);
       toast({
         variant: "destructive",
         title: "Error",
@@ -405,8 +388,8 @@ export default function Settings() {
       if (!res.ok) throw new Error("Failed to fetch audit sessions");
       const data = await res.json();
       setAuditSessions(data);
-    } catch (err: any) {
-      console.error("Failed to fetch audit sessions:", err);
+    } catch {
+      // Silently fail
     } finally {
       setAuditSessionsLoading(false);
     }
@@ -470,8 +453,8 @@ export default function Settings() {
           const data = await res.json();
           setSystemDefaults(data);
         }
-      } catch (err) {
-        console.error("Failed to load system defaults:", err);
+      } catch {
+        // Silently fail
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -724,7 +707,7 @@ export default function Settings() {
       if (servingUnit === "g") return servingSizeVal;
       if (servingUnit === "unit") return servingSizeVal;
       if (servingUnit === "oz" && bulkUnit === "ml")
-        return servingSizeVal * 29.5735;
+        return servingSizeVal * ML_PER_OZ;
       if (servingUnit === "l" && bulkUnit === "ml")
         return servingSizeVal * 1000;
       if (servingUnit === "kg" && bulkUnit === "g")
@@ -837,7 +820,7 @@ export default function Settings() {
           else servingSize = 1;
         }
         // Convert oz to ml for backend
-        servingSize = servingSize * 29.5735;
+        servingSize = servingSize * ML_PER_OZ;
 
         // Order Cost
         const rawCost = columnMappings["orderCost"]
@@ -886,7 +869,6 @@ export default function Settings() {
 
         return {
           name,
-          nameEs: "",
           type,
           subtype,
           trackingMode,
@@ -1069,6 +1051,36 @@ export default function Settings() {
     }
   };
 
+  const handleSeedCocktails = async () => {
+    setIsSeedingCocktails(true);
+    try {
+      const res = await fetch("/api/seed-cocktails", { method: "POST" });
+      const data = await res.json();
+      if (data.ok) {
+        toast({
+          title: getTranslation("success", language),
+          description: `${data.count} cocktails seeded successfully`,
+        });
+        qc.invalidateQueries({ queryKey: ["/api/drinks"] });
+        setShowSeedCocktailsModal(false);
+      } else {
+        toast({
+          variant: "destructive",
+          title: getTranslation("error", language),
+          description: data.error,
+        });
+      }
+    } catch (err: any) {
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: err.message,
+      });
+    } finally {
+      setIsSeedingCocktails(false);
+    }
+  };
+
   const handleCreateBackup = async () => {
     setCreatingBackup(true);
     try {
@@ -1173,7 +1185,6 @@ export default function Settings() {
             });
           },
           onError: (err: any) => {
-            console.error("Create user error:", err);
             toast({
               variant: "destructive",
               title: getTranslation("error", language),
@@ -1183,83 +1194,6 @@ export default function Settings() {
         },
       );
     }
-  };
-
-  const handleAddRush = () => {
-    const startTimeUnix = Math.floor(
-      new Date(newRush.startTime).getTime() / 1000,
-    );
-    const endTimeUnix = newRush.endTime
-      ? Math.floor(new Date(newRush.endTime).getTime() / 1000)
-      : undefined;
-
-    createRush.mutate(
-      {
-        data: {
-          title: newRush.title,
-          description: newRush.description || undefined,
-          startTime: startTimeUnix,
-          endTime: endTimeUnix,
-          repeatEvent: newRush.repeatEvent as 0 | 1 | 2 | 3,
-          impact: newRush.impact as "low" | "medium" | "high",
-          type: newRush.type as "cruise" | "festival" | "music" | "other",
-        },
-      },
-      {
-        onSuccess: () => {
-          setShowAddRush(false);
-          setNewRush({
-            title: "",
-            type: "cruise" as const,
-            impact: "medium" as const,
-            repeatEvent: 0,
-            startTime: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-            endTime: "",
-            description: "",
-          });
-          refetchRushes();
-          toast({
-            title: getTranslation("success", language),
-            description: "Rush event scheduled successfully",
-          });
-        },
-        onError: (err: any) => {
-          toast({
-            variant: "destructive",
-            title: getTranslation("error", language),
-            description: err?.message || "Failed to schedule rush event",
-          });
-        },
-      },
-    );
-  };
-
-  const handleDeleteRush = (rush: any) => {
-    setDeletingRush(rush);
-  };
-
-  const confirmDeleteRush = () => {
-    if (!deletingRush) return;
-    deleteRush.mutate(
-      { id: deletingRush.id },
-      {
-        onSuccess: () => {
-          refetchRushes();
-          toast({
-            title: getTranslation("success", language),
-            description: "Rush event deleted",
-          });
-          setDeletingRush(null);
-        },
-        onError: (_err: any) => {
-          toast({
-            variant: "destructive",
-            title: getTranslation("error", language),
-            description: "Failed to delete rush",
-          });
-        },
-      },
-    );
   };
 
   return (
@@ -1347,102 +1281,6 @@ export default function Settings() {
         </h1>
         <p className="text-muted-foreground mt-1">Configure your POS system</p>
       </div>
-
-      {/* Rush Events */}
-      <section className="glass rounded-3xl p-6 space-y-6">
-        <div className="flex justify-between items-center border-b border-white/5 pb-2">
-          <h3 className="text-lg font-medium text-primary flex items-center gap-2">
-            <Zap size={18} /> Rush Events
-          </h3>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant={rushDays === 7 ? "default" : "outline"}
-              onClick={() => {
-                setRushDays(7);
-                setShowAllRushes(false);
-                refetchRushes();
-              }}
-            >
-              7 Days
-            </Button>
-            <Button
-              size="sm"
-              variant={rushDays === 30 ? "default" : "outline"}
-              onClick={() => {
-                setRushDays(30);
-                setShowAllRushes(false);
-                refetchRushes();
-              }}
-            >
-              30 Days
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setShowAddRush(true)}
-            >
-              <Plus size={16} className="mr-2" /> Schedule Rush
-            </Button>
-          </div>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-white/5 text-muted-foreground text-sm">
-                <th className="p-3 font-medium">Event</th>
-                <th className="p-3 font-medium">Type</th>
-                <th className="p-3 font-medium">Impact</th>
-                <th className="p-3 font-medium">Start Time</th>
-                <th className="p-3 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {rushes?.map((rush: any) => (
-                <tr
-                  key={rush.id}
-                  className="hover:bg-white/5 transition-colors"
-                >
-                  <td className="p-3 font-medium text-sm">{rush.title}</td>
-                  <td className="p-3">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 capitalize">
-                      {rush.type?.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={
-                        "text-xs font-medium px-2 py-1 rounded-full " +
-                        (rush.impact === "high"
-                          ? "bg-red-500/20 text-red-400"
-                          : rush.impact === "medium"
-                            ? "bg-yellow-500/20 text-yellow-400"
-                            : "bg-emerald-500/20 text-emerald-400")
-                      }
-                    >
-                      {rush.impact}
-                    </span>
-                  </td>
-                  <td className="p-3 text-sm text-muted-foreground">
-                    {rush.startTime
-                      ? format(new Date(rush.startTime), "PPp")
-                      : "—"}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteRush(rush)}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       {/* Audit Logs */}
       <section id="audit-logs" className="glass rounded-3xl p-6 space-y-6">
@@ -1708,7 +1546,7 @@ export default function Settings() {
                     </td>
                     <td className="p-3 font-mono">{session.itemCount || 0}</td>
                     <td className="p-3 text-right">
-                      {session.status === "in_progress" && (
+                      {session.status === "in_progress" ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -1717,6 +1555,18 @@ export default function Settings() {
                           }
                         >
                           Resume
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            setLocation(
+                              "/settings/batch-audit/" + session.id + "/report",
+                            )
+                          }
+                        >
+                          View Report
                         </Button>
                       )}
                     </td>
@@ -1728,37 +1578,6 @@ export default function Settings() {
         )}
       </section>
 
-      {isAdmin && (
-        <>
-          <section className="glass rounded-3xl p-6 space-y-6">
-            <PromoCodesSection
-              promoCodes={promoCodes}
-              isAdmin={isAdmin}
-              onRefetch={() => {
-                fetch("/api/promo-codes", { credentials: "include" })
-                  .then((res) => res.json())
-                  .then(setPromoCodes)
-                  .catch(console.error);
-              }}
-            />
-          </section>
-
-          <section className="glass rounded-3xl p-6 space-y-6">
-            <SpecialsSection
-              specials={specials}
-              drinks={drinks || []}
-              isAdmin={isAdmin}
-              onRefetch={() => {
-                fetch("/api/specials", { credentials: "include" })
-                  .then((res) => res.json())
-                  .then(setSpecials)
-                  .catch(console.error);
-              }}
-            />
-          </section>
-        </>
-      )}
-
       {/* Staff Management */}
       <section className="glass rounded-3xl p-6 space-y-6">
         <div className="flex justify-between items-center border-b border-white/5 pb-2">
@@ -1766,6 +1585,41 @@ export default function Settings() {
             <Users size={18} /> Staff Management
           </h3>
           <div className="flex gap-2">
+            <div className="flex bg-secondary/50 rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setStaffFilter("active")}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  staffFilter === "active"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                onClick={() => setStaffFilter("archived")}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  staffFilter === "archived"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Archived
+              </button>
+              <button
+                type="button"
+                onClick={() => setStaffFilter("all")}
+                className={`px-3 py-1 text-xs rounded-md transition-colors ${
+                  staffFilter === "all"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                All
+              </button>
+            </div>
             <Button
               size="sm"
               onClick={() =>
@@ -1797,56 +1651,64 @@ export default function Settings() {
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {users?.map((user: any) => (
-                <tr
-                  key={user.id}
-                  className="hover:bg-white/5 transition-colors"
-                >
-                  <td className="p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
-                        {user.firstName?.[0]}
-                        {user.lastName?.[0]}
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">
-                          {user.firstName} {user.lastName}
+              {users
+                ?.filter((user: any) => {
+                  if (staffFilter === "active")
+                    return user.isActive === 1 || user.isActive === true;
+                  if (staffFilter === "archived")
+                    return user.isActive === 0 || user.isActive === false;
+                  return true;
+                })
+                .map((user: any) => (
+                  <tr
+                    key={user.id}
+                    className="hover:bg-white/5 transition-colors"
+                  >
+                    <td className="p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary text-xs font-bold">
+                          {user.firstName?.[0]}
+                          {user.lastName?.[0]}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">
+                            {user.firstName} {user.lastName}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="p-3 text-sm text-muted-foreground">
-                    {user.username || user.email || "—"}
-                  </td>
-                  <td className="p-3">
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 capitalize">
-                      {user.role?.replace("_", " ")}
-                    </span>
-                  </td>
-                  <td className="p-3 font-mono text-sm">{user.pin || "—"}</td>
-                  <td className="p-3">
-                    <span
-                      className={
-                        "text-xs font-medium px-2 py-1 rounded-full " +
-                        (user.isActive
-                          ? "bg-emerald-500/20 text-emerald-400"
-                          : "bg-secondary text-muted-foreground")
-                      }
-                    >
-                      {user.isActive ? "Active" : "Archived"}
-                    </span>
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEditingStaff(user)}
-                    >
-                      <Edit2 size={16} />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="p-3 text-sm text-muted-foreground">
+                      {user.username || user.email || "—"}
+                    </td>
+                    <td className="p-3">
+                      <span className="text-xs font-medium px-2 py-1 rounded-full bg-white/5 capitalize">
+                        {user.role?.replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="p-3 font-mono text-sm">{user.pin || "—"}</td>
+                    <td className="p-3">
+                      <span
+                        className={
+                          "text-xs font-medium px-2 py-1 rounded-full " +
+                          (user.isActive
+                            ? "bg-emerald-500/20 text-emerald-400"
+                            : "bg-secondary text-muted-foreground")
+                        }
+                      >
+                        {user.isActive ? "Active" : "Archived"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingStaff(user)}
+                      >
+                        <Edit2 size={16} />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
@@ -2074,8 +1936,8 @@ export default function Settings() {
                             }
                           };
                           input.click();
-                        } catch (err) {
-                          console.error("Failed to select directory:", err);
+                        } catch {
+                          // Silently fail
                         }
                       }}
                     >
@@ -2101,41 +1963,102 @@ export default function Settings() {
             <p className="text-xs text-muted-foreground mt-1">
               Choose where to save nightly sales reports
             </p>
-            <div className="mt-3 flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={async () => {
-                  try {
-                    const input = document.createElement("input");
-                    input.type = "file";
-                    input.webkitdirectory = true;
-                    input.onchange = async () => {
-                      const files = input.files;
-                      if (files && files.length > 0) {
-                        const path =
-                          files[0].webkitRelativePath || files[0].name;
-                        const dirPath = path.split("/")[0] || "";
-                        setFormData({ ...formData, reportExportPath: dirPath });
-                      }
-                    };
-                    input.click();
-                  } catch (err) {
-                    console.error("Failed to select directory:", err);
-                  }
-                }}
-              >
-                Choose Report Location
-              </Button>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.webkitdirectory = true;
+                      input.onchange = async () => {
+                        const files = input.files;
+                        if (files && files.length > 0) {
+                          const path =
+                            files[0].webkitRelativePath || files[0].name;
+                          const dirPath = path.split("/")[0] || "";
+                          setFormData({
+                            ...formData,
+                            reportExportPath: dirPath,
+                          });
+                        }
+                      };
+                      input.click();
+                    } catch {
+                      // Silently fail
+                    }
+                  }}
+                >
+                  Choose Report Location
+                </Button>
+              </div>
               {formData.reportExportPath && (
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-green-400">
                   Selected: {formData.reportExportPath}
                 </span>
               )}
             </div>
           </div>
         </div>
+
+        {/* Manual Data Export */}
+        <div className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/5">
+          <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400 shrink-0">
+            <Download size={20} />
+          </div>
+          <div className="flex-1">
+            <h4 className="font-medium text-sm">Manual Data Export</h4>
+            <p className="text-xs text-muted-foreground mt-1">
+              Download system data as CSV spreadsheets
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.open("/api/export/sales", "_blank")}
+              >
+                Sales
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.open("/api/export/inventory", "_blank")}
+              >
+                Inventory
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.open("/api/export/cogs", "_blank")}
+              >
+                COGS
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.open("/api/export/audit-logs", "_blank")}
+              >
+                Audit Logs
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => window.open("/api/export/periods", "_blank")}
+              >
+                Periods
+              </Button>
+            </div>
+          </div>
+        </div>
+
         <Button className="w-full" onClick={handleSaveSettings}>
           <Save size={16} className="mr-2" /> Save Backup Settings
         </Button>
@@ -2181,14 +2104,7 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (servingSizeUnit === "oz") {
-                      setServingSizeUnit("ml");
-                      setSystemDefaults({
-                        ...systemDefaults,
-                        defaultServingSizeMl:
-                          systemDefaults.defaultServingSizeMl * 29.5735,
-                      });
-                    }
+                    setServingSizeUnit("ml");
                   }}
                   className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
                     servingSizeUnit === "ml"
@@ -2201,14 +2117,7 @@ export default function Settings() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (servingSizeUnit === "ml") {
-                      setServingSizeUnit("oz");
-                      setSystemDefaults({
-                        ...systemDefaults,
-                        defaultServingSizeMl:
-                          systemDefaults.defaultServingSizeMl / 29.5735,
-                      });
-                    }
+                    setServingSizeUnit("oz");
                   }}
                   className={`px-2 py-0.5 text-[10px] rounded-md transition-colors ${
                     servingSizeUnit === "oz"
@@ -2225,7 +2134,7 @@ export default function Settings() {
               step="0.1"
               value={
                 servingSizeUnit === "oz"
-                  ? (systemDefaults.defaultServingSizeMl / 29.5735).toFixed(2)
+                  ? (systemDefaults.defaultServingSizeMl / ML_PER_OZ).toFixed(2)
                   : systemDefaults.defaultServingSizeMl
               }
               onChange={(e) => {
@@ -2233,7 +2142,7 @@ export default function Settings() {
                 setSystemDefaults({
                   ...systemDefaults,
                   defaultServingSizeMl:
-                    servingSizeUnit === "oz" ? val * 29.5735 : val,
+                    servingSizeUnit === "oz" ? val * ML_PER_OZ : val,
                 });
               }}
               className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-2"
@@ -2437,6 +2346,18 @@ export default function Settings() {
           </Button>
           <Button
             variant="outline"
+            className="flex flex-col items-center gap-2 h-auto py-6 hover:text-white"
+            onClick={() => setShowSeedCocktailsModal(true)}
+            disabled={isSeedingCocktails}
+          >
+            <Sparkles size={24} />
+            <span>Seed Cocktails</span>
+            <span className="text-xs text-muted-foreground font-normal">
+              Add popular recipes
+            </span>
+          </Button>
+          <Button
+            variant="outline"
             className="flex flex-col items-center gap-2 h-auto py-6 text-red-400 hover:text-red-300 hover:bg-red-500/10"
             onClick={handleResetDatabase}
             disabled={isResetting}
@@ -2449,111 +2370,6 @@ export default function Settings() {
           </Button>
         </div>
       </section>
-
-      {/* Rush Add Modal */}
-      {showAddRush && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="glass p-8 rounded-3xl w-full max-w-md relative">
-            <button
-              onClick={() => setShowAddRush(false)}
-              className="absolute top-6 right-6 text-muted-foreground hover:text-foreground"
-            >
-              <X size={24} />
-            </button>
-            <h2 className="text-2xl font-display mb-6">Schedule a Rush</h2>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Event Title
-                </label>
-                <input
-                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                  placeholder="e.g. Carnival Panorama Arrival"
-                  value={newRush.title}
-                  onChange={(e) =>
-                    setNewRush({ ...newRush, title: e.target.value })
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Type
-                  </label>
-                  <select
-                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                    value={newRush.type}
-                    onChange={(e) =>
-                      setNewRush({ ...newRush, type: e.target.value as any })
-                    }
-                  >
-                    <option value="cruise">Cruise Ship</option>
-                    <option value="festival">Festival</option>
-                    <option value="music">Live Music</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Impact
-                  </label>
-                  <select
-                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                    value={newRush.impact}
-                    onChange={(e) =>
-                      setNewRush({ ...newRush, impact: e.target.value as any })
-                    }
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Repeat
-                  </label>
-                  <select
-                    className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                    value={newRush.repeatEvent}
-                    onChange={(e) =>
-                      setNewRush({
-                        ...newRush,
-                        repeatEvent: Number(e.target.value),
-                      })
-                    }
-                  >
-                    <option value={0}>Never</option>
-                    <option value={1}>Weekly</option>
-                    <option value={2}>Monthly</option>
-                    <option value={3}>Daily</option>
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">
-                  Start Time
-                </label>
-                <input
-                  type="datetime-local"
-                  className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
-                  value={newRush.startTime}
-                  onChange={(e) =>
-                    setNewRush({ ...newRush, startTime: e.target.value })
-                  }
-                />
-              </div>
-              <Button
-                className="w-full h-14 mt-4"
-                onClick={handleAddRush}
-                disabled={createRush.isPending}
-              >
-                Schedule Event
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Staff Edit Modal */}
       {editingStaff && (
@@ -2832,6 +2648,42 @@ export default function Settings() {
                 className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
               >
                 {isSeeding ? "Seeding..." : "Load Starter Data"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Seed Cocktails Modal */}
+      {showSeedCocktailsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="glass p-8 rounded-3xl w-full max-w-md relative">
+            <button
+              onClick={() => setShowSeedCocktailsModal(false)}
+              className="absolute top-6 right-6 text-muted-foreground hover:text-foreground"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-display mb-2 flex items-center gap-2">
+              <Sparkles className="text-primary" /> Seed Cocktails
+            </h2>
+            <p className="text-muted-foreground mb-6 text-sm">
+              This will add 8 popular cocktail recipes to your menu. Requires
+              ingredients to be available. Continue?
+            </p>
+            <div className="flex justify-end gap-3 pt-6 mt-6 border-t border-white/10">
+              <Button
+                variant="ghost"
+                onClick={() => setShowSeedCocktailsModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSeedCocktails}
+                disabled={isSeedingCocktails}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20"
+              >
+                {isSeedingCocktails ? "Seeding..." : "Add Cocktails"}
               </Button>
             </div>
           </div>
@@ -3156,44 +3008,6 @@ export default function Settings() {
                 </div>
               </div>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* Delete Rush Confirmation Modal */}
-      {deletingRush && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-md">
-          <div className="glass p-8 rounded-3xl w-full max-w-md relative border border-white/10 shadow-2xl">
-            <button
-              onClick={() => setDeletingRush(null)}
-              className="absolute top-6 right-6 text-muted-foreground hover:text-foreground"
-            >
-              <X size={24} />
-            </button>
-            <div className="flex items-center gap-3 mb-6">
-              <Trash2 size={24} className="text-destructive" />
-              <h2 className="text-2xl font-display font-bold text-destructive">
-                Delete Rush Event
-              </h2>
-            </div>
-
-            <p className="text-muted-foreground mb-6">
-              Are you sure you want to delete the rush event &quot;
-              {deletingRush.title}&quot;? This action cannot be undone.
-            </p>
-
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" onClick={() => setDeletingRush(null)}>
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDeleteRush}
-                disabled={deleteRush.isPending}
-              >
-                {deleteRush.isPending ? "..." : "Delete"}
-              </Button>
-            </div>
           </div>
         </div>
       )}

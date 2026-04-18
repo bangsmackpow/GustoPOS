@@ -13,6 +13,7 @@ export default tseslint.config(
       "**/generated/**",
       "**/*.mjs",
       "test-db.js",
+      "test-comprehensive.js",
       "scripts/**",
     ],
   },
