@@ -255,11 +255,12 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
           .limit(1);
 
         const drinkCategory = getCategoryForType(item.type, item.name);
+        const priceToUse = item.menuPricePerServing || 0;
         const drinkData = {
           name: item.name,
           category: drinkCategory,
-          actualPrice: 0,
-          menuPrice: 0,
+          actualPrice: priceToUse,
+          menuPrice: priceToUse,
           priceSource: "auto",
           sourceType: "inventory_single",
           isAvailable: 1,
@@ -274,6 +275,12 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
         } else {
           await db.insert(drinksTable).values({ id, ...drinkData });
         }
+
+        // Also update recipe ingredient product price
+        await db
+          .update(recipeIngredientsTable)
+          .set({ productPrice: priceToUse })
+          .where(eq(recipeIngredientsTable.ingredientId, id));
       } else {
         await db.delete(drinksTable).where(eq(drinksTable.id, id));
       }
@@ -416,9 +423,11 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
 
         const drinkData = {
           name: item.name,
-
           category: item.type,
-          actualPrice: 0,
+          actualPrice: item.menuPricePerServing || 0,
+          menuPrice: item.menuPricePerServing || 0,
+          priceSource: "auto",
+          sourceType: "inventory_single",
           isAvailable: 1,
           isOnMenu: 1,
         };
@@ -431,6 +440,12 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
         } else {
           await db.insert(drinksTable).values({ id: item.id, ...drinkData });
         }
+
+        // Also update recipe ingredient product price
+        await db
+          .update(recipeIngredientsTable)
+          .set({ productPrice: item.menuPricePerServing || 0 })
+          .where(eq(recipeIngredientsTable.ingredientId, item.id));
       } else {
         await db.delete(drinksTable).where(eq(drinksTable.id, item.id));
       }

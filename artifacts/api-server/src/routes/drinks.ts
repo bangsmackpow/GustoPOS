@@ -153,7 +153,7 @@ router.post("/drinks", async (req: Request, res: Response) => {
     // Calculate menuPrice from ingredients
     let menuPrice = 0;
     if (recipe && recipe.length > 0) {
-      // Get ingredient prices
+      // Get ALL ingredient prices (not just first!)
       const ingredientIds = recipe.map((r: any) => r.ingredientId);
       const ingredients = await db
         .select({
@@ -161,10 +161,10 @@ router.post("/drinks", async (req: Request, res: Response) => {
           productPrice: inventoryItemsTable.productPrice,
         })
         .from(inventoryItemsTable)
-        .where(eq(inventoryItemsTable.id, ingredientIds[0])); // Simplified - get all
+        .where(inArray(inventoryItemsTable.id, ingredientIds));
 
       const priceMap = new Map(
-        ingredients.map((i) => [i.id, i.productPrice || 0]),
+        ingredients.map((i) => [i.id, Number(i.productPrice) || 0]),
       );
 
       // Calculate menuPrice = sum of ingredient productPrices
@@ -370,10 +370,18 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
 
 router.delete("/drinks/:id", async (req: Request, res: Response) => {
   try {
+    const id = req.params.id as string;
+    
+    // First delete associated recipe ingredients (cascade)
+    await db
+      .delete(recipeIngredientsTable)
+      .where(eq(recipeIngredientsTable.drinkId, id));
+    
+    // Then soft-delete the drink
     const [drink] = await db
       .update(drinksTable)
       .set({ isDeleted: 1, updatedAt: Math.floor(Date.now() / 1000) })
-      .where(eq(drinksTable.id, req.params.id as string))
+      .where(eq(drinksTable.id, id))
       .returning();
     if (!drink) {
       res.status(404).json({ error: "Drink not found" });
