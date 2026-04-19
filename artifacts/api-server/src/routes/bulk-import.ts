@@ -68,6 +68,8 @@ const IngredientRowSchema = z.object({
     .default(false)
     .transform((val) => (val ? 1 : 0)),
   singleServingPrice: z.coerce.number().optional().nullable(),
+  menuPricePerServing: z.coerce.number().optional().nullable(),
+  productPrice: z.coerce.number().optional().nullable(),
   unitSize: z.coerce.number().optional(),
   size: z.coerce.number().optional(),
   cost: z.coerce.number().optional(),
@@ -77,6 +79,7 @@ const IngredientRowSchema = z.object({
   min: z.coerce.number().optional(),
   minimumStock: z.coerce.number().optional(),
   alcoholDensity: z.coerce.number().optional(),
+  markupFactor: z.coerce.number().optional(),
 });
 
 const DrinkRowSchema = z.object({
@@ -279,6 +282,9 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
 
         const isOnMenu = item.isOnMenu ? 1 : 0;
         const singleServingPrice = item.singleServingPrice || null;
+        const menuPricePerServing = item.menuPricePerServing || item.productPrice || null;
+        const productPrice = item.productPrice || item.menuPricePerServing || null;
+        const markupFactor = item.markupFactor || 3.0;
         const sellSingleServing =
           singleServingPrice && singleServingPrice > 0 ? 1 : 0;
         const bulkUnit = item.bulkUnit || null;
@@ -455,6 +461,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
               .insert(inventoryItemsTable)
               .values({
                 name,
+                nameEs: null,
                 type,
                 subtype,
                 baseUnit,
@@ -462,9 +469,11 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 bulkUnit,
                 servingSize,
                 servingUnit,
+                pourSize: servingSize,
                 bottleSizeMl,
                 fullBottleWeightG,
                 containerWeightG,
+                density,
                 orderCost,
                 currentStock,
                 currentBulk,
@@ -475,7 +484,11 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 isOnMenu: isOnMenu ? 1 : 0,
                 sellSingleServing: sellSingleServing ? 1 : 0,
                 singleServingPrice,
+                menuPricePerServing: menuPricePerServing,
+                productPrice: productPrice,
+                markupFactor: markupFactor || 3.0,
                 parentItemId,
+                createdAt: Math.floor(Date.now() / 1000),
                 updatedAt: Math.floor(Date.now() / 1000),
               } as any)
               .returning();
@@ -499,12 +512,13 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
             // Create drinks for new item
             if (isOnMenu) {
               const drinkCategory = getCategoryForType(type, name);
+              const priceToUse = menuPricePerServing || productPrice || Number(singleServingPrice) || 0;
               await tx.insert(drinksTable).values({
                 id: inserted.id,
                 name: name,
                 category: drinkCategory,
-                actualPrice: 0,
-                menuPrice: 0,
+                actualPrice: priceToUse,
+                menuPrice: priceToUse,
                 priceSource: "auto",
                 sourceType: "inventory_single",
                 isAvailable: 1,
@@ -516,6 +530,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 drinkId: inserted.id,
                 ingredientId: inserted.id,
                 amountInBaseUnit: servingSize || 44.36,
+                productPrice: priceToUse,
               });
             }
 
