@@ -333,6 +333,8 @@ router.get("/:id/report", async (req: Request, res: Response) => {
       .status(500)
       .json({ error: err.message || "Failed to get audit report" });
   }
+  
+  return res.json({ session: {}, summary: {}, results: [] });
 });
 
 export default router;
