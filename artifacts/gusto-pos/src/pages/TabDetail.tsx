@@ -162,24 +162,11 @@ export default function TabDetail() {
   ];
 
   const filteredDrinks = drinks?.filter((d: any) => {
-    if (d.isHidden) return false;
+    if (d.isHidden || !d.isOnMenu) return false;
     if (activeCategory !== "all" && d.category !== activeCategory) return false;
 
-    const hasRecipe = d.recipe && d.recipe.length > 0;
-    const hasFallback = HOUSE_FALLBACK_IDS.includes(d.id);
-
-    // Must have recipe OR be system default
-    if (!hasRecipe && !hasFallback) return false;
-
-    // Auto-hide: Check if recipe ingredients have stock
-    // System defaults always show (dynamic ingredient selection)
-    if (hasRecipe) {
-      const hasStock = d.recipe.every((r: any) => {
-        const stock = r.currentStock || r.availableStock || 0;
-        return stock > 0;
-      });
-      if (!hasStock) return false;
-    }
+    // Show all drinks that make it through category/menu filters.
+    // Out of stock or missing recipes will be visually disabled instead of silently vanishing.
     return true;
   }) || [];
 
@@ -1019,10 +1006,10 @@ export default function TabDetail() {
             return (
               <div
                 key={drink.id}
-                className={`glass p-4 rounded-3xl text-left transition-all duration-200 group border border-transparent flex flex-col h-48 relative overflow-hidden ${
+                className={`glass p-4 rounded-3xl text-left transition-all duration-200 group border flex flex-col relative overflow-hidden min-h-[220px] ${
                   isOut
-                    ? "opacity-40 grayscale pointer-events-none"
-                    : "hover:-translate-y-1 active:scale-95 hover:border-primary/30"
+                    ? "opacity-70 grayscale-[50%] border-destructive/20"
+                    : "hover:-translate-y-1 active:scale-95 border-transparent hover:border-primary/30"
                 }`}
               >
                 <button
@@ -1049,7 +1036,7 @@ export default function TabDetail() {
 
                   {stock.message && (
                     <p
-                      className={`text-[10px] font-bold uppercase tracking-wider mb-auto ${isOut ? "text-destructive" : stock.status === "medium" ? "text-amber-400" : "text-amber-500"}`}
+                      className={`text-[10px] font-bold uppercase tracking-wider mb-2 ${isOut ? "text-destructive" : stock.status === "medium" ? "text-amber-400" : "text-amber-500"}`}
                     >
                       {stock.message}
                     </p>
@@ -1060,16 +1047,16 @@ export default function TabDetail() {
                   </div>
                 </div>
 
-                {/* Quantity Selector */}
-                {!isOut && drink.isAvailable && (
-                  <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between bg-background/80 backdrop-blur-sm rounded-xl p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                {/* Quantity Selector - Redesigned to be permanently visible */}
+                {!isOut ? (
+                  <div className="mt-4 flex items-center justify-between bg-secondary/50 rounded-xl p-1 shadow-inner">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         updateSelectedQuantity(drink.id, -1);
                       }}
                       disabled={selectedQty <= 1}
-                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-white/20 transition-colors disabled:opacity-30"
+                      className="w-8 h-8 rounded-lg bg-background flex items-center justify-center hover:bg-white/10 transition-colors disabled:opacity-30 border border-white/5"
                     >
                       <Minus size={14} />
                     </button>
@@ -1079,7 +1066,7 @@ export default function TabDetail() {
                         handleAddDrink(drink);
                       }}
                       disabled={addOrder.isPending}
-                      className="flex-1 mx-1 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-1"
+                      className="flex-1 mx-2 h-8 rounded-lg bg-primary text-primary-foreground font-bold text-sm hover:bg-primary/90 transition-colors flex items-center justify-center gap-1 shadow-sm"
                     >
                       <Plus size={14} />
                       <span>{selectedQty}</span>
@@ -1090,10 +1077,14 @@ export default function TabDetail() {
                         updateSelectedQuantity(drink.id, 1);
                       }}
                       disabled={selectedQty >= 20}
-                      className="w-8 h-8 rounded-lg bg-secondary flex items-center justify-center hover:bg-white/20 transition-colors disabled:opacity-30"
+                      className="w-8 h-8 rounded-lg bg-background flex items-center justify-center hover:bg-white/10 transition-colors disabled:opacity-30 border border-white/5"
                     >
                       <Plus size={14} />
                     </button>
+                  </div>
+                ) : (
+                  <div className="mt-4 w-full py-2 bg-destructive/10 text-destructive text-xs font-bold uppercase tracking-wider rounded-xl text-center border border-destructive/20">
+                    {stock.message === "SETUP" ? "Setup Needed" : "Out of Stock"}
                   </div>
                 )}
               </div>
