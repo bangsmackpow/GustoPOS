@@ -40,6 +40,13 @@ export async function authMiddleware(
 
   const sid = getSessionId(req);
   if (!sid) {
+    if (req.path === "/auth/user") {
+      console.log("[AuthMiddleware] /auth/user: No session ID found", {
+        hasCookie: !!req.cookies?.["sid"],
+        allCookies: Object.keys(req.cookies || {}),
+        authHeader: req.headers.authorization ? "present" : "missing",
+      });
+    }
     next();
     return;
   }
@@ -47,8 +54,23 @@ export async function authMiddleware(
   // Stateless: getSession now just verifies the JWT
   const session = await getSession(sid);
   if (!session?.user?.id) {
+    if (req.path === "/auth/user") {
+      console.log("[AuthMiddleware] /auth/user: Session validation failed", {
+        sessionExists: !!session,
+        hasUser: !!session?.user,
+        hasUserId: !!session?.user?.id,
+      });
+    }
     next();
     return;
+  }
+
+  if (req.path === "/auth/user") {
+    console.log("[AuthMiddleware] /auth/user: Session valid", {
+      userId: session.user.id,
+      email: session.user.email,
+      role: session.user.role,
+    });
   }
 
   req.user = session.user;

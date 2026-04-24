@@ -197,7 +197,12 @@ export default function adminLoginRouter(): express.Router {
           maxAge: SESSION_TTL,
         });
 
-        console.log(`[AdminLogin] Success! Token issued for: ${username}`);
+        console.log(`[AdminLogin] Success! Token issued for: ${username}`, {
+          tokenLength: sid.length,
+          isSecure,
+          sessionUserEmail: sessionData.user.email,
+          responseStatus: 200,
+        });
         return res.status(200).json({ ok: true, user: sessionData.user });
       } catch (err: any) {
         console.error("[AdminLogin] Critical Error:", err.message);
