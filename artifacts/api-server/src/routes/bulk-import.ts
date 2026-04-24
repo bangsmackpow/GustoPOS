@@ -445,6 +445,66 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
 
             console.log(`[Bulk Import] Inserted: "${name}" id=${inserted.id} bottleSizeMl=${bottleSizeMl} currentBulk=${currentBulk} currentPartial=${currentPartial}`);
           }
+          // Handle isHouseDefault toggle - create recipe link to shot drink
+          if (isHouseDefault) {
+             const subtypeToShot: Record<string, string> = {
+               tequila: "shot-tequila",
+               mezcal: "shot-mezcal",
+               vodka: "shot-vodka",
+               gin: "shot-gin",
+               whiskey: "shot-whiskey",
+               rum: "shot-rum",
+               misc: "shot-misc",
+             };
+             const subtypeToCocktail: Record<string, string> = {
+               tequila: "cocktail-tonic",
+               mezcal: "cocktail-soda",
+               vodka: "cocktail-soft",
+               gin: "cocktail-juice",
+             };
+             const shotId = subtype ? subtypeToShot[subtype.toLowerCase()] : null;
+             const cocktailId = subtype ? subtypeToCocktail[subtype.toLowerCase()] : null;
+             
+             if (shotId) {
+               // First, clear any existing default recipe for this shot
+               await tx
+                 .delete(recipeIngredientsTable)
+                 .where(eq(recipeIngredientsTable.drinkId, shotId));
+       
+               // Insert new recipe with this ingredient as default
+               await tx.insert(recipeIngredientsTable).values({
+                 drinkId: shotId,
+                 ingredientId: itemId,
+                 amountInBaseUnit: servingSize || 44.36,
+                 isDefault: 1,
+                 defaultCost: Number(orderCost) || 0,
+                 productPrice: Number(menuPricePerServing) || 0,
+               });
+       
+               // Update the shot drink's actualPrice from the house default
+               await tx
+                 .update(drinksTable)
+                 .set({
+                   actualPrice: Number(menuPricePerServing) || 0,
+                   menuPrice: Number(menuPricePerServing) || 0,
+                   updatedAt: Math.floor(Date.now() / 1000),
+                 })
+                 .where(eq(drinksTable.id, shotId));
+             }
+             
+             if (cocktailId) {
+               // We only update the spirit portion here. Mixer price requires lookup which is complex during bulk import.
+               // At minimum, we'll ensure cocktail has a base price of the spirit.
+               await tx
+                 .update(drinksTable)
+                 .set({
+                   basePriceOverride: Number(menuPricePerServing) || 0,
+                   updatedAt: Math.floor(Date.now() / 1000),
+                 })
+                 .where(eq(drinksTable.id, cocktailId));
+             }
+          }
+
           processedCount++;
         } catch (itemErr: any) {
           console.error(`Error processing item "${name}":`, itemErr.message);

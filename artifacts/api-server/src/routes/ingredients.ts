@@ -29,6 +29,7 @@ function formatInventoryItem(item: typeof inventoryItemsTable.$inferSelect) {
     containerWeightG: item.containerWeightG
       ? Number(item.containerWeightG)
       : null,
+    isHouseDefault: item.isHouseDefault === 1,
     createdAt: new Date(item.createdAt).toISOString(),
     updatedAt: new Date(item.updatedAt).toISOString(),
   };
