@@ -91,9 +91,10 @@ export default function pinLoginRouter(): express.Router {
         const sessionData: SessionData = {
           user: {
             id: dbUser.id,
-            email: dbUser.email,
-            firstName: dbUser.firstName,
-            lastName: dbUser.lastName,
+            email: dbUser.email || "",
+            firstName: dbUser.firstName || "",
+            lastName: dbUser.lastName || "",
+            profileImageUrl: dbUser.profileImageUrl || null,
             role: dbUser.role,
             language: dbUser.language,
             isActive: true,
