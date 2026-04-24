@@ -11,9 +11,9 @@
 
 - **File**: `GustoPOS-0.1.0.dmg`
 - **Location**: `artifacts/desktop-app/dist/build/GustoPOS-0.1.0.dmg`
-- **Size**: 104 MB
+- **Size**: 108 MB
 - **Platform**: macOS x64 (Intel)
-- **MD5**: `b39f81f6cb01dd34cd6a61864b1fba1c`
+- **MD5**: `82b34c7a9a2bf491daac9003e2782163`
 - **Format**: DMG (Disk Image) - ready to distribute and install
 - **Status**: ✅ Production-ready, unsigned (unsigned development build)
 
