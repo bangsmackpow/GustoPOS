@@ -13,6 +13,7 @@ import {
   Trash2,
   X,
   Search,
+  RotateCw,
 } from "lucide-react";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
@@ -25,7 +26,7 @@ export default function Tabs() {
   );
   const [sortAsc, setSortAsc] = useState(false);
   const { language, activeStaff } = usePosStore();
-  const { data: tabs, isLoading } = useGetTabs({ status: "open" });
+  const { data: tabs, isLoading, refetch } = useGetTabs({ status: "open" });
   const createTab = useCreateTabMutation();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -127,45 +128,56 @@ export default function Tabs() {
           </p>
         </div>
 
-        {!isCreating ? (
-          <Button size="lg" onClick={() => setIsCreating(true)}>
-            <Plus className="mr-2" size={20} />
-            {getTranslation("new_tab", language)}
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => refetch()}
+            title={getTranslation("refresh", language) || "Refresh"}
+          >
+            <RotateCw size={18} />
           </Button>
-        ) : (
-          <div className="flex items-center gap-3 glass p-2 rounded-2xl">
-            <input
-              autoFocus
-              maxLength={30}
-              className="bg-transparent border-none outline-none px-4 text-foreground placeholder:text-muted-foreground w-48"
-              placeholder={getTranslation(
-                "table_or_name_placeholder",
-                language,
-              )}
-              value={newTabName}
-              onChange={(e) => setNewTabName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            />
-            <Button
-              size="sm"
-              onClick={handleCreate}
-              disabled={createTab.isPending}
-            >
-              {createTab.isPending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                getTranslation("add", language)
-              )}
+
+          {!isCreating ? (
+            <Button size="lg" onClick={() => setIsCreating(true)}>
+              <Plus className="mr-2" size={20} />
+              {getTranslation("new_tab", language)}
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setIsCreating(false)}
-            >
-              {getTranslation("cancel", language)}
-            </Button>
-          </div>
-        )}
+          ) : (
+            <div className="flex items-center gap-3 glass p-2 rounded-2xl">
+              <input
+                autoFocus
+                maxLength={30}
+                className="bg-transparent border-none outline-none px-4 text-foreground placeholder:text-muted-foreground w-48"
+                placeholder={getTranslation(
+                  "table_or_name_placeholder",
+                  language,
+                )}
+                value={newTabName}
+                onChange={(e) => setNewTabName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+              />
+              <Button
+                size="sm"
+                onClick={handleCreate}
+                disabled={createTab.isPending}
+              >
+                {createTab.isPending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  getTranslation("add", language)
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setIsCreating(false)}
+              >
+                {getTranslation("cancel", language)}
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Search */}

@@ -24,6 +24,7 @@ export interface InventoryItem {
   orderCost?: number;
   markupFactor: number;
   isOnMenu: boolean;
+  isHouseDefault?: boolean;
   menuPricePerServing?: number;
   lowStockMethod?: string;
   lowStockManualThreshold?: number;

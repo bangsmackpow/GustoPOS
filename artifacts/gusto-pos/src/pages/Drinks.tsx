@@ -24,10 +24,11 @@ import {
   ChevronLeft,
   Star,
   Check,
+  RotateCw,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 
-const OZ_TO_ML = 44.36;
+const OZ_TO_ML = 29.5735; // ml per oz conversion factor
 
 const DRINK_CATEGORIES = [
   { value: "all", label: "All", labelEs: "Todos" },
@@ -61,8 +62,8 @@ const _SPIRIT_SUBTYPES = [
 
 export default function Drinks() {
   const { language } = usePosStore();
-  const { data: drinks } = useGetDrinks();
-  const { data: ingredients } = useGetIngredients();
+  const { data: drinks, refetch: refetchDrinks } = useGetDrinks();
+  const { data: ingredients, refetch: refetchIngredients } = useGetIngredients();
   const saveDrink = useSaveDrinkMutation();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -161,20 +162,8 @@ export default function Drinks() {
   const handleMenuToggle = async (drink: any) => {
     const newVal = !drink.isOnMenu;
 
-    // Block enabling menu without recipe (unless it's inventory_single which has auto-recipe)
-    if (
-      newVal &&
-      (!drink.recipe || drink.recipe.length === 0) &&
-      drink.sourceType !== "inventory_single"
-    ) {
-      toast({
-        variant: "destructive",
-        title: getTranslation("error", language),
-        description:
-          "Add at least one ingredient to the recipe before enabling menu",
-      });
-      return;
-    }
+    // Allow enabling drinks on menu even without recipe
+    // Users can see drinks and add them, will get stock alert if no inventory
 
     qc.setQueryData(["drinks"], (old: any) => {
       if (!old) return old;
@@ -204,20 +193,51 @@ export default function Drinks() {
     }
   };
 
+  const handleHiddenToggle = async (drink: any) => {
+    const newVal = !drink.isHidden;
+
+    // Optimistic update
+    qc.setQueryData(["drinks"], (old: any) => {
+      if (!old) return old;
+      return old.map((d: any) =>
+        d.id === drink.id ? { ...d, isHidden: newVal } : d,
+      );
+    });
+
+    try {
+      const res = await fetch(`/api/drinks/${drink.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isHidden: newVal }),
+      });
+      if (!res.ok) throw new Error("Failed to update visibility");
+    } catch (e: any) {
+      // Revert on error
+      qc.setQueryData(["drinks"], (old: any) => {
+        if (!old) return old;
+        return old.map((d: any) =>
+          d.id === drink.id ? { ...d, isHidden: !newVal } : d,
+        );
+      });
+      toast({
+        variant: "destructive",
+        title: getTranslation("error", language),
+        description: e.message,
+      });
+    }
+  };
+
   const filteredDrinks = drinks?.filter((d: any) => {
     const matchesCategory =
       activeCategory === "all" || d.category === activeCategory;
     const matchesOnMenu = !onMenuOnly || d.isOnMenu;
     const matchesSearch =
       !search || d.name.toLowerCase().includes(search.toLowerCase());
-
-    // For Shot and Cocktail categories, require default ingredient
-    const needsDefault = d.category === "shot" || d.category === "cocktail";
-    const hasDefault = d.recipe?.some((r: any) => r.isDefault);
-    const showWithoutDefault = !needsDefault || hasDefault;
+    // Show drinks that are hidden from tabs but visible in admin
+    const matchesHidden = true; // Show all drinks including hidden ones
 
     return (
-      matchesCategory && matchesOnMenu && matchesSearch && showWithoutDefault
+      matchesCategory && matchesOnMenu && matchesSearch && matchesHidden
     );
   });
 
@@ -397,29 +417,47 @@ export default function Drinks() {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() =>
-                setEditingDrink({
-                  name: "",
-                  category: "cocktail",
-                  actualPrice: null,
-                  recipe: [],
-                  isAvailable: true,
-                  isOnMenu: false,
-                  sourceType: "standard",
-                })
-              }
-            >
-              <Plus className="mr-2" size={18} />{" "}
-              {getTranslation("new_drink", language)}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  refetchDrinks();
+                  refetchIngredients();
+                  toast({
+                    title: getTranslation("success", language),
+                    description: "Menu refreshed",
+                  });
+                }}
+              >
+                <RotateCw className="mr-2" size={18} />
+                Refresh
+              </Button>
+              <Button
+                onClick={() =>
+                  setEditingDrink({
+                    name: "",
+                    category: "cocktail",
+                    actualPrice: null,
+                    basePriceOverride: null,
+                    recipe: [],
+                    isAvailable: true,
+                    isOnMenu: false,
+                    sourceType: "standard",
+                    isHidden: 1,
+                  })
+                }
+              >
+                <Plus className="mr-2" size={18} />{" "}
+                {getTranslation("new_drink", language)}
+              </Button>
+            </div>
           </div>
 
           <div className="glass rounded-3xl overflow-hidden">
             <div className="overflow-x-auto">
               {sortedDrinks && sortedDrinks.length > 0 ? (
                 <table className="w-full text-left">
-                  <thead>
+                  <thead className="sticky top-0 z-30 bg-background">
                     <tr className="border-b border-white/5 text-muted-foreground text-sm">
                       <th className="p-4 font-medium w-12">
                         {getTranslation("on_menu", language)}
@@ -467,6 +505,9 @@ export default function Drinks() {
                             $ / %
                           </span>
                         </div>
+                      </th>
+                      <th className="p-4 font-medium text-center">
+                        Approved
                       </th>
                       <th className="p-4 font-medium text-right">Actions</th>
                     </tr>
@@ -554,6 +595,33 @@ export default function Drinks() {
                                 {marginPercent.toFixed(0)}% Margin
                               </span>
                             </div>
+                          </td>
+                          <td className="p-4 text-center">
+                            <button
+                              onClick={() => handleHiddenToggle(drink)}
+                              className={`w-6 h-6 rounded-md flex items-center justify-center transition-all border-2 mx-auto ${
+                                !drink.isHidden || drink.isHidden === 0
+                                  ? "bg-emerald-500 border-emerald-500 text-white"
+                                  : "bg-transparent border-white/30 hover:border-emerald-500/60"
+                              }`}
+                              title={!drink.isHidden || drink.isHidden === 0 ? "Visible on menu" : "Hidden from menu"}
+                            >
+                              {(drink.isHidden === 0 || !drink.isHidden) && (
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                              )}
+                            </button>
                           </td>
                           <td className="p-4 text-right">
                             <div className="flex items-center justify-end gap-1">
@@ -648,6 +716,8 @@ export default function Drinks() {
 
             const saveData = {
               ...rest,
+              // Include basePriceOverride if set
+              basePriceOverride: rest.basePriceOverride || null,
               // nameEs removed
               recipe: convertedRecipe,
             };
@@ -694,6 +764,13 @@ export default function Drinks() {
   );
 }
 
+// Default drinks that use dynamic ingredient selection (cannot have static recipes)
+const DEFAULT_DRINK_IDS = [
+  "shot-tequila", "shot-mezcal", "shot-vodka", "shot-gin",
+  "shot-whiskey", "shot-rum", "shot-misc",
+  "cocktail-tonic", "cocktail-soda", "cocktail-soft", "cocktail-juice"
+];
+
 function DrinkModal({
   drink,
   ingredients,
@@ -710,19 +787,33 @@ function DrinkModal({
   isSaving: boolean;
 }) {
   const { toast } = useToast();
-  // On initialization, convert DB ML values to OZ for display
+  
+  // Check if this is a system default drink (uses dynamic ingredient selection)
+  const isDefaultDrink = drink.id && DEFAULT_DRINK_IDS.includes(drink.id);
+  
+  // On initialization, convert DB ML values to OZ for display and look up type/subtype from ingredients
   const [editing, setEditing] = useState(() => {
     const displayRecipe = (drink.recipe || []).map((r: any) => {
       const ing = ingredients.find((i: any) => i.id === r.ingredientId);
       let amount = r.amountInBaseUnit || 0;
       if (ing && ing.baseUnit === "ml" && amount > 5) {
-        // Threshold to avoid double conversion of already converted small values if any
         amount = parseFloat((amount / OZ_TO_ML).toFixed(2));
       }
-      return { ...r, amountInBaseUnit: amount };
+      return { 
+        ...r, 
+        amountInBaseUnit: amount,
+        type: ing?.type || r.type || "",
+        subtype: ing?.subtype || r.subtype || "",
+      };
     });
     return { ...drink, recipe: displayRecipe };
   });
+  
+  // Total cost = sum of each ingredient's orderCost (pre-calculated by inventory)
+  const calculatedCost = (editing.recipe || []).reduce((sum: number, r: any) => {
+    const ing = ingredients.find((i: any) => i.id === r.ingredientId);
+    return sum + (ing?.orderCost || 0);
+  }, 0);
 
   const handleSave = () => {
     if (!editing.name.trim()) {
@@ -822,7 +913,14 @@ function DrinkModal({
       const ing = ingredients.find((i: any) => i.id === updates.ingredientId);
       if (ing) {
         newRecipe[idx].ingredientName = ing.name;
-        newRecipe[idx].amountInBaseUnit = ing.servingSize || 1.5;
+        newRecipe[idx].type = ing.type || "";
+        newRecipe[idx].subtype = ing.subtype || "";
+        // Convert ml serving size to oz for display
+        // Default: 59.15 ml = 2 oz
+        const servingSizeOz = ing.servingSize 
+          ? ing.servingSize / OZ_TO_ML 
+          : 59.15 / OZ_TO_ML; // Default 2 oz (59.15 ml)
+        newRecipe[idx].amountInBaseUnit = servingSizeOz;
         // Auto-set as default if it's the first spirit ingredient
         if (
           ing.type === "spirit" &&
@@ -902,11 +1000,12 @@ function DrinkModal({
               {getTranslation("drink_category", language)}
             </label>
             <select
-              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground"
+              className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
               value={editing.category || "cocktail"}
               onChange={(e) =>
                 setEditing({ ...editing, category: e.target.value })
               }
+              disabled={isDefaultDrink}
             >
               <option value="shot">{getTranslation("shot", language)}</option>
               <option value="shot_specialty">
@@ -927,6 +1026,7 @@ function DrinkModal({
               <option value="other">{getTranslation("other", language)}</option>
             </select>
           </div>
+          {(!isDefaultDrink && editing.basePriceOverride == null) && (
           <div className="space-y-2 col-span-2">
             <label className="text-sm font-medium text-muted-foreground">
               {getTranslation("actual_price_label", language)}
@@ -951,6 +1051,17 @@ function DrinkModal({
               />
             </div>
           </div>
+          )}
+          {(isDefaultDrink || editing.basePriceOverride != null) && (
+            <div className="space-y-2 col-span-2">
+              <span className="text-sm font-medium text-muted-foreground">
+                {language === "es" ? "Precio Base" : "Base Price"}
+              </span>
+              <div className="text-lg font-bold text-emerald-400 pl-2">
+                ${(editing.basePriceOverride ?? editing.actualPrice ?? 0).toFixed(2)}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mb-6">
@@ -979,6 +1090,15 @@ function DrinkModal({
                   </div>
                 ))}
               </div>
+            </div>
+          ) : isDefaultDrink ? (
+            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
+              <p className="text-sm text-amber-400 mb-2">
+                <span className="font-semibold">Dynamic Ingredient Selection:</span> This default drink uses ingredients selected at order time from the tab interface.
+              </p>
+              <p className="text-xs text-muted-foreground italic">
+                Ingredients are chosen when adding to a tab. To create a custom version with static ingredients, use the &quot;Clone&quot; button.
+              </p>
             </div>
           ) : (
             <>
@@ -1103,17 +1223,105 @@ function DrinkModal({
                 ))}
               </div>
 
-              <Button
-                variant="outline"
-                className="w-full border-dashed border-white/20 hover:bg-white/5 h-12"
-                onClick={addRecipeItem}
-              >
-                <Plus size={16} className="mr-2" />{" "}
-                {getTranslation("add_ingredient", language)}
-              </Button>
+              {!isDefaultDrink && (
+                <Button
+                  variant="outline"
+                  className="w-full border-dashed border-white/20 hover:bg-white/5 h-12"
+                  onClick={addRecipeItem}
+                >
+                  <Plus size={16} className="mr-2" />{" "}
+                  {getTranslation("add_ingredient", language)}
+                </Button>
+              )}
             </>
           )}
         </div>
+
+        {/* Price Calculator - Show ingredient costs from inventory */}
+        {(!isDefaultDrink) && (
+          <div className="bg-amber-500/5 rounded-2xl p-6 mb-8 border border-amber-500/10">
+            <div className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
+              {language === "es" ? "Calculadora de Precio" : "Price Calculator"}
+            </div>
+            {editing.recipe && editing.recipe.length > 0 ? (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-muted-foreground text-xs">
+                  <th className="text-left pb-2">{language === "es" ? "Ingrediente" : "Ingredient"}</th>
+                  <th className="text-right pb-2">{language === "es" ? "Cantidad" : "Amount"}</th>
+                  <th className="text-right pb-2">{language === "es" ? "Costo" : "Cost"}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5">
+                {editing.recipe.map((r: any, idx: number) => {
+                  const ing = ingredients.find((i: any) => i.id === r.ingredientId);
+                  const ingredientCost = ing?.orderCost || 0;
+                  return (
+                    <tr key={idx}>
+                      <td className="py-2 text-foreground">
+                        {ing?.name || `( ${language === "es" ? "Sin seleccionar" : "Not selected"} )`}
+                      </td>
+                      <td className="py-2 text-right text-muted-foreground">
+                        {r.amountInBaseUnit || 0} oz
+                      </td>
+                      <td className="py-2 text-right text-destructive">
+                        {formatMoney(ingredientCost)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-white/10">
+                  <td className="pt-2 font-semibold text-foreground" colSpan={2}>
+                    {language === "es" ? "Costo Total:" : "Total Cost:"}
+                  </td>
+                  <td className="pt-2 text-right font-bold text-destructive">
+                    {formatMoney(calculatedCost)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+            ) : (
+              <p className="text-sm text-muted-foreground italic text-center py-4">
+                {language === "es" 
+                  ? "Agregue ingredientes para ver costos" 
+                  : "Add ingredients to see costs"}
+              </p>
+            )}
+
+            {/* Price Override */}
+            <div className="mt-4 pt-4 border-t border-white/10">
+              <label className="flex items-center justify-between cursor-pointer">
+                <span className="text-sm text-muted-foreground">
+                  {language === "es" ? "Precio Base (override)" : "Base Price (override)"}
+                </span>
+                <div className="relative w-32">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    className="w-full bg-secondary border border-white/10 rounded-xl pl-7 pr-3 py-2 text-foreground text-sm text-right"
+                    value={editing.basePriceOverride || ""}
+                    onChange={(e) =>
+                      setEditing({
+                        ...editing,
+                        basePriceOverride: parseFloat(e.target.value) || null,
+                      })
+                    }
+                    placeholder="auto"
+                  />
+                </div>
+              </label>
+              <p className="text-xs text-muted-foreground mt-2">
+                {language === "es" 
+                  ? "Deja en blanco para precio automático basado en ingredientes"
+                  : "Leave blank for auto-calculated price based on ingredients"}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="bg-primary/5 rounded-2xl p-6 mb-8 border border-primary/10 grid grid-cols-2 gap-6">
           <div className="space-y-1">
@@ -1121,7 +1329,7 @@ function DrinkModal({
               {getTranslation("estimated_cost_label", language)}
             </span>
             <div className="text-2xl font-display text-destructive">
-              {formatMoney(editing.costPerDrink || 0)}
+              {formatMoney(calculatedCost)}
             </div>
           </div>
           <div className="space-y-1 text-right">
@@ -1130,28 +1338,59 @@ function DrinkModal({
             </span>
             <div className="flex flex-col items-end">
               <span
-                className={`text-xl font-bold ${editing.actualPrice && editing.costPerDrink && editing.actualPrice > editing.costPerDrink ? "text-emerald-400" : "text-red-400"}`}
+                className={`text-xl font-bold ${editing.actualPrice && calculatedCost && editing.actualPrice > calculatedCost ? "text-emerald-400" : "text-red-400"}`}
               >
-                {editing.actualPrice && editing.costPerDrink
-                  ? `${(((editing.actualPrice - editing.costPerDrink) / editing.costPerDrink) * 100).toFixed(0)}% Markup`
+                {editing.actualPrice && calculatedCost
+                  ? `${(((editing.actualPrice - calculatedCost) / calculatedCost) * 100).toFixed(0)}% Markup`
                   : "--% Markup"}
               </span>
               <span className="text-xs text-muted-foreground">
-                {editing.actualPrice && editing.costPerDrink
-                  ? `${(((editing.actualPrice - editing.costPerDrink) / editing.actualPrice) * 100).toFixed(0)}% Margin`
+                {editing.actualPrice && calculatedCost
+                  ? `${(((editing.actualPrice - calculatedCost) / editing.actualPrice) * 100).toFixed(0)}% Margin`
                   : "--% Margin"}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 pt-6 border-t border-white/10">
+        <div className="flex justify-end items-center gap-3 pt-6 border-t border-white/10">
           <Button variant="ghost" onClick={onClose}>
             {getTranslation("cancel", language)}
           </Button>
           <Button onClick={handleSave} disabled={isSaving} className="px-8">
             {getTranslation("save", language)}
           </Button>
+          <div className="flex items-center gap-2 ml-4">
+            <span className="text-sm text-muted-foreground">
+              {language === "es" ? "Oculto" : "Hidden"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setEditing({ ...editing, isHidden: editing.isHidden ? 0 : 1 })}
+              className={`w-6 h-6 rounded-md flex items-center justify-center transition-all border-2 ${
+                editing.isHidden || editing.isHidden === 1
+                  ? "bg-emerald-500 border-emerald-500 text-white"
+                  : "bg-transparent border-white/30 hover:border-emerald-500/60"
+              }`}
+              title={editing.isHidden || editing.isHidden === 1 ? "Hidden from menu" : "Visible on menu"}
+            >
+              {(editing.isHidden === 0 || !editing.isHidden) && (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

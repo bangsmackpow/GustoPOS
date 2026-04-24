@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import crypto from "crypto";
 import {
   db,
   inventoryItemsTable,
@@ -8,7 +9,7 @@ import {
   drinksTable,
   recipeIngredientsTable,
 } from "@workspace/db";
-import { eq, desc, lt, sql } from "drizzle-orm";
+import { eq, desc, lt, and, sql } from "drizzle-orm";
 import { logEvent } from "../lib/auditLog";
 import { requireRole } from "../middlewares/authMiddleware";
 
@@ -52,6 +53,62 @@ router.get("/items", async (req: Request, res: Response) => {
     } else {
       res.json(items.filter((i) => !i.isDeleted));
     }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/inventory/ingredients/by-type/:type - Get ingredients filtered by type and subtype
+router.get("/ingredients/by-type/:type", async (req: Request, res: Response) => {
+  try {
+    const typeParam = req.params.type as string;
+    const subtype = req.query.subtype as string | undefined;
+    const isOnMenuOnly = req.query.isOnMenu === "true";
+
+    const query = db
+      .select()
+      .from(inventoryItemsTable)
+      .where(eq(inventoryItemsTable.type, typeParam))
+      .orderBy(inventoryItemsTable.name);
+
+    let items = await query;
+
+    // Filter out deleted
+    items = items.filter((i) => !i.isDeleted);
+
+    // Apply subtype filter
+    if (subtype) {
+      items = items.filter((i) => i.subtype === subtype);
+    }
+
+    // Apply isOnMenu filter
+    if (isOnMenuOnly) {
+      items = items.filter((i) => i.isOnMenu === 1);
+    }
+
+    // Sort by menu price (cheapest first)
+    items.sort((a, b) => {
+      const priceA = Number(a.menuPricePerServing || 0);
+      const priceB = Number(b.menuPricePerServing || 0);
+      return priceA - priceB;
+    });
+
+    // Return with price info
+    const result = items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      type: item.type,
+      subtype: item.subtype,
+      isOnMenu: item.isOnMenu === 1,
+      isHouseDefault: item.isHouseDefault === 1,
+      baseUnitAmount: item.baseUnitAmount,
+      menuPricePerServing: item.menuPricePerServing
+        ? Number(item.menuPricePerServing)
+        : null,
+      currentStock: item.currentStock,
+    }));
+
+    res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -375,6 +432,8 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       updateData.parentItemId = data.parentItemId || null;
     if (data.alcoholDensity !== undefined)
       updateData.alcoholDensity = Number(data.alcoholDensity);
+    if (data.isHouseDefault !== undefined)
+      updateData.isHouseDefault = data.isHouseDefault ? 1 : 0;
 
     console.log(
       "[PATCH /items/:id] Final update data:",
@@ -412,75 +471,131 @@ router.patch("/items/:id", async (req: Request, res: Response) => {
       },
     });
 
-    // Handle isOnMenu toggle in full update
-    if (data.isOnMenu !== undefined) {
-      if (data.isOnMenu) {
-        const [existingDrink] = await db
-          .select()
-          .from(drinksTable)
-          .where(eq(drinksTable.id, item.id))
-          .limit(1);
+    // Handle isHouseDefault toggle - create/remove recipe link to shot drink
+    if (data.isHouseDefault !== undefined) {
+      const subtypeToShot: Record<string, string> = {
+        tequila: "shot-tequila",
+        mezcal: "shot-mezcal",
+        vodka: "shot-vodka",
+        gin: "shot-gin",
+        whiskey: "shot-whiskey",
+        rum: "shot-rum",
+        misc: "shot-misc",
+      };
+      const subtypeToCocktail: Record<string, string> = {
+        tequila: "cocktail-tonic",
+        mezcal: "cocktail-soda",
+        vodka: "cocktail-soft",
+        gin: "cocktail-juice",
+      };
+      const shotId = item.subtype ? subtypeToShot[item.subtype.toLowerCase()] : null;
+      const cocktailId = item.subtype ? subtypeToCocktail[item.subtype.toLowerCase()] : null;
 
-        const drinkData = {
-          name: item.name,
-          category: item.type,
-          actualPrice: item.menuPricePerServing || 0,
-          menuPrice: item.menuPricePerServing || 0,
-          priceSource: "auto",
-          sourceType: "inventory_single",
-          isAvailable: 1,
-          isOnMenu: 1,
-        };
+      if (data.isHouseDefault) {
+        if (shotId) {
+          // Enable: Create recipe link to shot drink
+          console.log(`[PATCH /items/:id] Linking ${item.name} as house default for ${shotId}`);
 
-        if (existingDrink) {
+          // First, clear any existing default recipe for this shot
+          await db
+            .delete(recipeIngredientsTable)
+            .where(eq(recipeIngredientsTable.drinkId, shotId));
+
+          // Insert new recipe with this ingredient as default
+          await db.insert(recipeIngredientsTable).values({
+            drinkId: shotId,
+            ingredientId: item.id,
+            amountInBaseUnit: item.servingSize || 44.36,
+            isDefault: 1,
+            defaultCost: Number(item.orderCost) || 0,
+            productPrice: Number(item.menuPricePerServing) || 0,
+          });
+
+          // Update the shot drink's actualPrice from the house default
           await db
             .update(drinksTable)
-            .set({ ...drinkData, updatedAt: Math.floor(Date.now() / 1000) })
-            .where(eq(drinksTable.id, existingDrink.id));
-        } else {
-          await db.insert(drinksTable).values({ id: item.id, ...drinkData });
+            .set({
+              actualPrice: Number(item.menuPricePerServing) || 0,
+              menuPrice: Number(item.menuPricePerServing) || 0,
+              updatedAt: Math.floor(Date.now() / 1000),
+            })
+            .where(eq(drinksTable.id, shotId));
+
+          console.log(`[PATCH /items/:id] ✓ Created recipe link: ${shotId} → ${item.id}`);
         }
 
-        // Also update recipe ingredient product price
-        await db
-          .update(recipeIngredientsTable)
-          .set({ productPrice: item.menuPricePerServing || 0 })
-          .where(eq(recipeIngredientsTable.ingredientId, item.id));
+        // Also update cocktail if applicable (spirit + mixer price)
+        if (cocktailId) {
+          console.log(`[PATCH /items/:id] Updating cocktail ${cocktailId} from house spirit ${item.name}`);
+
+          // Find the mixer for this cocktail type
+          const cocktailDrink = await db
+            .select()
+            .from(drinksTable)
+            .where(eq(drinksTable.id, cocktailId))
+            .limit(1);
+
+          const mixerSubtype = cocktailDrink[0]?.drinkMixerSubtype;
+          let mixerPrice = 0;
+
+          if (mixerSubtype) {
+            // Find first available mixer of this subtype
+            const mixer = await db
+              .select()
+              .from(inventoryItemsTable)
+              .where(and(
+                eq(inventoryItemsTable.type, "mixer"),
+                eq(inventoryItemsTable.subtype, mixerSubtype),
+                eq(inventoryItemsTable.isOnMenu, 1)
+              ))
+              .limit(1);
+
+            mixerPrice = Number(mixer[0]?.menuPricePerServing) || 0;
+          }
+
+          // Update cocktail base price = spirit price + mixer price
+          const basePrice = (Number(item.menuPricePerServing) || 0) + mixerPrice;
+          await db
+            .update(drinksTable)
+            .set({
+              basePriceOverride: basePrice,
+              updatedAt: Math.floor(Date.now() / 1000),
+            })
+            .where(eq(drinksTable.id, cocktailId));
+
+          console.log(`[PATCH /items/:id] ✓ Updated cocktail base price: MX$${basePrice.toFixed(2)}`);
+        }
       } else {
-        await db.delete(drinksTable).where(eq(drinksTable.id, item.id));
+        // Disable: Remove recipe link
+        if (shotId) {
+          console.log(`[PATCH /items/:id] Removing house default link for ${shotId}`);
+          await db
+            .delete(recipeIngredientsTable)
+            .where(eq(recipeIngredientsTable.drinkId, shotId));
+          console.log(`[PATCH /items/:id] ✓ Removed recipe link for ${shotId}`);
+        }
+        if (cocktailId) {
+          console.log(`[PATCH /items/:id] Clearing cocktail base price for ${cocktailId}`);
+          await db
+            .update(drinksTable)
+            .set({
+              basePriceOverride: null,
+              updatedAt: Math.floor(Date.now() / 1000),
+            })
+            .where(eq(drinksTable.id, cocktailId));
+        }
       }
     }
 
-    // Handle productPrice changes - update linked drink
+    // Handle isOnMenu toggle - NO LONGER creates drinks
+    // On Menu just marks inventory item as available in dropdowns, not as a separate menu item
+    // The 11 default drinks (7 shots + 4 classics) handle the menu instead
+    // (The actual isOnMenu update is handled in updateData above)
+
+    // Handle productPrice changes - DEPRECATED
+    // Since we no longer create drinks from inventory, this code is now dead
     if (data.productPrice !== undefined && item.isOnMenu) {
-      const [existingDrink] = await db
-        .select()
-        .from(drinksTable)
-        .where(eq(drinksTable.id, item.id))
-        .limit(1);
-
-      if (existingDrink) {
-        const calculatedMenuPrice = data.productPrice || 0;
-        const newActualPrice =
-          existingDrink.priceSource === "manual"
-            ? existingDrink.actualPrice
-            : calculatedMenuPrice;
-
-        await db
-          .update(drinksTable)
-          .set({
-            actualPrice: newActualPrice,
-            menuPrice: calculatedMenuPrice,
-            updatedAt: Math.floor(Date.now() / 1000),
-          })
-          .where(eq(drinksTable.id, existingDrink.id));
-
-        // Also update recipe ingredient productPrice
-        await db
-          .update(recipeIngredientsTable)
-          .set({ productPrice: data.productPrice })
-          .where(eq(recipeIngredientsTable.drinkId, existingDrink.id));
-      }
+      console.log(`[PATCH /items/:id] productPrice changed but no linked drink to update`);
     }
 
     res.json(item);
@@ -866,5 +981,9 @@ router.get("/items/audit-age-stats", async (req: Request, res: Response) => {
       .json({ error: "Internal server error", message: err.message });
   }
 });
+
+// Manual cleanup endpoint - DELETE drinks with sourceType='inventory_single' directly from database
+// This is a simple pass-through since we can't do admin check easily here
+// Run this SQL manually in db: DELETE FROM drinks WHERE source_type = 'inventory_single'
 
 export default router;

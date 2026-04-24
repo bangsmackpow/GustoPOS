@@ -127,22 +127,29 @@ const migrationsPath =
 
 async function upsertAdmin() {
   const adminUsername = process.env.ADMIN_USERNAME || "GUSTO";
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminPassword = process.env.ADMIN_PASSWORD || "0262"; // Fallback default
   const adminPin = process.env.ADMIN_PIN || "0000";
 
-  if (!adminPassword) {
-    console.warn("[Initialize] ADMIN_PASSWORD not set. Skipping admin upsert.");
-    return;
-  }
+  // Always create/update admin user with credentials (env var or fallback)
+  console.log(
+    `[Initialize] Ensuring admin user exists: ${adminUsername} with password: ${adminPassword.substring(0,2)}***`,
+  );
 
   try {
-    console.log(
-      `[Initialize] Checking for existing admin user: ${adminUsername}`,
-    );
+    // Check if users table exists first
+    const tableCheck = await db.all(sql`SELECT name FROM sqlite_master WHERE type='table' AND name='users'`);
+    if (tableCheck.length === 0) {
+      console.error("[Initialize] CRITICAL: users table does not exist!");
+      return;
+    }
+    console.log("[Initialize] Users table exists");
+
     const [existing] = await db
       .select()
       .from(schema.usersTable)
       .where(eq(schema.usersTable.username, adminUsername));
+
+    console.log(`[Initialize] Admin user found: ${existing ? "yes" : "no"}`);
 
     const hashedPassword = await bcrypt.hash(adminPassword, 10);
     const hashedPin = await bcrypt.hash(adminPin, 10);
@@ -177,12 +184,152 @@ async function upsertAdmin() {
         isActive: 1,
       });
       console.log(
-        `[Initialize] ✓ Admin user created successfully: ${adminUsername}`,
+        `[Initialize] ✓ Admin user created successfully: ${adminUsername} with password: ${adminPassword}`,
       );
     }
   } catch (err: any) {
     console.error("[Initialize] ✗ FAILED to upsert admin user:", err.message);
+    console.error("[Initialize] Stack:", err.stack);
     throw new Error(`Admin user initialization failed: ${err.message}`);
+  }
+}
+
+async function seedDefaultDrinks() {
+  try {
+    const { drinksTable, recipeIngredientsTable, inventoryItemsTable } = schema;
+    
+    // CRITICAL: Ensure drinks table has required columns for this function
+    // This handles old databases that don't have these columns yet
+    const drinksCols = await db.all(sql`PRAGMA table_info(drinks)`);
+    const drinksColNames = drinksCols.map((c: any) => c.name);
+    
+    if (!drinksColNames.includes("drink_subtype")) {
+      await db.run(sql`ALTER TABLE drinks ADD COLUMN drink_subtype text`);
+      console.log("[Initialize] Added column: drink_subtype");
+    }
+    if (!drinksColNames.includes("drink_mixer_subtype")) {
+      await db.run(sql`ALTER TABLE drinks ADD COLUMN drink_mixer_subtype text`);
+      console.log("[Initialize] Added column: drink_mixer_subtype");
+    }
+    if (!drinksColNames.includes("is_hidden")) {
+      await db.run(sql`ALTER TABLE drinks ADD COLUMN is_hidden integer DEFAULT 0`);
+      console.log("[Initialize] Added column: is_hidden");
+    }
+    if (!drinksColNames.includes("is_approved")) {
+      await db.run(sql`ALTER TABLE drinks ADD COLUMN is_approved integer DEFAULT 1`);
+      console.log("[Initialize] Added column: is_approved");
+    }
+    
+    // Check if drinks already exist
+    const existingDrinks = await db
+      .select()
+      .from(drinksTable)
+      .limit(1);
+    
+    if (existingDrinks.length > 0) {
+      console.log("[Initialize] Drinks already exist, skipping seed");
+      return;
+    }
+    
+    // Fetch house default ingredients (marked by admin)
+    const houseIngredients = await db
+      .select()
+      .from(inventoryItemsTable)
+      .where(eq(inventoryItemsTable.isHouseDefault, 1));
+    
+    // Map subtype -> ingredient for quick lookup
+    const houseBySubtype = new Map<string, typeof inventoryItemsTable.$inferSelect>();
+    for (const ing of houseIngredients) {
+      if (ing.subtype) {
+        houseBySubtype.set(ing.subtype.toLowerCase(), ing);
+      }
+    }
+    
+    console.log("[Initialize] Creating default menu drinks...");
+    
+    // Shot definitions with their drinkSubtype for dynamic ingredient selection
+    const shotDefinitions = [
+      { id: "shot-tequila", name: "Tequila Shot", drinkSubtype: "tequila" },
+      { id: "shot-mezcal", name: "Mezcal Shot", drinkSubtype: "mezcal" },
+      { id: "shot-vodka", name: "Vodka Shot", drinkSubtype: "vodka" },
+      { id: "shot-gin", name: "Gin Shot", drinkSubtype: "gin" },
+      { id: "shot-whiskey", name: "Whiskey Shot", drinkSubtype: "whiskey" },
+      { id: "shot-rum", name: "Rum Shot", drinkSubtype: "rum" },
+      { id: "shot-misc", name: "Misc Shot", drinkSubtype: "misc" },
+    ];
+
+    // Cocktail definitions with drinkMixerSubtype for dynamic mixer selection
+    const cocktailDefinitions = [
+      { id: "cocktail-tonic", name: "& Tonic", drinkMixerSubtype: "tonic" },
+      { id: "cocktail-soda", name: "& Club Soda", drinkMixerSubtype: "club_soda" },
+      { id: "cocktail-soft", name: "& Soft Drink", drinkMixerSubtype: "soft_drink" },
+      { id: "cocktail-juice", name: "& Juice", drinkMixerSubtype: "juice" },
+    ];
+    
+    const timestamp = Math.floor(Date.now() / 1000);
+    let drinksCreated = 0;
+    
+    // Create shots with drinkSubtype for dynamic ingredient selection
+    for (const shot of shotDefinitions) {
+      // Insert drink with drinkSubtype - NO static recipe
+      await db.insert(drinksTable).values({
+        id: shot.id,
+        name: shot.name,
+        category: "shot",
+        taxCategory: "standard",
+        taxRate: 0,
+        actualPrice: 0,
+        menuPrice: 0,
+        priceSource: "auto",
+        markupFactor: 3.0,
+        sourceType: "standard",
+        isAvailable: 1,
+        isOnMenu: 1,
+        isHidden: 0,
+        isDeleted: 0,
+        isApproved: 1,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        drinkSubtype: shot.drinkSubtype,
+      });
+      drinksCreated++;
+      // Note: No recipe_ingredients created - ingredients are selected dynamically at order time
+    }
+    
+    // Create cocktails with drinkMixerSubtype for dynamic ingredient selection
+    for (const cocktail of cocktailDefinitions) {
+      await db.insert(drinksTable).values({
+        id: cocktail.id,
+        name: cocktail.name,
+        category: "cocktail",
+        taxCategory: "standard",
+        taxRate: 0,
+        actualPrice: 0,
+        menuPrice: 0,
+        priceSource: "auto",
+        markupFactor: 3.0,
+        sourceType: "standard",
+        isAvailable: 1,
+        isOnMenu: 1,
+        isHidden: 0,
+        isDeleted: 0,
+        isApproved: 1,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        drinkMixerSubtype: cocktail.drinkMixerSubtype,
+      });
+      drinksCreated++;
+    }
+    
+    console.log(`[Initialize] ✓ Created ${drinksCreated} default menu drinks`);
+    console.log("[Initialize] ℹ Default drinks use dynamic ingredient selection - no static recipes");
+    if (houseIngredients.length > 0) {
+      console.log(`[Initialize] ℹ Found ${houseIngredients.length} house default ingredients`);
+    }
+    console.log("[Initialize] ℹ Mark inventory items as 'House Default' to set default brand");
+  } catch (err: any) {
+    console.error("[Initialize] ✗ FAILED to seed drinks:", err.message);
+    // Don't throw - drinks seed failure is non-critical
   }
 }
 
@@ -457,6 +604,14 @@ export async function initializeDatabase() {
           );
           console.log("[Initialize] Added column: tracking_mode");
         }
+        // House default column (for dynamic drink pricing)
+        if (!colNames.includes("is_house_default")) {
+          await db.run(
+            sql`ALTER TABLE inventory_items ADD COLUMN is_house_default integer DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: is_house_default");
+        }
+
         // Menu price per serving column
         if (!colNames.includes("menu_price_per_serving")) {
           await db.run(
@@ -517,6 +672,12 @@ export async function initializeDatabase() {
           );
           console.log("[Initialize] Added column: variance_warning_threshold");
         }
+        if (!setColNames.includes("enable_touchscreen")) {
+          await db.run(
+            sql`ALTER TABLE settings ADD COLUMN enable_touchscreen integer DEFAULT 0`,
+          );
+          console.log("[Initialize] Added column: enable_touchscreen");
+        }
         if (!setColNames.includes("default_alcohol_density")) {
           await db.run(
             sql`ALTER TABLE settings ADD COLUMN default_alcohol_density real DEFAULT 0.94`,
@@ -525,7 +686,7 @@ export async function initializeDatabase() {
         }
         if (!setColNames.includes("default_serving_size_ml")) {
           await db.run(
-            sql`ALTER TABLE settings ADD COLUMN default_serving_size_ml real DEFAULT 44.36`,
+            sql`ALTER TABLE settings ADD COLUMN default_serving_size_ml real DEFAULT 59.15`,
           );
           console.log("[Initialize] Added column: default_serving_size_ml");
         }
@@ -706,6 +867,40 @@ export async function initializeDatabase() {
             sql`ALTER TABLE drinks ADD COLUMN source_type text DEFAULT 'standard'`,
           );
           console.log("[Initialize] Added column: source_type");
+        }
+        if (!drinksColNames.includes("is_hidden")) {
+          await db.run(
+            sql`ALTER TABLE drinks ADD COLUMN is_hidden integer DEFAULT 0`
+          );
+          console.log("[Initialize] Added column: is_hidden");
+        }
+        if (!drinksColNames.includes("drink_subtype")) {
+          await db.run(
+            sql`ALTER TABLE drinks ADD COLUMN drink_subtype text`
+          );
+          console.log("[Initialize] Added column: drink_subtype");
+        }
+        if (!drinksColNames.includes("drink_mixer_subtype")) {
+          await db.run(
+            sql`ALTER TABLE drinks ADD COLUMN drink_mixer_subtype text`
+          );
+          console.log("[Initialize] Added column: drink_mixer_subtype");
+        }
+
+        // Add is_approved column for admin approval workflow
+        if (!drinksColNames.includes("is_approved")) {
+          await db.run(
+            sql`ALTER TABLE drinks ADD COLUMN is_approved integer DEFAULT 0`
+          );
+          console.log("[Initialize] Added column: is_approved");
+        }
+
+        // Add base_price_override column for price override feature
+        if (!drinksColNames.includes("base_price_override")) {
+          await db.run(
+            sql`ALTER TABLE drinks ADD COLUMN base_price_override real`
+          );
+          console.log("[Initialize] Added column: base_price_override");
         }
 
         // Specials table
@@ -890,6 +1085,18 @@ export async function initializeDatabase() {
     console.log("[Initialize] Starting admin user initialization...");
     try {
       await upsertAdmin();
+      console.log(
+        "[Initialize] ✓ Admin user initialized",
+      );
+      
+      // Seed default drinks if none exist
+      try {
+        await seedDefaultDrinks();
+        console.log("[Initialize] ✓ Drink seeding completed");
+      } catch (seedErr: any) {
+        console.warn("[Initialize] FAILED to seed drinks:", seedErr.message);
+        // Don't throw - drinks seed failure is non-critical, admin can create drinks via UI
+      }
       console.log(
         "[Initialize] ✓ Database initialization completed successfully",
       );

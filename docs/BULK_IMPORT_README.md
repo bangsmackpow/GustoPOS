@@ -111,7 +111,8 @@ curl -X POST http://localhost:3000/api/bulk-drinks \
 
 ## Notes
 
-- The import handles duplicate names intelligently based on the chosen strategy
+- Items with the same name but different bottle sizes are treated as separate items (unique ID = name + bottleSizeMl, e.g., "tiahuani550", "tiahuani750")
+- To group items as variations, use "Link to Parent" in the inventory edit modal
 - Ingredients must exist in the inventory before drinks can reference them by name
 - Prices are automatically calculated from ingredient costs if not manually specified
 - All numeric fields accept both integers and decimals

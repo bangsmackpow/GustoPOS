@@ -1095,7 +1095,90 @@ Created `docs/BATCH_AUDIT_SYSTEM.md` with:
 
 ---
 
-## Verification Commands
+## 📝 Bulk Import - Unique ID System (May 17, 2026)
+
+### Change
+
+- Import now generates unique IDs using `name + bottleSizeMl` (e.g., `tiahuani750`)
+- Items with same name but different sizes are imported as separate items
+- Removed name-based auto-grouping
+
+### Files Modified
+
+| File                                            | Changes                                |
+| ------------------------------------------------ | ------------------------------------- |
+| `artifacts/api-server/src/routes/bulk-import.ts`        | Generate ID from name+size, use for lookup |
+
+### Result
+
+- Each CSV row imports as a separate item
+- Use "Link to Parent" button in inventory edit modal to manually group variations
+
+---
+
+## April 23, 2026 - DMG Build Fix & TypeScript Resolution
+
+### Problem
+The DMG build was failing due to 100+ TypeScript errors. The root cause was a mismatch between the generated API client types and the actual implementation:
+
+1. `lib/api-client-react/src/generated/api.ts` - Contained TypeScript declarations with strict types
+2. `lib/api-client-react/src/generated/api-stub.ts` - Contained actual implementations but without proper types
+3. TypeScript was using declarations from `api.ts` but runtime was using `api-stub.ts`
+
+### Solution
+
+**Phase 1: API Client Fix**
+- Removed conflicting `lib/api-client-react/src/generated/api.ts` file
+- Completely rewrote `lib/api-client-react/src/generated/api-stub.ts` with proper TypeScript types
+- Added explicit type annotations to all hooks using types from `api.schemas.ts`
+- Added proper type casts to all `response.json()` calls
+
+**Phase 2: Frontend Component Fixes**
+
+1. **Layout.tsx** - Fixed `useGetCurrentAuthUser` call:
+   - Changed from `{ query: { staleTime: 0, ... } }` to `{ staleTime: 0, ... }`
+   - The hook expects options directly, not nested in a `query` property
+
+2. **use-pos-mutations.ts** - Fixed `useModifyOrderIngredientMutation`:
+   - Changed from `{ id, data }` to `{ tabId, orderId, data }`
+   - The API endpoint requires both tab ID and order ID
+
+3. **Calendar.tsx** - Fixed rush event mutations:
+   - Removed unsupported `days` parameter from `useGetRushes`
+   - Changed `createRush.mutate({ data: {...} })` to `createRush.mutate({...})`
+   - Changed `deleteRush.mutate({ id: ... })` to `deleteRush.mutate(id)`
+
+4. **Settings.tsx** - Fixed mutation calls:
+   - Changed `updateSettings.mutate({ data: formData })` to `updateSettings.mutate(formData)`
+   - Changed `createUser.mutate({ data: {...} })` to `createUser.mutate({...})`
+   - Removed unsupported `isActive: 1` field (should be boolean, not in CreateUserBody)
+
+5. **TabDetail.tsx** - Fixed ingredient substitution:
+   - Changed from `{ id, data }` to `{ tabId, orderId, data }`
+   - Added `tabId` from component scope to mutation call
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `lib/api-client-react/src/generated/api.ts` | Deleted conflicting file |
+| `lib/api-client-react/src/generated/api-stub.ts` | Rewrote with full TypeScript types |
+| `artifacts/gusto-pos/src/components/Layout.tsx` | Fixed useGetCurrentAuthUser options |
+| `artifacts/gusto-pos/src/hooks/use-pos-mutations.ts` | Fixed mutation parameters |
+| `artifacts/gusto-pos/src/pages/Calendar.tsx` | Fixed rush mutation calls |
+| `artifacts/gusto-pos/src/pages/Settings.tsx` | Fixed settings/user mutations |
+| `artifacts/gusto-pos/src/pages/TabDetail.tsx` | Fixed ingredient substitution mutation |
+
+### Build Output
+
+```
+✓ Frontend built (2850 modules)
+✓ API server built (4.9mb)
+✓ Desktop app built
+✓ DMG created: artifacts/desktop-app/dist/build/GustoPOS-0.1.0.dmg (108MB)
+```
+
+### Verification Commands
 
 ```bash
 # TypeCheck
@@ -1104,3 +1187,10 @@ pnpm run typecheck
 # Build DMG
 pnpm run build:desktop
 ```
+
+### Result
+
+- All TypeScript errors resolved
+- Typecheck passes successfully
+- DMG builds successfully
+- Application is ready for deployment

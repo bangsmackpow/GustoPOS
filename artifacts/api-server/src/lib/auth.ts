@@ -43,8 +43,20 @@ export async function createSession(data: SessionData): Promise<string> {
     userId: data.user.id,
     email: data.user.email,
     role: data.user.role,
+    hasProfileImage: !!data.user.profileImageUrl,
     tokenLength: token.length,
   });
+  // Verify token can be decoded immediately
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as SessionData;
+    console.log("[Auth] Verified created token - decoded user:", {
+      userId: decoded.user?.id,
+      email: decoded.user?.email,
+      role: decoded.user?.role,
+    });
+  } catch (err: any) {
+    console.error("[Auth] CRITICAL: Created token cannot be verified!", err.message);
+  }
   return token;
 }
 

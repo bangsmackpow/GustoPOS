@@ -41,6 +41,8 @@ async function getDrinksBatched(drinkIds?: string[]) {
       ingredientName: string;
       amountInBaseUnit: number;
       costContribution: number;
+      isDefault: boolean;
+      defaultCost: number;
     }>
   >();
   const drinkCostMap = new Map<string, number>();
@@ -62,6 +64,8 @@ async function getDrinksBatched(drinkIds?: string[]) {
       ingredientName: inv?.name ?? "Unknown",
       amountInBaseUnit,
       costContribution,
+      isDefault: ri.isDefault === 1,
+      defaultCost: Number(ri.defaultCost) || 0,
     });
     drinkCostMap.set(
       ri.drinkId,
@@ -82,6 +86,7 @@ async function getDrinksBatched(drinkIds?: string[]) {
       name: drink.name,
       description: drink.description ?? null,
       category: drink.category,
+      sourceType: drink.sourceType,
       costPerDrink,
       suggestedPrice,
       actualPrice,
@@ -89,6 +94,8 @@ async function getDrinksBatched(drinkIds?: string[]) {
       recipe,
       isAvailable: drink.isAvailable === 1,
       isOnMenu: drink.isOnMenu === 1,
+      isHidden: drink.isHidden === 1,
+      isApproved: drink.isApproved === 1,
       createdAt: drink.createdAt
         ? new Date(drink.createdAt * 1000).toISOString()
         : null,
@@ -147,6 +154,7 @@ router.post("/drinks", async (req: Request, res: Response) => {
         actualPrice: actualPrice != null ? Number(actualPrice) : null,
         priceSource: actualPrice != null ? "manual" : "auto",
         isAvailable: isAvailable !== undefined ? (isAvailable ? 1 : 0) : 1,
+        isApproved: 1, // Auto-approve new drinks for beta
       } as typeof drinksTable.$inferInsert)
       .returning();
 
@@ -251,6 +259,10 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
         data.actualPrice != null ? Number(data.actualPrice) : undefined;
       updateData.priceSource = data.actualPrice != null ? "manual" : "auto";
     }
+    if (data.basePriceOverride !== undefined) {
+      updateData.basePriceOverride =
+        data.basePriceOverride != null ? Number(data.basePriceOverride) : undefined;
+    }
     if (data.isAvailable != null) updateData.isAvailable = data.isAvailable;
 
     // Validate isOnMenu requires recipe
@@ -279,6 +291,7 @@ router.patch("/drinks/:id", async (req: Request, res: Response) => {
       }
     }
     if (data.isOnMenu != null) updateData.isOnMenu = data.isOnMenu;
+    if (data.isApproved != null) updateData.isApproved = data.isApproved ? 1 : 0;
 
     const [drink] = await db
       .update(drinksTable)

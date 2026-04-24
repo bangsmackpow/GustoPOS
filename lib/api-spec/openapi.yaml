@@ -1371,17 +1371,15 @@ components:
           type: number
         suggestedPrice:
           type: number
-        actualPrice:
+actualPrice:
           type: ["number", "null"]
-        markupFactor:
-          type: number
-        recipe:
-          type: array
-          items:
-            $ref: "#/components/schemas/RecipeIngredient"
+        basePriceOverride:
+          type: ["number", "null"]
         isAvailable:
           type: boolean
         isOnMenu:
+          type: boolean
+        isApproved:
           type: boolean
         createdAt:
           type: string
@@ -1400,6 +1398,7 @@ components:
         - recipe
         - isAvailable
         - isOnMenu
+        - isApproved
         - createdAt
         - updatedAt
 

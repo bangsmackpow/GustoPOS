@@ -23,8 +23,8 @@ const IngredientRowSchema = z.object({
   bulkUnit: z.string().optional().nullable(),
   servingSize: z.coerce
     .number()
-    .transform((val) => (isNaN(val) ? 44.36 : Math.max(0, val)))
-    .default(44.36),
+    .transform((val) => (isNaN(val) ? 59.15 : Math.max(0, val)))
+    .default(59.15),
   servingUnit: z.string().optional().nullable(),
   bottleSizeMl: z.coerce.number().optional().nullable(),
   fullBottleWeightG: z.coerce.number().optional().nullable(),
@@ -52,6 +52,10 @@ const IngredientRowSchema = z.object({
     .number()
     .transform((val) => (isNaN(val) ? 1 : Math.max(0, val)))
     .default(1),
+  // Add case size aliases for beer import
+  caseSize: z.coerce.number().optional(),
+  caseCount: z.coerce.number().optional(),
+  caseUnits: z.coerce.number().optional(),
   unitsPerCase: z.coerce
     .number()
     .transform((val) => (isNaN(val) ? 1 : Math.max(0, val)))
@@ -80,6 +84,16 @@ const IngredientRowSchema = z.object({
   minimumStock: z.coerce.number().optional(),
   alcoholDensity: z.coerce.number().optional(),
   markupFactor: z.coerce.number().optional(),
+  isHouseDefault: z
+    .union([z.boolean(), z.number()])
+    .optional()
+    .default(false)
+    .transform((val) => (val ? 1 : 0)),
+  isHouse: z
+    .union([z.boolean(), z.number()])
+    .optional()
+    .default(false)
+    .transform((val) => (val ? 1 : 0)),
 });
 
 const DrinkRowSchema = z.object({
@@ -207,9 +221,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
       let skippedCount = 0;
       let errorCount = 0;
 
-      // Track parents for auto-pooling within this session
-      const nameToParentId = new Map<string, string>();
-
+      // No auto-pooling - all items created as independent parents
       for (const { data: item } of validRows) {
         const name = item.name;
         const type = item.type;
@@ -222,25 +234,37 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
         const servingSize = item.servingSize || 44.36;
         const servingUnit = item.servingUnit || null;
         const bottleSizeMl = item.bottleSizeMl || null;
-        const fullBottleWeightG = item.fullBottleWeightG || null;
-        // Calculate containerWeightG from fullBottleWeightG if provided
-        // Container Weight = Full Weight - (Bottle Size in ml × Density)
+        // Weight failsafe: IF fullBottleWeightG > 0, use it. Else: use liquid + 500g bottle estimate
         const density = item.density || 0.94;
         const bottleSizeForCalc =
           item.bottleSizeMl || item.baseUnitAmount || 750;
-        const containerWeightG = fullBottleWeightG
-          ? fullBottleWeightG - bottleSizeForCalc * density
-          : null;
+        const liquidWeightG = bottleSizeForCalc * density;
+        const fullBottleWeightGInput = item.fullBottleWeightG || 0;
+        
+        // IF fullBottleWeightG > 0, use it. Else: use liquid + 500g bottle estimate
+        const fullBottleWeightG = fullBottleWeightGInput > 0
+          ? fullBottleWeightGInput
+          : liquidWeightG + 500;
+        
+        // Container weight = full weight - liquid weight
+        const containerWeightG = fullBottleWeightG - liquidWeightG; // auto-calculated
+        
         const currentStock = item.currentStock || item.stock || item.qty || 0;
         const currentBulk = item.currentBulk || 0;
         const currentPartial = item.currentPartial || 0;
         const orderCost = item.orderCost || item.cost || item.bulkCost || 0;
         const lowStockThreshold =
           item.lowStockThreshold || item.min || item.minimumStock || 1;
-        const unitsPerCase = item.unitsPerCase || 1;
+        // Handle case size aliases for beer: caseSize, caseCount, caseUnits, OR unitsPerCase
+        const unitsPerCase =
+          item.unitsPerCase ||
+          item.caseCount ||
+          item.caseSize ||
+          item.caseUnits ||
+          1;
 
-        // Determine trackingMode based on container size (failsafe)
-        // >=100 = ml (pool), <100 = units (collection)
+        // Determine trackingMode - check type FIRST before container size
+        // This ensures beer/merch/misc gets collection mode regardless of size
         let trackingMode = item.trackingMode || "auto";
         const containerSize = item.bottleSizeMl || item.baseUnitAmount || 0;
 
@@ -248,14 +272,16 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
         const normalizedType = (type || "").toLowerCase().replace(/s$/, "");
 
         if (trackingMode === "auto") {
-          if (containerSize >= 100) {
-            trackingMode = "pool";
-          } else if (containerSize > 0) {
-            trackingMode = "collection";
-          }
-
-          // Override based on type for known categories
+          // FIRST: Override based on type for known categories (takes priority)
           if (
+            normalizedType === "beer" ||
+            normalizedType === "merch" ||
+            normalizedType === "misc" ||
+            (normalizedType === "ingredient" &&
+              (subtype || "").toLowerCase() === "weighted")
+          ) {
+            trackingMode = "collection";
+          } else if (
             normalizedType === "spirit" ||
             normalizedType === "tequila" ||
             normalizedType === "mezcal" ||
@@ -269,18 +295,18 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
               (subtype || "").toLowerCase() === "liquid")
           ) {
             trackingMode = "pool";
-          } else if (
-            normalizedType === "beer" ||
-            normalizedType === "merch" ||
-            normalizedType === "misc" ||
-            (normalizedType === "ingredient" &&
-              (subtype || "").toLowerCase() === "weighted")
-          ) {
+          }
+          // FALLBACK: Use container size only if type didn't determine it
+          else if (containerSize >= 100) {
+            trackingMode = "pool";
+          } else if (containerSize > 0) {
             trackingMode = "collection";
           }
         }
 
         const isOnMenu = item.isOnMenu ? 1 : 0;
+        // Support both isHouseDefault and isHouse column aliases
+        const isHouseDefault = (item.isHouseDefault || item.isHouse) ? 1 : 0;
         const singleServingPrice = item.singleServingPrice || null;
         const menuPricePerServing = item.menuPricePerServing || item.productPrice || null;
         const productPrice = item.productPrice || item.menuPricePerServing || null;
@@ -290,45 +316,18 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
         const bulkUnit = item.bulkUnit || null;
 
         try {
-          // AUTO-POOLING logic: ONLY for Spirits and Mixers
-          let parentItemId: string | null = null;
-          const normalizedType = (type || "").toLowerCase().replace(/s$/, "");
-          const isPooledType =
-            normalizedType === "spirit" ||
-            normalizedType === "tequila" ||
-            normalizedType === "mezcal" ||
-            normalizedType === "whiskey" ||
-            normalizedType === "vodka" ||
-            normalizedType === "gin" ||
-            normalizedType === "rum" ||
-            normalizedType === "vino" ||
-            normalizedType === "mixer";
+          // No auto-grouping - all items are created as independent parent items
+          // Users can manually link items via "Link to Parent" in the UI
+          const parentItemId: string | null = null;
 
-          if (isPooledType) {
-            if (nameToParentId.has(name)) {
-              parentItemId = nameToParentId.get(name)!;
-            } else {
-              // Check DB for an existing top-level item with this name
-              const [dbParent] = await tx
-                .select()
-                .from(inventoryItemsTable)
-                .where(eq(inventoryItemsTable.name, name))
-                .limit(1);
+          // Generate unique ID from name + bottleSizeMl (e.g., "tiahuani750")
+          const itemId = (name?.toLowerCase().replace(/[^a-z0-9]/g, "") || "") + (bottleSizeMl || 750);
 
-              if (dbParent) {
-                // If it's already a variation, find its parent
-                parentItemId = dbParent.parentItemId || dbParent.id;
-                nameToParentId.set(name, parentItemId);
-              }
-            }
-          }
-
-          // Search criteria for "existing" depends on strategy
-          // For spirits/mixers, we might want to check name + size if we allow multiple variations in DB
+          // Search by unique ID instead of name
           const [existing] = await tx
             .select()
             .from(inventoryItemsTable)
-            .where(eq(inventoryItemsTable.name, name))
+            .where(eq(inventoryItemsTable.id, itemId))
             .limit(1);
 
           if (existing) {
@@ -341,7 +340,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
               await tx
                 .update(inventoryItemsTable)
                 .set({
-                  type: existing.type,
+                  type: type || existing.type,
                   subtype:
                     subtype && subtype.trim() !== ""
                       ? subtype
@@ -349,21 +348,21 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                   baseUnit: existing.baseUnit,
                   baseUnitAmount: existing.baseUnitAmount,
                   bulkUnit: bulkUnit || existing.bulkUnit,
-                  servingSize: existing.servingSize,
+                  servingSize: servingSize || existing.servingSize,
                   servingUnit: servingUnit || existing.servingUnit,
                   bottleSizeMl: bottleSizeMl || existing.bottleSizeMl,
                   fullBottleWeightG:
                     fullBottleWeightG || existing.fullBottleWeightG,
-                  containerWeightG:
-                    containerWeightG || existing.containerWeightG,
-                  orderCost: existing.orderCost,
-                  currentStock: existing.currentStock,
-                  currentBulk: currentBulk || existing.currentBulk,
-                  currentPartial: existing.currentPartial,
-                  lowStockThreshold: existing.lowStockThreshold,
-                  unitsPerCase: existing.unitsPerCase,
+                  containerWeightG: containerWeightG || existing.containerWeightG,
+                  density: density || existing.density,
+                  orderCost: orderCost !== undefined ? orderCost : existing.orderCost,
+                  currentStock: currentStock !== undefined ? currentStock : existing.currentStock,
+                  currentBulk: currentBulk !== undefined ? currentBulk : existing.currentBulk,
+                  currentPartial: currentPartial !== undefined ? currentPartial : existing.currentPartial,
+                  lowStockThreshold: lowStockThreshold || existing.lowStockThreshold,
+                  unitsPerCase: unitsPerCase || existing.unitsPerCase,
                   trackingMode: trackingMode || existing.trackingMode,
-                  isOnMenu: existing.isOnMenu,
+                  isOnMenu: isOnMenu !== undefined ? isOnMenu : existing.isOnMenu,
                   sellSingleServing: existing.sellSingleServing ? 1 : 0,
                   singleServingPrice: existing.singleServingPrice,
                   parentItemId: existing.parentItemId,
@@ -385,7 +384,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                   servingUnit,
                   bottleSizeMl,
                   fullBottleWeightG,
-                  containerWeightG,
+                  // containerWeightG is calculated automatically from fullBottleWeightG
                   orderCost,
                   currentStock,
                   currentBulk,
@@ -402,64 +401,12 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 .where(eq(inventoryItemsTable.id, existing.id));
             }
 
-            // Sync drinks for existing item update
-            if (isOnMenu) {
-              const drinkData = {
-                name: name,
-                category: type,
-                actualPrice: 0,
-                isAvailable: 1,
-                isOnMenu: 1,
-                sourceType: "inventory_single",
-                updatedAt: Math.floor(Date.now() / 1000),
-              };
-              const [existingDrink] = await tx
-                .select()
-                .from(drinksTable)
-                .where(eq(drinksTable.id, existing.id));
-              if (existingDrink) {
-                await tx
-                  .update(drinksTable)
-                  .set(drinkData)
-                  .where(eq(drinksTable.id, existing.id));
-              } else {
-                await tx
-                  .insert(drinksTable)
-                  .values({ id: existing.id, ...drinkData });
-              }
-            }
-
-            if (sellSingleServing) {
-              const singleDrinkId = `${existing.id}-single`;
-              const singleDrinkData = {
-                name: `${name} (Shot)`,
-                category: type,
-                actualPrice: singleServingPrice || 0,
-                isAvailable: 1,
-                isOnMenu: 1,
-                sourceType: "inventory_single",
-                updatedAt: Math.floor(Date.now() / 1000),
-              };
-              const [existingSingle] = await tx
-                .select()
-                .from(drinksTable)
-                .where(eq(drinksTable.id, singleDrinkId));
-              if (existingSingle) {
-                await tx
-                  .update(drinksTable)
-                  .set(singleDrinkData)
-                  .where(eq(drinksTable.id, singleDrinkId));
-              } else {
-                await tx
-                  .insert(drinksTable)
-                  .values({ id: singleDrinkId, ...singleDrinkData });
-              }
-            }
           } else {
             // Insert new item
             const [inserted] = await tx
               .insert(inventoryItemsTable)
               .values({
+                id: itemId,
                 name,
                 nameEs: null,
                 type,
@@ -472,7 +419,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 pourSize: servingSize,
                 bottleSizeMl,
                 fullBottleWeightG,
-                containerWeightG,
+                // containerWeightG is calculated automatically from fullBottleWeightG
                 density,
                 orderCost,
                 currentStock,
@@ -487,71 +434,14 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                 menuPricePerServing: menuPricePerServing,
                 productPrice: productPrice,
                 markupFactor: markupFactor || 3.0,
+                isHouseDefault: isHouseDefault ? 1 : 0,
                 parentItemId,
                 createdAt: Math.floor(Date.now() / 1000),
                 updatedAt: Math.floor(Date.now() / 1000),
               } as any)
               .returning();
 
-            // Map inventory type to drink category
-            const getCategoryForType = (itemType: string, itemName: string): string => {
-              const nameLower = itemName.toLowerCase();
-              if (itemType === "spirit") {
-                // Vino/sparkling wine gets wine category
-                if (nameLower.includes("vino") || nameLower.includes("wine") || nameLower.includes("champagne") || nameLower.includes("espumoso")) {
-                  return "wine";
-                }
-                return "shot";
-              }
-              if (itemType === "mixer") return "beverage";
-              if (itemType === "beer") return "beer";
-              if (itemType === "merch") return "other";
-              return "other";
-            };
-
-            // Create drinks for new item
-            if (isOnMenu) {
-              const drinkCategory = getCategoryForType(type, name);
-              const priceToUse = menuPricePerServing || productPrice || Number(singleServingPrice) || 0;
-              await tx.insert(drinksTable).values({
-                id: inserted.id,
-                name: name,
-                category: drinkCategory,
-                actualPrice: priceToUse,
-                menuPrice: priceToUse,
-                priceSource: "auto",
-                sourceType: "inventory_single",
-                isAvailable: 1,
-                isOnMenu: 1,
-              });
-
-              // Auto-create recipe: add 1 serving of the item to itself
-              await tx.insert(recipeIngredientsTable).values({
-                drinkId: inserted.id,
-                ingredientId: inserted.id,
-                amountInBaseUnit: servingSize || 44.36,
-                productPrice: priceToUse,
-              });
-            }
-
-            if (sellSingleServing) {
-              const shotCategory = getCategoryForType(type, name);
-              await tx.insert(drinksTable).values({
-                id: `${inserted.id}-single`,
-                name: `${name} (Shot)`,
-                category: shotCategory,
-                actualPrice: singleServingPrice || 0,
-                menuPrice: singleServingPrice || 0,
-                priceSource: "auto",
-                sourceType: "inventory_single",
-                isAvailable: 1,
-                isOnMenu: 1,
-              });
-            }
-
-            if (isPooledType && !parentItemId) {
-              nameToParentId.set(name, inserted.id);
-            }
+            console.log(`[Bulk Import] Inserted: "${name}" id=${inserted.id} bottleSizeMl=${bottleSizeMl} currentBulk=${currentBulk} currentPartial=${currentPartial}`);
           }
           processedCount++;
         } catch (itemErr: any) {

@@ -40,8 +40,11 @@ export default function Login() {
           description: getTranslation("too_many_login_attempts", language),
         });
       } else if (data.ok) {
+        // Store user in localStorage as backup for auth check
+        localStorage.setItem("gusto_user", JSON.stringify(data.user));
         queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
-        setLocation("/");
+        // Wait for cookie to be persisted before navigating
+        setTimeout(() => setLocation("/"), 300);
       } else {
         toast({
           variant: "destructive",

@@ -95,6 +95,9 @@ export default function TabDetail() {
   const [showBrandSelect, setShowBrandSelect] = useState(false);
   const [selectedDrink, setSelectedDrink] = useState<any>(null);
   const [brandQuantity, setBrandQuantity] = useState(1);
+  const [selectedSubtype, setSelectedSubtype] = useState<string | null>(null);
+  const [selectedLiquor, setSelectedLiquor] = useState<string | null>(null);
+  const [selectedMixer, setSelectedMixer] = useState<string | null>(null);
 
   const getSelectedQuantity = (drinkId: string) =>
     selectedQuantities[drinkId] || 1;
@@ -151,10 +154,34 @@ export default function TabDetail() {
     "all",
     ...Array.from(new Set(drinks?.map((d) => d.category) || [])),
   ];
-  const filteredDrinks =
-    drinks?.filter(
-      (d) => activeCategory === "all" || d.category === activeCategory,
-    ) || [];
+
+  const HOUSE_FALLBACK_IDS = [
+    "shot-tequila", "shot-mezcal", "shot-vodka", "shot-gin",
+    "shot-whiskey", "shot-rum", "shot-misc",
+    "cocktail-tonic", "cocktail-soda", "cocktail-soft", "cocktail-juice"
+  ];
+
+  const filteredDrinks = drinks?.filter((d: any) => {
+    if (d.isHidden) return false;
+    if (activeCategory !== "all" && d.category !== activeCategory) return false;
+
+    const hasRecipe = d.recipe && d.recipe.length > 0;
+    const hasFallback = HOUSE_FALLBACK_IDS.includes(d.id);
+
+    // Must have recipe OR be system default
+    if (!hasRecipe && !hasFallback) return false;
+
+    // Auto-hide: Check if recipe ingredients have stock
+    // System defaults always show (dynamic ingredient selection)
+    if (hasRecipe) {
+      const hasStock = d.recipe.every((r: any) => {
+        const stock = r.currentStock || r.availableStock || 0;
+        return stock > 0;
+      });
+      if (!hasStock) return false;
+    }
+    return true;
+  }) || [];
 
   const handleAddDrink = (drink: any, quantity?: number) => {
     if (!activeStaff) {
@@ -196,41 +223,72 @@ export default function TabDetail() {
     );
   };
 
-  // Get available brands for selected drink based on default ingredient's subtype
-  const getAvailableBrands = () => {
-    if (!selectedDrink || !ingredients) return [];
-    const defaultIngredient = selectedDrink.recipe?.find(
-      (r: any) => r.isDefault,
-    );
-    if (!defaultIngredient) return [];
-    const defaultIng = ingredients.find(
-      (i: any) => i.id === defaultIngredient.ingredientId,
-    );
-    if (!defaultIng) return [];
-    // Filter ingredients by same subtype
+  // Get unique subtypes from available spirits
+  const getAvailableSubtypes = () => {
+    if (!ingredients) return [];
+    const subtypes = new Set<string>();
+    ingredients
+      .filter((i: any) => i.type === "spirit" && i.isOnMenu === 1)
+      .forEach((i: any) => {
+        if (i.subtype) subtypes.add(i.subtype);
+      });
+    return Array.from(subtypes).sort();
+  };
+
+  // Get spirits filtered by selected subtype
+  const getLiquorsBySubtype = (subtype: string | null) => {
+    if (!ingredients || !subtype) return [];
     return ingredients.filter(
-      (i: any) => i.subtype === defaultIng.subtype && i.orderCost > 0,
+      (i: any) =>
+        i.type === "spirit" &&
+        i.subtype?.toLowerCase() === subtype.toLowerCase() &&
+        i.isOnMenu === 1
     );
   };
 
-  const handleAddBrand = (ingredient: any) => {
-    if (!selectedDrink || !activeStaff) return;
-    const defaultIngredient = selectedDrink.recipe?.find(
-      (r: any) => r.isDefault,
+  // Get mixer for cocktail (fixed by drinkMixerSubtype)
+  const getMixerForCocktail = () => {
+    if (!selectedDrink?.drinkMixerSubtype || !ingredients) return null;
+    const mixers = ingredients.filter(
+      (i: any) =>
+        i.type === "mixer" &&
+        i.subtype === selectedDrink.drinkMixerSubtype &&
+        i.isOnMenu === 1
     );
-    const defaultCost = defaultIngredient?.defaultCost || 0;
-    const drinkPrice = selectedDrink.actualPrice || 0;
-    // Calculate price: selected ingredient cost + (drink price - default cost)
-    const adjustedPrice = ingredient.orderCost + (drinkPrice - defaultCost);
+    return mixers[0] || null; // Return first available mixer
+  };
 
-    // Create order data with adjusted price
+  // Calculate dynamic price
+  const calculatePrice = () => {
+    if (!ingredients) return 0;
+    if (selectedDrink?.drinkSubtype) {
+      // Shot: just liquor price
+      const liquor = ingredients.find((i: any) => i.id === selectedLiquor);
+      return liquor?.menuPricePerServing || 0;
+    }
+    if (selectedDrink?.drinkMixerSubtype) {
+      // Cocktail: liquor + mixer
+      const liquor = ingredients.find((i: any) => i.id === selectedLiquor);
+      const mixer = getMixerForCocktail();
+      return (liquor?.menuPricePerServing || 0) + (mixer?.menuPricePerServing || 0);
+    }
+    return 0;
+  };
+
+  const handleAddBrand = () => {
+    if (!selectedDrink || !activeStaff || !selectedLiquor) return;
+
+    const liquor = ingredients?.find((i: any) => i.id === selectedLiquor);
+    const mixer = getMixerForCocktail();
+    const totalPrice = calculatePrice();
+
+    // Create order data with dynamic price
     const orderData: any = {
       drinkId: selectedDrink.id,
       quantity: brandQuantity,
+      unitPriceMxn: totalPrice,
+      notes: liquor ? `${liquor.name}${mixer ? ` + ${mixer.name}` : ""}` : undefined,
     };
-
-    // Use adjusted price instead of drink's default price
-    orderData.unitPriceMxn = Math.max(0, adjustedPrice);
 
     addOrder.mutate(
       {
@@ -241,11 +299,14 @@ export default function TabDetail() {
         onSuccess: () => {
           toast({
             title: getTranslation("success", language),
-            description: `${brandQuantity}x ${ingredient.name} added to tab.`,
+            description: `${brandQuantity}x ${selectedDrink.name} (${liquor?.name}${mixer ? ` + ${mixer.name}` : ""}) added to tab.`,
           });
           setShowBrandSelect(false);
           setSelectedDrink(null);
           setBrandQuantity(1);
+          setSelectedSubtype(null);
+          setSelectedLiquor(null);
+          setSelectedMixer(null);
         },
         onError: (error: any) => {
           toast({
@@ -383,45 +444,121 @@ export default function TabDetail() {
   };
 
   const getStockStatus = (drink: any) => {
-    if (!ingredients || !drink.recipe || drink.recipe.length === 0) {
+    // Handle drinks with recipes
+    if (drink.recipe && drink.recipe.length > 0 && ingredients) {
+      let minServingsAvailable = Infinity;
+      let hasAnyIngredient = false;
+
+      for (const recipeItem of drink.recipe) {
+        if (!recipeItem.ingredientId) continue;
+
+        const ingredient = ingredients.find(
+          (i: any) => i.id === recipeItem.ingredientId,
+        );
+        if (!ingredient) {
+          // Ingredient not found - mark as needs setup
+          hasAnyIngredient = false;
+          break;
+        }
+        hasAnyIngredient = true;
+
+        const availableStock = Number(ingredient.currentStock) || 0;
+        const amountNeeded = Number(recipeItem.amountInBaseUnit) || 0;
+
+        if (amountNeeded <= 0) continue;
+
+        const servingsAvailable = availableStock / amountNeeded;
+        minServingsAvailable = Math.min(minServingsAvailable, servingsAvailable);
+      }
+
+      // If no valid ingredient found in recipe, or all missing
+      if (!hasAnyIngredient) {
+        // Try finding house default by subtype as fallback
+        const shotIdToSubtype: Record<string, string> = {
+          "shot-tequila": "tequila", "shot-mezcal": "mezcal", "shot-vodka": "vodka",
+          "shot-gin": "gin", "shot-whiskey": "whiskey", "shot-rum": "rum", "shot-misc": "misc",
+        };
+        const subtype = shotIdToSubtype[drink.id];
+        if (subtype) {
+          const houseIngredient = ingredients.find(
+            (i: any) => i.subtype?.toLowerCase() === subtype.toLowerCase() && i.isHouseDefault,
+          );
+          if (houseIngredient && houseIngredient.servingSize) {
+            const availableStock = Number(houseIngredient.currentStock) || 0;
+            const amountNeeded = houseIngredient.servingSize;
+            const servingsAvailable = availableStock / amountNeeded;
+            if (servingsAvailable <= 0) return { status: "out", message: "OUT" };
+            if (servingsAvailable < 5) return { status: "low", message: `${Math.floor(servingsAvailable)} left` };
+            if (servingsAvailable < 15) return { status: "medium", message: `${Math.floor(servingsAvailable)} left` };
+            return { status: "available", message: "" };
+          }
+        }
+        return { status: "out", message: "SETUP" };
+      }
+
+      if (minServingsAvailable === Infinity || minServingsAvailable <= 0) {
+        return { status: "out", message: "OUT" };
+      } else if (minServingsAvailable < 5) {
+        return { status: "low", message: `${Math.floor(minServingsAvailable)} left` };
+      } else if (minServingsAvailable < 15) {
+        return { status: "medium", message: `${Math.floor(minServingsAvailable)} left` };
+      }
+
       return { status: "available", message: "" };
     }
 
-    let minServingsAvailable = Infinity;
+    // Handle shots/cocktails without recipes - check for house default ingredient
+    if (drink.category === "shot" || drink.category === "cocktail") {
+      const shotIdToSubtype: Record<string, string> = {
+        "shot-tequila": "tequila", "shot-mezcal": "mezcal", "shot-vodka": "vodka",
+        "shot-gin": "gin", "shot-whiskey": "whiskey", "shot-rum": "rum", "shot-misc": "misc",
+      };
+      const cocktailIdToMixer: Record<string, string> = {
+        "cocktail-tonic": "tonic",
+        "cocktail-soda": "club_soda",
+        "cocktail-soft": "soft_drink",
+        "cocktail-juice": "juice",
+      };
+      const subtype = shotIdToSubtype[drink.id];
+      const mixerSubtype = cocktailIdToMixer[drink.id];
 
-    for (const recipeItem of drink.recipe) {
-      if (!recipeItem.ingredientId) continue;
+      // For cocktails, check if mixer is available
+      if (mixerSubtype && ingredients) {
+        const mixerIngredients = ingredients.filter(
+          (i: any) => i.type === "mixer" && i.subtype === mixerSubtype && i.isOnMenu === 1
+        );
+        if (mixerIngredients.length === 0) {
+          return { status: "out", message: "SETUP" };
+        }
+        // For cocktails, also need at least one spirit available
+        const spiritIngredients = ingredients.filter(
+          (i: any) => i.type === "spirit" && i.isOnMenu === 1
+        );
+        if (spiritIngredients.length === 0) {
+          return { status: "out", message: "SETUP" };
+        }
+        return { status: "available", message: "" };
+      }
 
-      const ingredient = ingredients.find(
-        (i: any) => i.id === recipeItem.ingredientId,
-      );
-      if (!ingredient) continue;
+      if (subtype && ingredients) {
+        const houseIngredient = ingredients.find(
+          (i: any) => i.subtype?.toLowerCase() === subtype.toLowerCase() && i.isHouseDefault,
+        );
+        if (houseIngredient && houseIngredient.servingSize) {
+          const availableStock = Number(houseIngredient.currentStock) || 0;
+          const amountNeeded = houseIngredient.servingSize;
+          const servingsAvailable = availableStock / amountNeeded;
 
-      const availableStock = Number(ingredient.currentStock) || 0;
-      const reservedStock = Number(ingredient.reservedStock) || 0;
-      const totalAvailable = availableStock + reservedStock;
-      const amountNeeded = Number(recipeItem.amountInBaseUnit) || 0;
-
-      if (amountNeeded <= 0) continue;
-
-      const servingsAvailable = totalAvailable / amountNeeded;
-      minServingsAvailable = Math.min(minServingsAvailable, servingsAvailable);
+          if (servingsAvailable <= 0) return { status: "out", message: "OUT" };
+          if (servingsAvailable < 5) return { status: "low", message: `${Math.floor(servingsAvailable)} left` };
+          if (servingsAvailable < 15) return { status: "medium", message: `${Math.floor(servingsAvailable)} left` };
+          return { status: "available", message: "" };
+        }
+      }
+      return { status: "out", message: "SETUP" };
     }
 
-    if (minServingsAvailable === Infinity || minServingsAvailable <= 0) {
-      return { status: "out", message: "OUT" };
-    } else if (minServingsAvailable < 5) {
-      return {
-        status: "low",
-        message: `${Math.floor(minServingsAvailable)} left`,
-      };
-    } else if (minServingsAvailable < 15) {
-      return {
-        status: "medium",
-        message: `${Math.floor(minServingsAvailable)} left`,
-      };
-    }
-
+    // Other drinks (beer, etc.) - if no recipe, show available
     return { status: "available", message: "" };
   };
 
@@ -1371,7 +1508,8 @@ export default function TabDetail() {
               orderQuantity={substitutingOrder.quantity}
               onSubstitute={async (recipeLineIndex, newIngredientId, notes) => {
                 await modifyIngredient.mutateAsync({
-                  id: substitutingOrder.id,
+                  tabId: tabId,
+                  orderId: substitutingOrder.id,
                   data: {
                     recipeLineIndex,
                     newIngredientId,
@@ -1390,21 +1528,24 @@ export default function TabDetail() {
       {/* Brand Selection Modal for Shot/Cocktail */}
       {showBrandSelect && selectedDrink && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/90 backdrop-blur-sm">
-          <div className="glass p-6 rounded-3xl w-full max-w-md border border-white/10 max-h-[80vh] overflow-y-auto">
+          <div className="glass p-6 rounded-3xl w-full max-w-md border border-white/10 max-h-[80vh] overflow-y-auto relative">
             <button
               onClick={() => {
                 setShowBrandSelect(false);
                 setSelectedDrink(null);
+                setSelectedSubtype(null);
+                setSelectedLiquor(null);
+                setSelectedMixer(null);
               }}
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
             >
               <X size={24} />
             </button>
-            <h2 className="text-xl font-display font-bold mb-4">
-              Select {selectedDrink.name}
+            <h2 className="text-xl font-display font-bold mb-2">
+              {selectedDrink.name}
             </h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Base price: {formatMoney(selectedDrink.actualPrice || 0)}
+              Configure your {selectedDrink.category}
             </p>
 
             {/* Quantity selector */}
@@ -1433,38 +1574,178 @@ export default function TabDetail() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              {getAvailableBrands().map((ing: any) => {
-                const defaultIngredient = selectedDrink.recipe?.find(
-                  (r: any) => r.isDefault,
-                );
-                const defaultCost = defaultIngredient?.defaultCost || 0;
-                const drinkPrice = selectedDrink.actualPrice || 0;
-                const adjustedPrice =
-                  ing.orderCost + (drinkPrice - defaultCost);
-                return (
-                  <button
-                    key={ing.id}
-                    onClick={() => handleAddBrand(ing)}
-                    className="w-full p-3 rounded-xl bg-secondary/50 border border-white/10 hover:bg-primary/10 hover:border-primary/50 transition-colors flex items-center justify-between"
+            {/* SHOT: Single dropdown for subtype spirits */}
+            {selectedDrink.drinkSubtype && (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Select Brand
+                  </label>
+                  <select
+                    value={selectedLiquor || ""}
+                    onChange={(e) => setSelectedLiquor(e.target.value || null)}
+                    className="w-full p-3 rounded-xl bg-secondary border border-white/10 focus:border-primary focus:outline-none"
                   >
-                    <div className="text-left">
-                      <div className="font-medium">{ing.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        Cost: {formatMoney(ing.orderCost)}
+                    <option value="">Choose a brand...</option>
+                    {getLiquorsBySubtype(selectedDrink.drinkSubtype).map((ing: any) => (
+                      <option key={ing.id} value={ing.id}>
+                        {ing.name} {ing.isHouseDefault ? "★" : ""} - {formatMoney(ing.menuPricePerServing || 0)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {getLiquorsBySubtype(selectedDrink.drinkSubtype).length === 0 && (
+                  <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center">
+                    <p className="text-sm text-destructive">
+                      No inventory available for {selectedDrink.drinkSubtype}. Please audit this category.
+                    </p>
+                  </div>
+                )}
+
+                {/* Total Price Display */}
+                {selectedLiquor && (
+                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Total per serving:</span>
+                      <span className="text-xl font-bold text-primary">
+                        {formatMoney(calculatePrice())}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10">
+                      <span className="text-sm text-muted-foreground">Total for {brandQuantity}:</span>
+                      <span className="text-2xl font-bold text-emerald-400">
+                        {formatMoney(calculatePrice() * brandQuantity)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleAddBrand}
+                  disabled={!selectedLiquor || getLiquorsBySubtype(selectedDrink.drinkSubtype).length === 0}
+                  className="w-full"
+                >
+                  Add to Tab
+                </Button>
+              </div>
+            )}
+
+            {/* COCKTAIL: Two dropdowns - subtype then brand */}
+            {selectedDrink.drinkMixerSubtype && (
+              <div className="space-y-4">
+                {/* Step 1: Select Subtype */}
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    1. Select Spirit Type
+                  </label>
+                  <select
+                    value={selectedSubtype || ""}
+                    onChange={(e) => {
+                      setSelectedSubtype(e.target.value || null);
+                      setSelectedLiquor(null); // Reset liquor when subtype changes
+                    }}
+                    className="w-full p-3 rounded-xl bg-secondary border border-white/10 focus:border-primary focus:outline-none"
+                  >
+                    <option value="">Choose spirit type...</option>
+                    {getAvailableSubtypes().map((subtype) => (
+                      <option key={subtype} value={subtype}>
+                        {subtype.charAt(0).toUpperCase() + subtype.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Step 2: Select Brand (only if subtype selected) */}
+                {selectedSubtype && (
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                      2. Select Brand
+                    </label>
+                    <select
+                      value={selectedLiquor || ""}
+                      onChange={(e) => setSelectedLiquor(e.target.value || null)}
+                      className="w-full p-3 rounded-xl bg-secondary border border-white/10 focus:border-primary focus:outline-none"
+                    >
+                      <option value="">Choose a brand...</option>
+                      {getLiquorsBySubtype(selectedSubtype).map((ing: any) => (
+                        <option key={ing.id} value={ing.id}>
+                          {ing.name} {ing.isHouseDefault ? "★" : ""} - {formatMoney(ing.menuPricePerServing || 0)}
+                        </option>
+                      ))}
+                    </select>
+                    {getLiquorsBySubtype(selectedSubtype).length === 0 && (
+                      <p className="text-xs text-destructive mt-1">
+                        No brands available for this type.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Mixer Display */}
+                <div className="p-3 rounded-xl bg-secondary/50 border border-white/10">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Mixer:</span>
+                    <span className="font-medium">
+                      {getMixerForCocktail()?.name || "No mixer available"}
+                    </span>
+                  </div>
+                  {getMixerForCocktail() && (
+                    <div className="flex justify-between items-center mt-1">
+                      <span className="text-xs text-muted-foreground">Mixer price:</span>
+                      <span className="text-xs">{formatMoney(getMixerForCocktail()?.menuPricePerServing || 0)}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* No inventory message */}
+                {getAvailableSubtypes().length === 0 && (
+                  <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 text-center">
+                    <p className="text-sm text-destructive">
+                      No spirits available in inventory. Please audit your spirits.
+                    </p>
+                  </div>
+                )}
+
+                {/* Total Price Display */}
+                {selectedLiquor && (
+                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+                    <div className="text-sm text-muted-foreground mb-2">Price breakdown:</div>
+                    <div className="space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>{ingredients?.find((i: any) => i.id === selectedLiquor)?.name}</span>
+                        <span>{formatMoney(ingredients?.find((i: any) => i.id === selectedLiquor)?.menuPricePerServing || 0)}</span>
                       </div>
+                      {getMixerForCocktail() && (
+                        <div className="flex justify-between">
+                          <span>{getMixerForCocktail()?.name}</span>
+                          <span>{formatMoney(getMixerForCocktail()?.menuPricePerServing || 0)}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="font-bold text-emerald-400">
-                      {formatMoney(Math.max(0, adjustedPrice))}
+                    <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/10">
+                      <span className="font-medium">Total per serving:</span>
+                      <span className="text-xl font-bold text-primary">
+                        {formatMoney(calculatePrice())}
+                      </span>
                     </div>
-                  </button>
-                );
-              })}
-            </div>
-            {getAvailableBrands().length === 0 && (
-              <p className="text-center text-muted-foreground py-4">
-                No brands available with prices set.
-              </p>
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-white/10">
+                      <span className="text-sm text-muted-foreground">Total for {brandQuantity}:</span>
+                      <span className="text-2xl font-bold text-emerald-400">
+                        {formatMoney(calculatePrice() * brandQuantity)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={handleAddBrand}
+                  disabled={!selectedLiquor || !selectedSubtype}
+                  className="w-full"
+                >
+                  Add to Tab
+                </Button>
+              </div>
             )}
           </div>
         </div>

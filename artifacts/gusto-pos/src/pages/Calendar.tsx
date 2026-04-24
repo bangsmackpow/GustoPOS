@@ -66,9 +66,7 @@ export default function Calendar() {
     description: "",
   });
 
-  const { data: rushes, refetch: refetchRushes } = useGetRushes({
-    days: showAllRushes ? 365 : rushDays,
-  });
+  const { data: rushes, refetch: refetchRushes } = useGetRushes();
   const { data: drinks } = useGetDrinks();
   const [specials, setSpecials] = useState<any[]>([]);
   const [promoCodes, setPromoCodes] = useState<any[]>([]);
@@ -198,15 +196,13 @@ export default function Calendar() {
 
     createRush.mutate(
       {
-        data: {
-          title: newRush.title,
-          description: newRush.description || undefined,
-          startTime: startTimeUnix,
-          endTime: endTimeUnix,
-          repeatEvent: newRush.repeatEvent as 0 | 1 | 2 | 3,
-          impact: newRush.impact as "low" | "medium" | "high",
-          type: newRush.type as "cruise" | "festival" | "music" | "other",
-        },
+        title: newRush.title,
+        description: newRush.description || undefined,
+        startTime: startTimeUnix,
+        endTime: endTimeUnix,
+        repeatEvent: newRush.repeatEvent as 0 | 1 | 2 | 3,
+        impact: newRush.impact as "low" | "medium" | "high",
+        type: newRush.type as "cruise" | "festival" | "music" | "other",
       },
       {
         onSuccess: () => {
@@ -244,7 +240,7 @@ export default function Calendar() {
   const confirmDeleteRush = () => {
     if (!deletingRush) return;
     deleteRush.mutate(
-      { id: deletingRush.id },
+      deletingRush.id,
       {
         onSuccess: () => {
           refetchRushes();

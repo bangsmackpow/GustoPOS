@@ -254,11 +254,12 @@ export function useModifyOrderIngredientMutation() {
   const { toast } = useToast();
   return useMutation({
     mutationFn: (variables: {
-      id: string;
-      data: Parameters<typeof modifyOrderIngredient>[1];
-    }) => modifyOrderIngredient(variables.id, variables.data),
+      tabId: string;
+      orderId: string;
+      data: Parameters<typeof modifyOrderIngredient>[2];
+    }) => modifyOrderIngredient(variables.tabId, variables.orderId, variables.data),
     onSuccess: (_, variables) => {
-      qc.invalidateQueries({ queryKey: getGetTabQueryKey(variables.id) });
+      qc.invalidateQueries({ queryKey: getGetTabQueryKey(variables.tabId) });
     },
     onError: (err: any) => {
       toast({

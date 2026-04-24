@@ -83,6 +83,9 @@ export const inventoryItemsTable = sqliteTable("inventory_items", {
   auditMethod: text("audit_method").default("auto"),
 
   trackingMode: text("tracking_mode").default("auto"),
+
+  // House/Well default (for dynamic drink pricing)
+  isHouseDefault: integer("is_house_default").notNull().default(0),
 });
 
 export type InventoryItem = typeof inventoryItemsTable.$inferSelect;

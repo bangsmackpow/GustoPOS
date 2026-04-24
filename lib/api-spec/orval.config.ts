@@ -1,28 +1,16 @@
-import { defineConfig, InputTransformerFn } from "orval";
+import { defineConfig } from "orval";
 import path from "path";
+import { fileURLToPath } from "url";
 
-const root = path.resolve(__dirname, "..", "..");
-const apiClientReactSrc = path.resolve(root, "lib", "api-client-react", "src");
-const apiZodSrc = path.resolve(root, "lib", "api-zod", "src");
-
-// Our exports make assumptions about the title of the API being "Api" (i.e. generated output is `api.ts`).
-const titleTransformer: InputTransformerFn = (config) => {
-  config.info ??= {};
-  config.info.title = "Api";
-
-  return config;
-};
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   "api-client-react": {
     input: {
-      target: "./openapi.yaml",
-      override: {
-        transformer: titleTransformer,
-      },
+      target: path.resolve(__dirname, "openapi.yaml"),
     },
     output: {
-      workspace: apiClientReactSrc,
+      workspace: path.resolve(__dirname, "..", "api-client-react", "src"),
       target: "generated",
       client: "react-query",
       mode: "split",
@@ -34,7 +22,7 @@ export default defineConfig({
           includeHttpResponseReturnType: false,
         },
         mutator: {
-          path: path.resolve(apiClientReactSrc, "custom-fetch.ts"),
+          path: path.resolve(__dirname, "..", "api-client-react", "src", "custom-fetch.ts"),
           name: "customFetch",
         },
       },
@@ -42,13 +30,10 @@ export default defineConfig({
   },
   zod: {
     input: {
-      target: "./openapi.yaml",
-      override: {
-        transformer: titleTransformer,
-      },
+      target: path.resolve(__dirname, "openapi.yaml"),
     },
     output: {
-      workspace: apiZodSrc,
+      workspace: path.resolve(__dirname, "..", "api-zod", "src"),
       client: "zod",
       target: "generated/api.ts",
       mode: "single",

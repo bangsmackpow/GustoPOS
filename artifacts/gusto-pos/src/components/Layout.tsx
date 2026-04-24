@@ -97,17 +97,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
     isSuccess,
     isError,
   } = useGetCurrentAuthUser({
-    query: {
-      staleTime: 0,
-      refetchOnMount: "always",
-      queryKey: ["/api/auth/user"],
-    },
+    staleTime: 0,
+    refetchOnMount: "always",
+    queryKey: ["/api/auth/user"],
   });
   const { data: shiftData } = useGetActiveShift();
   const { data: settings } = useGetSettings();
   const [showPin, setShowPin] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [lockScreenMode, setLockScreenMode] = useState(false);
+  
+  // Touchscreen mode flag - currently disabled for desktop/non-touch usage
+  // Can be enabled via settings in the future
+  const enableTouchscreen = settings?.enableTouchscreen === true;
+  
+  // If not in touchscreen mode, never show PinPad (use password login instead)
   const queryClient = useQueryClient();
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -118,8 +122,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
     idleTimerRef.current = setTimeout(
       () => {
         setIsLocked(true);
-        setLockScreenMode(true);
-        setShowPin(true);
+        // Only show PinPad in touchscreen mode, otherwise redirect to login
+        if (enableTouchscreen) {
+          setLockScreenMode(true);
+          setShowPin(true);
+        } else {
+          // Desktop mode: redirect to login page instead of showing PinPad
+          setLocation("/login");
+        }
       },
       timeoutMin * 60 * 1000,
     );
@@ -228,12 +238,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (location === "/login") return;
 
+    console.log("[Layout] Auth check:", { isError, isSuccess, isLoading, auth });
+
     if (isError) {
+      console.log("[Layout] isError true, redirecting to login");
       setLocation("/login");
       return;
     }
 
     if (isSuccess && !auth?.isAuthenticated) {
+      console.log("[Layout] isSuccess but not authenticated, redirecting to login");
       setLocation("/login");
     }
   }, [isError, isSuccess, auth?.isAuthenticated, location, setLocation]);
@@ -492,7 +506,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </main>
 
-      {showPin && (
+      {showPin && enableTouchscreen && (
         <PinPad
           onClose={handlePinClose}
           onLogin={lockScreenMode ? handlePinUnlock : undefined}

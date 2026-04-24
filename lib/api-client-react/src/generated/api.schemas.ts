@@ -344,6 +344,8 @@ export interface Drink {
   recipe: RecipeIngredient[];
   isAvailable: boolean;
   isOnMenu: boolean;
+  isHidden?: number;
+  isApproved?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -717,6 +719,7 @@ export interface AppSettings {
   autoBackupEnabled?: boolean;
   autoBackupIntervalMin?: number;
   maxAutoBackups?: number;
+  enableTouchscreen?: boolean;
   /** @nullable */
   usbBackupPath?: string | null;
   /** @nullable */

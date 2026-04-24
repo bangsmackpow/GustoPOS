@@ -69,154 +69,96 @@ const APP_COLUMNS = [
     key: "name",
     label: "name",
     required: true,
-    suggest: ["name", "item", "product", "description"],
+    suggest: ["name"],
   },
   {
     key: "type",
     label: "type",
     required: true,
-    suggest: ["type", "category", "kind"],
+    suggest: ["type"],
   },
   {
     key: "subtype",
     label: "subtype",
     required: false,
-    suggest: ["subtype", "sub-category", "variety", "style"],
+    suggest: ["subtype"],
   },
   {
     key: "trackingMode",
-    label: "trackingMode",
+    label: "tracking_mode",
     required: false,
     hint: "Pool, Collection, or Auto",
-    suggest: ["trackingmode", "tracking mode", "tracking_mode"],
+    suggest: ["tracking_mode"],
   },
   {
     key: "bottleSizeMl",
-    label: "bottleSizeMl",
+    label: "bottle_size_ml",
     required: false,
     hint: "Pool: ml per bottle | Collection: units per case",
-    suggest: [
-      "bottle_size_ml",
-      "bottlesize",
-      "containersize",
-      "ml",
-      "container",
-      "size",
-      "units",
-    ],
+    suggest: ["bottle_size_ml"],
   },
   {
     key: "fullBottleWeightG",
-    label: "fullBottleWeightG",
+    label: "full_bottle_weight_g",
     required: false,
     hint: "Pool only - total weight of full bottle",
-    suggest: [
-      "full_bottle_weight_g",
-      "fullbottleweightg",
-      "fullbottleweight",
-      "full weight",
-      "full bottle",
-    ],
-  },
-  {
-    key: "containerWeightG",
-    label: "containerWeightG",
-    required: false,
-    hint: "Pool only - empty container weight",
-    suggest: [
-      "container_weight_g",
-      "containerweightg",
-      "containerweight",
-      "empty weight",
-      "tare",
-      "glass weight",
-    ],
+    suggest: ["full_bottle_weight_g"],
   },
   {
     key: "density",
     label: "density",
     required: false,
     hint: "Liquid density (default: 0.94)",
-    suggest: ["density", "specific gravity"],
+    suggest: ["density"],
   },
   {
     key: "servingSize",
-    label: "servingSize",
+    label: "serving_size",
     required: false,
     hint: "Pool: oz per serving | Collection: units per serving",
-    suggest: [
-      "serving size",
-      "servingsize",
-      "serving",
-      "pour",
-      "pour size",
-      "oz",
-      "units",
-    ],
+    suggest: ["serving_size"],
   },
   {
     key: "orderCost",
-    label: "orderCost",
+    label: "order_cost",
     required: false,
     hint: "Price per bottle/case",
-    suggest: [
-      "bulk cost",
-      "cost",
-      "price",
-      "ordercost",
-      "unit cost",
-      "wholesale",
-    ],
+    suggest: ["order_cost"],
   },
   {
     key: "lowStockThreshold",
-    label: "lowStockThreshold",
+    label: "low_stock_threshold",
     required: false,
     hint: "Minimum stock before alert",
-    suggest: [
-      "low_stock_threshold",
-      "lowstockthreshold",
-      "min",
-      "minimum",
-      "alert threshold",
-    ],
+    suggest: ["low_stock_threshold"],
   },
   {
     key: "isOnMenu",
-    label: "isOnMenu",
+    label: "is_on_menu",
     required: false,
     hint: "Available for sale",
-    suggest: ["is_on_menu", "onmenu", "available", "active"],
+    suggest: ["is_on_menu"],
   },
   {
     key: "currentSealed",
-    label: "currentSealed",
+    label: "current_sealed",
     required: false,
     hint: "Pool: full bottles | Collection: unopened cases",
-    suggest: [
-      "current_sealed",
-      "sealedcontainers",
-      "sealed",
-      "full",
-      "unopened",
-      "cases",
-      "bottles",
-    ],
+    suggest: ["current_sealed"],
   },
   {
     key: "currentPartial",
-    label: "currentPartial",
+    label: "current_partial",
     required: false,
     hint: "Pool: partial bottle weight in grams | Collection: loose units",
-    suggest: [
-      "current_partial",
-      "openweightg",
-      "partial",
-      "open",
-      "loose",
-      "grams",
-      "weight",
-    ],
+    suggest: ["current_partial"],
+  },
+  {
+    key: "menuPricePerServing",
+    label: "price_per_serving",
+    required: false,
+    hint: "Manual menu price per serving",
+    suggest: ["price_per_serving"],
   },
 ];
 
@@ -462,7 +404,7 @@ export default function Settings() {
 
   const handleSaveSettings = () => {
     updateSettings.mutate(
-      { data: formData },
+      formData,
       {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: ["/api/settings"] });
@@ -544,16 +486,42 @@ export default function Settings() {
     for (const csvHeader of csvHeaders) {
       const normalized = csvHeader.toLowerCase().trim();
       for (const keyword of suggestions) {
-        if (
-          normalized === keyword ||
-          normalized.includes(keyword) ||
-          keyword.includes(normalized)
-        ) {
+        if (normalized === keyword.toLowerCase()) {
           return csvHeader;
         }
       }
     }
     return "";
+  };
+
+  const parseCSVLine = (line: string): string[] => {
+    const values: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    let i = 0;
+    while (i < line.length) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i += 2;
+          continue;
+        }
+        inQuotes = !inQuotes;
+        i++;
+        continue;
+      }
+      if (char === "," && !inQuotes) {
+        values.push(current.trim());
+        current = "";
+        i++;
+        continue;
+      }
+      current += char;
+      i++;
+    }
+    values.push(current.trim());
+    return values;
   };
 
   const handleIngredientUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -574,9 +542,9 @@ export default function Settings() {
           return;
         }
 
-        const headers = lines[0].split(",").map((h) => h.trim());
+        const headers = parseCSVLine(lines[0]);
         const rows = lines.slice(1).map((line) => {
-          const values = line.split(",").map((v) => v.trim());
+          const values = parseCSVLine(line);
           const row: Record<string, string> = {};
           headers.forEach((h, i) => {
             row[h] = values[i] || "";
@@ -793,13 +761,9 @@ export default function Settings() {
           : "";
         const fullBottleWeightG = parseFloat(rawFullWeight) || 0;
 
-        // Container Weight - Pool only (also accept glassWeightG for backward compatibility)
-        const rawContainerWeight = columnMappings["containerWeightG"]
-          ? row[columnMappings["containerWeightG"]] || ""
-          : columnMappings["glassWeightG"]
-            ? row[columnMappings["glassWeightG"]] || ""
-            : "";
-        const containerWeightG = parseFloat(rawContainerWeight) || 0;
+        // Container weight - auto-calculated from fullBottleWeightG in bulk-import.ts
+        // Do NOT read from CSV - it's calculated, not user input
+        const containerWeightG = 0;
 
         // Density - Pool only
         const rawDensity = columnMappings["density"]
@@ -859,6 +823,13 @@ export default function Settings() {
           : "";
         const currentPartial = parseFloat(rawPartial.replace(/,/g, "")) || 0;
 
+        // Menu Price Per Serving
+        const rawMenuPrice = columnMappings["menuPricePerServing"]
+          ? row[columnMappings["menuPricePerServing"]] || ""
+          : "";
+        const menuPricePerServing =
+          parseFloat(rawMenuPrice.replace(/,/g, "")) || null;
+
         // Calculate currentStock for backend compatibility
         let currentStock = 0;
         if (trackingMode === "pool") {
@@ -878,7 +849,7 @@ export default function Settings() {
           // Pool fields
           bottleSizeMl: trackingMode === "pool" ? containerSize : 0,
           fullBottleWeightG: trackingMode === "pool" ? fullBottleWeightG : 0,
-          containerWeightG: trackingMode === "pool" ? containerWeightG : 0,
+          // containerWeightG is auto-calculated from fullBottleWeightG in backend
           density: trackingMode === "pool" ? density : 0.94,
           servingSize: servingSize,
           // Collection fields
@@ -890,6 +861,7 @@ export default function Settings() {
           currentStock: currentStock,
           currentBulk: currentSealed,
           currentPartial: currentPartial,
+          menuPricePerServing: menuPricePerServing,
         };
       })
       .filter((item) => item.name.trim());
@@ -1169,11 +1141,8 @@ export default function Settings() {
     } else {
       createUser.mutate(
         {
-          data: {
-            ...rest,
-            password: password || "",
-            isActive: 1,
-          },
+          ...rest,
+          password: password || "",
         },
         {
           onSuccess: () => {

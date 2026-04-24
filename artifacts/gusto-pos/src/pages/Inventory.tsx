@@ -24,6 +24,7 @@ import {
   Settings,
   ClipboardList,
   BarChart3,
+  Link2,
 } from "lucide-react";
 import { InventoryAuditModal } from "@/components/InventoryAuditModal";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,6 +52,12 @@ const SUBTYPES: Record<
     { value: "cider", label: "Cider", labelEs: "Sidra" },
   ],
   mixer: [
+    { value: "soft_drink", label: "Soft Drink", labelEs: "Refresco" },
+    { value: "tonic", label: "Tonic Water", labelEs: "Agua Tónica" },
+    { value: "club_soda", label: "Club Soda", labelEs: "Soda" },
+    { value: "juice", label: "Juice", labelEs: "Jugo" },
+    { value: "coffee", label: "Coffee", labelEs: "Café" },
+    { value: "energy_drink", label: "Energy Drink", labelEs: "Bebida Energética" },
     { value: "bulk", label: "Bulk", labelEs: "A Granel" },
     { value: "prepackaged", label: "Prepackaged", labelEs: "Preenvasado" },
   ],
@@ -110,6 +117,7 @@ export default function Inventory() {
     key: string;
     direction: "asc" | "desc";
   } | null>(null);
+  const [showLinkToParent, setShowLinkToParent] = useState(false);
 
   const handleSort = (key: string) => {
     setSortConfig((prev) => {
@@ -309,48 +317,52 @@ export default function Inventory() {
   };
 
   const getTotalServings = (item: any) => {
-    const {
-      currentBulk,
-      currentPartial,
-      baseUnitAmount,
-      containerWeightG,
-      density,
-      servingSize,
-      type,
-    } = item;
     const ML_PER_OZ = 29.5735;
-    const baseUnit = baseUnitAmount || 750;
-    const d = density || 0.94;
-    const serving = servingSize || 44.36;
+    const baseUnit = item.baseUnitAmount || 750;
+    const d = item.density || 0.94;
+    const serving = item.servingSize || 44.36;
 
     const isPool =
       item.trackingMode === "pool" ||
-      (item.trackingMode === "auto" && (type === "spirit" || type === "mixer"));
+      (item.trackingMode === "auto" && (item.type === "spirit" || item.type === "mixer"));
+
+    const calcItemServings = (i: any) => {
+      const base = i.baseUnitAmount || 750;
+      const den = i.density || 0.94;
+      const srv = i.servingSize || 44.36;
+      const srvOz = srv / ML_PER_OZ;
+      const servingOz = srv / ML_PER_OZ;
+      
+      // Sealed: grams -> oz -> servings
+      const sealedGrams = (i.currentBulk || 0) * (base * den);
+      const sealedOz = sealedGrams / ML_PER_OZ;
+      const sealedServings = sealedOz / servingOz;
+      
+      // Partial
+      const glassWeightG = (i.fullBottleWeightG || 0) - (i.currentPartial || 0) > 0 
+        ? (i.fullBottleWeightG || 0) - (i.currentPartial || 0) 
+        : 500;
+      const partialLiquidWeight = Math.max(0, (i.currentPartial || 0) - glassWeightG);
+      const partialOz = partialLiquidWeight / ML_PER_OZ;
+      const partialServings = partialOz / servingOz;
+      
+      return sealedServings + partialServings;
+    };
 
     if (!isPool) {
-      const totalUnits = currentBulk * baseUnit + currentPartial;
+      const totalUnits = (item.currentBulk || 0) * baseUnit + (item.currentPartial || 0);
       return totalUnits.toFixed(1);
     }
 
-    // Pool items: convert to oz, then divide by serving size in oz
-    const servingOz = serving / ML_PER_OZ; // e.g., 44.36ml / 29.5735 = 1.5oz
+    // Pool items: include parent + all variations
+    let totalServings = calcItemServings(item);
+    
+    // Add variations' servings
+    const variations = getVariations(item.id);
+    variations.forEach((v: any) => {
+      totalServings += calcItemServings(v);
+    });
 
-    // Sealed bottles: grams -> oz -> servings
-    const sealedGrams = currentBulk * (baseUnit * d);
-    const sealedOz = sealedGrams / ML_PER_OZ;
-    const sealedServings = sealedOz / servingOz;
-
-    // Partial bottle: liquid weight -> oz -> servings
-    // Fallback to 500g if full bottle weight not available
-    const glassWeightG = (() => {
-      const diff = (item.fullBottleWeightG || 0) - currentPartial;
-      return diff > 0 ? diff : 500;
-    })();
-    const partialLiquidWeight = Math.max(0, currentPartial - glassWeightG);
-    const partialOz = partialLiquidWeight / ML_PER_OZ;
-    const partialServings = partialOz / servingOz;
-
-    const totalServings = sealedServings + partialServings;
     return totalServings.toFixed(1);
   };
 
@@ -748,10 +760,10 @@ export default function Inventory() {
         </div>
 
         {/* Table */}
-        <div className="flex-1 overflow-x-auto px-4 md:px-6 pb-6">
+        <div className="flex-1 overflow-x-auto overflow-y-auto max-h-[calc(100vh-280px)] px-4 md:px-6 pb-6">
           <div className="glass rounded-2xl overflow-hidden min-w-[800px]">
             <table className="w-full text-left">
-              <thead>
+              <thead className="sticky top-0 z-30 bg-background">
                 <tr className="border-b border-white/5 text-muted-foreground text-sm">
                   <th className="p-3 font-medium w-10 sticky left-0 bg-background z-20">
                     Menu
@@ -773,14 +785,17 @@ export default function Inventory() {
                       (sortConfig.direction === "asc" ? "↑" : "↓")}
                   </th>
                   <th
-                    className="p-3 font-medium w-24 cursor-pointer hover:bg-white/5"
+                    className="p-3 font-medium w-20 cursor-pointer hover:bg-white/5"
                     onClick={() => handleSort("currentBulk")}
                   >
-                    Stock{" "}
+                    Sealed{" "}
                     {sortConfig?.key === "currentBulk" &&
                       (sortConfig.direction === "asc" ? "↑" : "↓")}
                   </th>
-                  <th className="p-3 font-medium w-24 cursor-pointer hover:bg-white/5">
+                  <th className="p-3 font-medium w-24">
+                    Partial
+                  </th>
+                  <th className="p-3 font-medium w-24">
                     Total Servings
                   </th>
                   <th
@@ -888,7 +903,13 @@ export default function Inventory() {
                         </td>
                         <td className="p-3">
                           <span className="font-mono text-sm">
-                            {item.currentBulk || 0}
+                            {Math.floor(item.currentBulk || 0)}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className="font-mono text-sm">
+                            {item.currentPartial || 0}
+                            {item.trackingMode === "pool" ? "g" : ""}
                           </span>
                         </td>
                         <td className="p-3">
@@ -1372,29 +1393,6 @@ export default function Inventory() {
                     />
                   </div>
 
-                  {/* Row 6: Price (legacy - duplicates menuPricePerServing) */}
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm font-bold text-primary uppercase tracking-widest text-[10px]">
-                      Price
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <span className="text-primary font-bold">$</span>
-                      <input
-                        type="number"
-                        step="0.01"
-                        className="w-full bg-secondary border border-white/10 rounded-xl px-4 py-3 text-foreground outline-none focus:border-primary/50 transition-colors text-primary font-mono"
-                        value={editingItem.menuPricePerServing || ""}
-                        onChange={(e) => {
-                          const price = parseFloat(e.target.value) || 0;
-                          setEditingItem({
-                            ...editingItem,
-                            menuPricePerServing: price,
-                          });
-                        }}
-                      />
-                    </div>
-                  </div>
-
                   {/* Weighing Section - Only for NEW items (not editing existing) */}
                   {isLayoutA && !editingItem.id && (
                     <div className="col-span-2 p-4 rounded-2xl bg-white/5 border border-white/10 space-y-6">
@@ -1485,6 +1483,32 @@ export default function Inventory() {
                         {getTranslation("on_menu_label", language)}
                       </span>
                     </label>
+                    {/* House Default Toggle */}
+                    {editingItem.type === "spirit" && (
+                      <label className="flex items-center gap-3 cursor-pointer group">
+                        <div
+                          className={`w-10 h-6 rounded-full transition-colors relative ${editingItem.isHouseDefault ? "bg-blue-500/50" : "bg-white/10"}`}
+                        >
+                          <div
+                            className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${editingItem.isHouseDefault ? "translate-x-4" : ""}`}
+                          />
+                          <input
+                            type="checkbox"
+                            className="hidden"
+                            checked={!!editingItem.isHouseDefault}
+                            onChange={(e) =>
+                              setEditingItem({
+                                ...editingItem,
+                                isHouseDefault: e.target.checked,
+                              })
+                            }
+                          />
+                        </div>
+                        <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+                          {language === "es" ? "Casa" : "House"}
+                        </span>
+                      </label>
+                    )}
                   </div>
 
                   {/* Current Inventory Display (Read-only - use Audit to update) */}
@@ -1610,6 +1634,16 @@ export default function Inventory() {
                     Add Variation
                   </Button>
                 )}
+                {/* Link to Parent - for items without a parent (can become variation) */}
+                {editingItem.id && !editingItem.parentItemId && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowLinkToParent(true)}
+                  >
+                    <Link2 size={18} className="mr-2" />
+                    Link to Parent
+                  </Button>
+                )}
                 {editingItem.id && (
                   <Button
                     variant="destructive"
@@ -1656,6 +1690,78 @@ export default function Inventory() {
                 </Button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Link to Parent Modal */}
+      {showLinkToParent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div className="glass p-6 rounded-3xl w-full max-w-md relative border border-white/10">
+            <button
+              onClick={() => setShowLinkToParent(false)}
+              className="absolute top-4 right-4 text-muted-foreground"
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-2xl font-display mb-4 flex items-center gap-2">
+              <Link2 className="text-blue-400" /> Link to Parent
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              Select a parent item to group "{editingItem.name}" with. The parent's stock will be pooled with this item.
+            </p>
+            <p className="text-sm text-muted-foreground mb-2">
+              Only items with the same subtype are shown:
+            </p>
+            <div className="max-h-60 overflow-y-auto space-y-2 mb-4 border border-white/10 rounded-xl p-2">
+              {items
+                ?.filter(
+                  (i: any) =>
+                    !i.parentItemId &&
+                    i.id !== editingItem.id &&
+                    i.subtype === editingItem.subtype
+                )
+                .map((parent: any) => (
+                  <button
+                    key={parent.id}
+                    onClick={() => {
+                      saveIngredient.mutate(
+                        {
+                          id: editingItem.id,
+                          data: { ...editingItem, parentItemId: parent.id },
+                        },
+                        {
+                          onSuccess: () => {
+                            setShowLinkToParent(false);
+                            setEditingItem(null);
+                            qc.invalidateQueries({
+                              queryKey: ["inventory-items"],
+                            });
+                          },
+                        }
+                      );
+                    }}
+                    className="w-full text-left p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <div className="font-medium">{parent.name}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {parent.type} &bull; {parent.subtype} &bull; Sealed: {parent.currentBulk || 0}
+                    </div>
+                  </button>
+                ))}
+              {(items?.filter((i: any) => !i.parentItemId && i.id !== editingItem.id && i.subtype === editingItem.subtype) || []).length === 0 && (
+                <p className="text-center text-muted-foreground p-4">
+                  No items with the same subtype found. Import other items with subtype "{editingItem.subtype}" first.
+                </p>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => setShowLinkToParent(false)}
+              className="w-full"
+            >
+              Cancel
+            </Button>
           </div>
         </div>
       )}

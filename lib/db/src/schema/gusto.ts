@@ -38,17 +38,22 @@ export const drinksTable = sqliteTable("drinks", {
   actualPrice: real("actual_price").notNull().default(0),
   menuPrice: real("menu_price").notNull().default(0),
   priceSource: text("price_source").notNull().default("auto"),
+  basePriceOverride: real("base_price_override"),
   markupFactor: real("markup_factor").notNull().default(3.0),
   sourceType: text("source_type").notNull().default("standard"),
   isAvailable: integer("is_available").notNull().default(1),
   isOnMenu: integer("is_on_menu").notNull().default(0),
+  isHidden: integer("is_hidden").notNull().default(0),
   isDeleted: integer("is_deleted").notNull().default(0),
+  isApproved: integer("is_approved").notNull().default(0),
   createdAt: integer("created_at")
     .notNull()
     .default(sql`(unixepoch())`),
   updatedAt: integer("updated_at")
     .notNull()
     .default(sql`(unixepoch())`),
+  drinkSubtype: text("drink_subtype"),
+  drinkMixerSubtype: text("drink_mixer_subtype"),
 });
 
 export const recipeIngredientsTable = sqliteTable("recipe_ingredients", {
@@ -213,6 +218,7 @@ export const settingsTable = sqliteTable("settings", {
   varianceWarningThreshold: real("variance_warning_threshold")
     .notNull()
     .default(5.0),
+  enableTouchscreen: integer("enable_touchscreen").notNull().default(0),
   lastAutoBackup: integer("last_auto_backup"),
   lastDailyBackup: integer("last_daily_backup"),
   lastWeeklyBackup: integer("last_weekly_backup"),
