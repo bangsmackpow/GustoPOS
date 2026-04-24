@@ -1238,8 +1238,7 @@ function DrinkModal({
         </div>
 
         {/* Price Calculator - Show ingredient costs from inventory */}
-        {(!isDefaultDrink) && (
-          <div className="bg-amber-500/5 rounded-2xl p-6 mb-8 border border-amber-500/10">
+        <div className="bg-amber-500/5 rounded-2xl p-6 mb-8 border border-amber-500/10">
             <div className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-4">
               {language === "es" ? "Calculadora de Precio" : "Price Calculator"}
             </div>
@@ -1321,7 +1320,6 @@ function DrinkModal({
               </p>
             </div>
           </div>
-        )}
 
         <div className="bg-primary/5 rounded-2xl p-6 mb-8 border border-primary/10 grid grid-cols-2 gap-6">
           <div className="space-y-1">
