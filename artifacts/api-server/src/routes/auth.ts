@@ -9,14 +9,27 @@ const router: IRouter = Router();
 router.get("/auth/user", async (req: Request, res: Response) => {
   const sid = getSessionId(req);
 
+  console.log("[AuthUser] GET /auth/user", {
+    hasCookie: !!sid,
+    cookieLength: sid?.length || 0,
+  });
+
   if (!sid) {
+    console.log("[AuthUser] No session ID found in cookies");
     return res.json({ isAuthenticated: false, user: null });
   }
 
   const session = await getSession(sid);
   if (!session?.user) {
+    console.log("[AuthUser] Session validation failed or no user in session");
     return res.json({ isAuthenticated: false, user: null });
   }
+
+  console.log("[AuthUser] Session valid, returning user:", {
+    userId: session.user.id,
+    email: session.user.email,
+    role: session.user.role,
+  });
 
   return res.json({
     isAuthenticated: true,

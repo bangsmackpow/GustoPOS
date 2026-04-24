@@ -38,7 +38,14 @@ export async function createSession(data: SessionData): Promise<string> {
     ...data,
     lastActivity: Date.now(),
   };
-  return jwt.sign(sessionWithActivity, JWT_SECRET, { expiresIn: "7d" });
+  const token = jwt.sign(sessionWithActivity, JWT_SECRET, { expiresIn: "7d" });
+  console.log("[Auth] Created session for user:", {
+    userId: data.user.id,
+    email: data.user.email,
+    role: data.user.role,
+    tokenLength: token.length,
+  });
+  return token;
 }
 
 export async function getSession(sid: string): Promise<SessionData | null> {
@@ -46,13 +53,25 @@ export async function getSession(sid: string): Promise<SessionData | null> {
     const decoded = jwt.verify(sid, JWT_SECRET) as SessionData;
     const now = Date.now();
     const lastActivity = decoded.lastActivity ?? decoded.createdAt;
+    const inactivityMinutes = (now - lastActivity) / (60 * 1000);
+    
+    console.log("[Auth] Verified session token for user:", {
+      userId: decoded.user?.id,
+      email: decoded.user?.email,
+      inactivityMinutes: inactivityMinutes.toFixed(2),
+      hasUser: !!decoded.user,
+    });
+    
     if (now - lastActivity > SESSION_ACTIVITY_TIMEOUT) {
-      console.warn("[Auth] Session expired due to inactivity");
+      console.warn("[Auth] Session expired due to inactivity", {
+        inactivityMinutes: inactivityMinutes.toFixed(2),
+        timeoutMinutes: SESSION_ACTIVITY_TIMEOUT / (60 * 1000),
+      });
       return null;
     }
     return decoded;
-  } catch {
-    console.warn("[Auth] Invalid or expired token");
+  } catch (err: any) {
+    console.warn("[Auth] Invalid or expired token:", err.message);
     return null;
   }
 }
