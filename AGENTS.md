@@ -1194,3 +1194,9 @@ pnpm run build:desktop
 - Typecheck passes successfully
 - DMG builds successfully
 - Application is ready for deployment
+
+### April 23, 2026 - Critical Login Loop Fix
+
+**Bug:** Login redirect loop caused by querying `api/auth/user` with `.then((r) => r.json())` on the already-parsed `customFetch()` result.
+**Fix:** Removed `.then((r) => r.json())` from all ~50 hooks/mutations in `api-stub.ts`.
+**Result:** Authentication check successfully resolves, typecheck passes, and rebuilt DMG (108MB) is verified.

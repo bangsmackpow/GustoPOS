@@ -338,11 +338,11 @@ GustoPOS supports English and Spanish:
 
 - **Build**: GustoPOS-0.1.0.dmg
 - **Platform**: macOS (Intel x64)
-- **Size**: 107 MB
-- **MD5**: 505bff92ec40d51223869ab23e0f29a1
+- **Size**: 108 MB
+- **MD5**: 9d988802a48d6ffd2f631cbb99ae764e
 - **Location**: `artifacts/desktop-app/dist/build/GustoPOS-0.1.0.dmg`
 - **Included**: Full database, API server, React frontend, PWA support
-- **Status**: ✅ Ready for deployment
+- **Status**: ✅ Ready for deployment (Login loop API client bug fixed)
 
 ---
 

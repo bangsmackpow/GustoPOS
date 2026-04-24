@@ -1,6 +1,6 @@
 # GustoPOS v0.1.0 - Complete Build Summary
 
-**Build Date**: April 15, 2026  
+**Build Date**: April 23, 2026  
 **Status**: ✅ PRODUCTION READY
 
 ---
@@ -11,9 +11,9 @@
 
 - **File**: `GustoPOS-0.1.0.dmg`
 - **Location**: `artifacts/desktop-app/dist/build/GustoPOS-0.1.0.dmg`
-- **Size**: 107 MB
+- **Size**: 108 MB
 - **Platform**: macOS x64 (Intel)
-- **MD5**: `505bff92ec40d51223869ab23e0f29a1`
+- **MD5**: `9d988802a48d6ffd2f631cbb99ae764e`
 - **Format**: DMG (Disk Image) - ready to distribute and install
 - **Status**: ✅ Production-ready, unsigned (unsigned development build)
 
@@ -319,11 +319,12 @@ ADMIN_PASSWORD=secure-password PORT=3000 node ./dist/index.cjs
 - Phase 2: UI/layout improvements (grid, modals, sidebars)
 - Phase 1: Complete core system (tabs, inventory, discounts, reporting)
 - **BONUS**: Ingredient substitution with full price/stock management
+- **FIX**: Critical login redirect loop fixed (api-stub.ts customFetch JSON logic corrected)
 
 **Build Artifacts**:
 
-- DMG: `GustoPOS-0.1.0.dmg` (107 MB)
-- MD5: `505bff92ec40d51223869ab23e0f29a1`
+- DMG: `GustoPOS-0.1.0.dmg` (108 MB)
+- MD5: `9d988802a48d6ffd2f631cbb99ae764e`
 - Platform: macOS x64
 
 **Documentation**: 8 comprehensive guides
