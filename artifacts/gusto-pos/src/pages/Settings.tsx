@@ -160,6 +160,13 @@ const APP_COLUMNS = [
     hint: "Manual menu price per serving",
     suggest: ["price_per_serving"],
   },
+  {
+    key: "isHouseDefault",
+    label: "is_house_default",
+    required: false,
+    hint: "Use as primary/house default ingredient in recipes",
+    suggest: ["is_house_default", "house_default", "default"],
+  },
 ];
 
 export default function Settings() {
@@ -838,6 +845,18 @@ export default function Settings() {
           currentStock = currentSealed * containerSize + currentPartial;
         }
 
+        const rawIsHouseDefault = columnMappings["isHouseDefault"]
+          ? row[columnMappings["isHouseDefault"]] || ""
+          : "";
+        const isHouseDefault =
+          rawIsHouseDefault.toLowerCase().trim() === "true" ||
+          rawIsHouseDefault.toLowerCase().trim() === "1" ||
+          rawIsHouseDefault.toLowerCase().trim() === "yes" ||
+          rawIsHouseDefault.toLowerCase().trim() === "on" ||
+          rawIsHouseDefault.toLowerCase().trim() === "default"
+            ? 1
+            : 0;
+
         return {
           name,
           type,
@@ -862,6 +881,7 @@ export default function Settings() {
           currentBulk: currentSealed,
           currentPartial: currentPartial,
           menuPricePerServing: menuPricePerServing,
+          isHouseDefault,
         };
       })
       .filter((item) => item.name.trim());

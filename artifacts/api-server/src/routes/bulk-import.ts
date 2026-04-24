@@ -366,6 +366,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                   sellSingleServing: existing.sellSingleServing ? 1 : 0,
                   singleServingPrice: existing.singleServingPrice,
                   parentItemId: existing.parentItemId,
+                  isHouseDefault: isHouseDefault !== undefined ? isHouseDefault : existing.isHouseDefault,
                   updatedAt: Math.floor(Date.now() / 1000),
                 })
                 .where(eq(inventoryItemsTable.id, existing.id));
@@ -396,6 +397,7 @@ router.post("/bulk-ingredients", async (req: Request, res: Response) => {
                   sellSingleServing: sellSingleServing ? 1 : 0,
                   singleServingPrice,
                   parentItemId: parentItemId || existing.parentItemId,
+                  isHouseDefault: isHouseDefault ? 1 : 0,
                   updatedAt: Math.floor(Date.now() / 1000),
                 })
                 .where(eq(inventoryItemsTable.id, existing.id));
